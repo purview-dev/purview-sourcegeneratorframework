@@ -1,4 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<IsPackable>true</IsPackable>
+		<AssemblyName>$(RootNamespace)</AssemblyName>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<ProjectReference Include="..\SourceGeneratorFramework.Testing\SourceGeneratorFramework.Testing.csproj" />
 	</ItemGroup>
