@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<IsPackable>true</IsPackable>
-		<!--<PackageId>Purview.SourceGeneratorFramework.Testing</PackageId>-->
 		<AssemblyName>$(RootNamespace)</AssemblyName>
 	</PropertyGroup>
 
