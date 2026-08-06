@@ -1,0 +1,44 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFrameworks></TargetFrameworks>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<IsPackable>true</IsPackable>
+		<NoWarn>$(NoWarn);CS1591;</NoWarn>
+		<AssemblyName>$(RootNamespace)</AssemblyName>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<SGFrameworkSourceGeneratorProjectName>SourceGeneratorFramework.Testing.Generators</SGFrameworkSourceGeneratorProjectName>
+		<SGFrameworkSourceGeneratorProject>$(MSBuildThisFileDirectory)..\$(SGFrameworkSourceGeneratorProjectName)\$(SGFrameworkSourceGeneratorProjectName).csproj</SGFrameworkSourceGeneratorProject>
+		<SGFrameworkSourceGeneratorTargetFramework>netstandard2.0</SGFrameworkSourceGeneratorTargetFramework>
+		<SGFrameworkSourceGeneratorAssembly>$(MSBuildThisFileDirectory)..\$(SGFrameworkSourceGeneratorProjectName)\bin\$(Configuration)\$(SGFrameworkSourceGeneratorTargetFramework)\Purview.$(SGFrameworkSourceGeneratorProjectName).dll</SGFrameworkSourceGeneratorAssembly>
+		<TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeSGFrameworkSourceGenerator</TargetsForTfmSpecificContentInPackage>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference
+			Include="$(SGFrameworkSourceGeneratorProject)"
+			PrivateAssets="all"
+			ReferenceOutputAssembly="false"
+			OutputItemType="Analyzer"
+		/>
+	</ItemGroup>
+
+	<Target Name="IncludeSGFrameworkSourceGenerator" DependsOnTargets="Build">
+		<Error
+			Condition="!Exists('$(SGFrameworkSourceGeneratorAssembly)')"
+			Text="The Purview SourceGeneratorFramework Source Generator was not found at '$(SGFrameworkSourceGeneratorAssembly)'."
+		/>
+
+		<ItemGroup>
+			<TfmSpecificPackageFile Include="$(SGFrameworkSourceGeneratorAssembly)">
+				<PackagePath>analyzers/dotnet/cs/</PackagePath>
+			</TfmSpecificPackageFile>
+		</ItemGroup>
+	</Target>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
+	</ItemGroup>
+</Project>

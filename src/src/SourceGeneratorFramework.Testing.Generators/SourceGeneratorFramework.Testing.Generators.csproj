@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFrameworks></TargetFrameworks>
+		<TargetFramework>netstandard2.0</TargetFramework>
+
+		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+		<DisableSourceLink>true</DisableSourceLink>
+		<CompilerGeneratedFilesOutputPath>Generated</CompilerGeneratedFilesOutputPath>
+		<IsRoslynComponent>true</IsRoslynComponent>
+		<!-- snupkg requires standard build output, which this analyzer package suppresses. -->
+		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
+		<TargetsForTfmSpecificDebugSymbolsInPackage>$(TargetsForTfmSpecificDebugSymbolsInPackage);PackSourceGeneratorSymbols</TargetsForTfmSpecificDebugSymbolsInPackage>
+		<!-- Exclude Purview.Telemetry.SourceGenerator since this is a netstandard2.0 analyzer project -->
+		<ExcludePurviewTelemetry>true</ExcludePurviewTelemetry>
+
+		<!--<IsPackable>false</IsPackable>
+		<NoWarn>$(NoWarn);CS1591;</NoWarn>-->
+		<AssemblyName>$(RootNamespace)</AssemblyName>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
+	</ItemGroup>
+</Project>

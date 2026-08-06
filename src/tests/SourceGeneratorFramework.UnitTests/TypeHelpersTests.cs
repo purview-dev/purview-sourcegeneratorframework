@@ -1,0 +1,297 @@
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Purview.SourceGeneratorFramework.Helpers;
+
+namespace Purview.SourceGeneratorFramework;
+
+public class TypeHelpersTests
+{
+	static async Task<INamedTypeSymbol> GetTypeSymbolAsync(string source, string typeName)
+	{
+		var syntaxTree = CSharpSyntaxTree.ParseText(source);
+		var compilation = CSharpCompilation.Create(
+			"TestAssembly",
+			[syntaxTree],
+			[
+				MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+				MetadataReference.CreateFromFile(typeof(IEnumerable<>).Assembly.Location),
+			],
+			new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+		);
+		var model = compilation.GetSemanticModel(syntaxTree);
+		var root = await syntaxTree.GetRootAsync();
+		var typeDeclaration = root.DescendantNodes()
+			.OfType<TypeDeclarationSyntax>()
+			.First(t => t.Identifier.ValueText == typeName);
+		return model.GetDeclaredSymbol(typeDeclaration)!;
+	}
+
+	[Test]
+	public async Task IsAttribute_TypeNameEndsWithAttribute_ReturnsTrue() =>
+		await Assert.That(TypeHelpers.IsAttribute("MyAttribute")).IsTrue();
+
+	[Test]
+	public async Task IsAttribute_TypeNameWithoutSuffix_ReturnsFalse() =>
+		await Assert.That(TypeHelpers.IsAttribute("MyClass")).IsFalse();
+
+	[Test]
+	public async Task GetTypeName_AttributeType_TrimsSuffix() =>
+		await Assert.That(TypeHelpers.GetTypeName("MyAttribute")).IsEqualTo("My");
+
+	[Test]
+	public async Task GetTypeName_NonAttributeType_ReturnsOriginal() =>
+		await Assert.That(TypeHelpers.GetTypeName("MyClass")).IsEqualTo("MyClass");
+
+	[Test]
+	public async Task IsValidIdentifier_ValidIdentifier_ReturnsTrue()
+	{
+		await Assert.That(TypeHelpers.IsValidIdentifier("validName")).IsTrue();
+		await Assert.That(TypeHelpers.IsValidIdentifier("_validName")).IsTrue();
+	}
+
+	[Test]
+	[Arguments("123invalid")]
+	[Arguments("")]
+	[Arguments(null)]
+	public async Task IsValidIdentifier_InvalidIdentifier_ReturnsFalse(string? name)
+	{
+		await Assert.That(TypeHelpers.IsValidIdentifier(name)).IsFalse();
+	}
+
+	[Test]
+	public async Task TryGetSpecialType_KnownKeyword_ReturnsTrue()
+	{
+		var result = TypeHelpers.TryGetSpecialType("int", out var specialType);
+
+		await Assert.That(result).IsTrue();
+		await Assert.That(specialType).IsEqualTo(SpecialType.System_Int32);
+	}
+
+	[Test]
+	public async Task TryGetSpecialType_UnknownKeyword_ReturnsFalse()
+	{
+		var result = TypeHelpers.TryGetSpecialType("unknown", out _);
+
+		await Assert.That(result).IsFalse();
+	}
+
+	[Test]
+	public async Task IsPartial_PartialClass_ReturnsTrue()
+	{
+		var source = "public partial class MyClass { }";
+		var tree = CSharpSyntaxTree.ParseText(source);
+		var declaration = (await tree.GetRootAsync())
+			.DescendantNodes()
+			.OfType<ClassDeclarationSyntax>()
+			.First();
+
+		await Assert.That(TypeHelpers.IsPartial(declaration)).IsTrue();
+	}
+
+	[Test]
+	public async Task IsPartial_NonPartialClass_ReturnsFalse()
+	{
+		var source = "public class MyClass { }";
+		var tree = CSharpSyntaxTree.ParseText(source);
+		var declaration = (await tree.GetRootAsync())
+			.DescendantNodes()
+			.OfType<ClassDeclarationSyntax>()
+			.First();
+
+		await Assert.That(TypeHelpers.IsPartial(declaration)).IsFalse();
+	}
+
+	[Test]
+	public async Task HasNonEmptyConstructors_WithParameterConstructor_ReturnsTrue()
+	{
+		var source = """
+			public class MyClass
+			{
+				public MyClass(int value) { }
+			}
+			""";
+		var tree = CSharpSyntaxTree.ParseText(source);
+		var declaration = (await tree.GetRootAsync())
+			.DescendantNodes()
+			.OfType<ClassDeclarationSyntax>()
+			.First();
+
+		await Assert.That(TypeHelpers.HasNonEmptyConstructors(declaration, "MyClass")).IsTrue();
+	}
+
+	[Test]
+	public async Task HasNonEmptyConstructors_WithEmptyConstructor_ReturnsFalse()
+	{
+		var source = """
+			public class MyClass
+			{
+				public MyClass() { }
+			}
+			""";
+		var tree = CSharpSyntaxTree.ParseText(source);
+		var declaration = (await tree.GetRootAsync())
+			.DescendantNodes()
+			.OfType<ClassDeclarationSyntax>()
+			.First();
+
+		await Assert.That(TypeHelpers.HasNonEmptyConstructors(declaration, "MyClass")).IsFalse();
+	}
+
+	[Test]
+	public async Task HasAttribute_AttributedClass_ReturnsTrue()
+	{
+		var source = """
+			using System;
+
+			[Serializable]
+			public class MyClass { }
+			""";
+		var symbol = await GetTypeSymbolAsync(source, "MyClass");
+
+		await Assert
+			.That(TypeHelpers.HasAttribute(symbol, "System.SerializableAttribute"))
+			.IsTrue();
+	}
+
+	[Test]
+	public async Task HasAttribute_MissingAttribute_ReturnsFalse()
+	{
+		var source = "public class MyClass { }";
+		var symbol = await GetTypeSymbolAsync(source, "MyClass");
+
+		await Assert
+			.That(TypeHelpers.HasAttribute(symbol, "System.SerializableAttribute"))
+			.IsFalse();
+	}
+
+	[Test]
+	public async Task InheritsFrom_DerivedClass_ReturnsTrue()
+	{
+		var source = """
+			public class Base { }
+			public class Derived : Base { }
+			""";
+		var symbol = await GetTypeSymbolAsync(source, "Derived");
+
+		await Assert.That(TypeHelpers.InheritsFrom(symbol, "Base")).IsTrue();
+	}
+
+	[Test]
+	public async Task InheritsFrom_UnrelatedClass_ReturnsFalse()
+	{
+		var source = """
+			public class Base { }
+			public class Other { }
+			""";
+		var symbol = await GetTypeSymbolAsync(source, "Other");
+
+		await Assert.That(TypeHelpers.InheritsFrom(symbol, "Base")).IsFalse();
+	}
+
+	[Test]
+	public async Task Implements_IEnumerableT_ReturnsTrue()
+	{
+		var source = """
+			using System.Collections.Generic;
+			public class MyCollection : IEnumerable<int>
+			{
+				public IEnumerator<int> GetEnumerator() => null;
+				System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => null;
+			}
+			""";
+		var symbol = await GetTypeSymbolAsync(source, "MyCollection");
+
+		await Assert
+			.That(TypeHelpers.Implements(symbol, "System.Collections.Generic.IEnumerable`1"))
+			.IsTrue();
+	}
+
+	[Test]
+	public async Task ToFullyQualifiedDisplayString_ReturnsGlobalQualifiedName()
+	{
+		var source = "namespace Test { public class MyClass { } }";
+		var symbol = await GetTypeSymbolAsync(source, "MyClass");
+
+		await Assert
+			.That(TypeHelpers.ToFullyQualifiedDisplayString(symbol))
+			.IsEqualTo("global::Test.MyClass");
+	}
+
+	[Test]
+	public async Task IsCollectionLike_List_ReturnsTrue()
+	{
+		var source =
+			"using System.Collections.Generic; public class MyClass { public List<int> Items; }";
+		var symbol = await GetTypeSymbolAsync(source, "MyClass");
+		var fieldSymbol = symbol.GetMembers("Items").OfType<IFieldSymbol>().First();
+
+		await Assert.That(TypeHelpers.IsCollectionLike(fieldSymbol.Type)).IsTrue();
+	}
+
+	[Test]
+	public async Task TryGetElementType_List_ReturnsIntElement()
+	{
+		var source =
+			"using System.Collections.Generic; public class MyClass { public List<int> Items; }";
+		var symbol = await GetTypeSymbolAsync(source, "MyClass");
+		var fieldSymbol = symbol.GetMembers("Items").OfType<IFieldSymbol>().First();
+
+		var result = TypeHelpers.TryGetElementType(fieldSymbol.Type, out var elementType);
+
+		await Assert.That(result).IsTrue();
+		await Assert.That(elementType).IsNotNull();
+		await Assert.That(elementType!.SpecialType).IsEqualTo(SpecialType.System_Int32);
+	}
+
+	[Test]
+	public async Task DeriveName_WithSuffix_RemovesSuffix()
+	{
+		await Assert.That(TypeHelpers.DeriveName("MyService", "Service")).IsEqualTo("My");
+	}
+
+	[Test]
+	public async Task DeriveName_WithoutSuffix_ReturnsOriginal()
+	{
+		await Assert.That(TypeHelpers.DeriveName("MyClass", "Service")).IsEqualTo("MyClass");
+	}
+
+	[Test]
+	[Arguments(Accessibility.Public, "public")]
+	[Arguments(Accessibility.Internal, "internal")]
+	[Arguments(Accessibility.Protected, "protected")]
+	[Arguments(Accessibility.Private, "private")]
+	[Arguments(Accessibility.ProtectedOrInternal, "protected internal")]
+	[Arguments(Accessibility.ProtectedAndInternal, "private protected")]
+	public async Task GetAccessibilityKeyword_ReturnsExpectedKeyword(
+		Accessibility accessibility,
+		string expected
+	)
+	{
+		await Assert.That(TypeHelpers.GetAccessibilityKeyword(accessibility)).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task IsAccessibleAsPublicOrInternal_PublicType_ReturnsTrue()
+	{
+		var source = "public class MyClass { }";
+		var symbol = await GetTypeSymbolAsync(source, "MyClass");
+
+		await Assert.That(TypeHelpers.IsAccessibleAsPublicOrInternal(symbol)).IsTrue();
+	}
+
+	[Test]
+	public async Task IsAccessibleAsPublicOrInternal_PrivateNestedType_ReturnsFalse()
+	{
+		var source = """
+			public class Outer
+			{
+				private class Inner { }
+			}
+			""";
+		var symbol = await GetTypeSymbolAsync(source, "Outer");
+		var innerSymbol = symbol.GetTypeMembers("Inner").First();
+
+		await Assert.That(TypeHelpers.IsAccessibleAsPublicOrInternal(innerSymbol)).IsFalse();
+	}
+}
