@@ -16,14 +16,13 @@ public class GenerationContextTests
 		);
 	}
 
-	sealed record TestContext(Compilation Compilation, CodeWriter Writer)
-		: GenerationContext(Compilation, Writer);
+	sealed record TestContext(Compilation Compilation) : GenerationContext(Compilation);
 
 	[Test]
 	public async Task GetTypeByMetadataName_KnownType_ReturnsSymbol()
 	{
 		var compilation = CreateCompilation();
-		var context = new TestContext(compilation, new CodeWriter());
+		var context = new TestContext(compilation);
 
 		var symbol = context.GetTypeByMetadataName("System.Object");
 
@@ -35,7 +34,7 @@ public class GenerationContextTests
 	public async Task GetTypeByMetadataName_UnknownType_ReturnsNull()
 	{
 		var compilation = CreateCompilation();
-		var context = new TestContext(compilation, new CodeWriter());
+		var context = new TestContext(compilation);
 
 		var symbol = context.GetTypeByMetadataName("NonExistent.Type");
 
@@ -46,7 +45,7 @@ public class GenerationContextTests
 	public async Task GetTypeByMetadataName_TypeValueObject_ReturnsSymbol()
 	{
 		var compilation = CreateCompilation();
-		var context = new TestContext(compilation, new CodeWriter());
+		var context = new TestContext(compilation);
 		var type = new TypeValueObject("Object", "System");
 
 		var symbol = context.GetTypeByMetadataName(type);

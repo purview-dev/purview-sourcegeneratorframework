@@ -1,51 +1,46 @@
+using System.ComponentModel;
 using Microsoft.CodeAnalysis;
-using Purview.SourceGeneratorFramework.Models;
 
 namespace Purview.SourceGeneratorFramework.Extensions;
 
 /// <summary>
 /// Extension methods for <see cref="SourceProductionContext"/>.
 /// </summary>
+[EditorBrowsable(EditorBrowsableState.Never)]
 public static class SourceProductionContextExtensions
 {
-	/// <summary>
-	/// Reports a single <see cref="DiagnosticInfo"/> to the source production context.
-	/// </summary>
-	public static void ReportDiagnostic(
-		this SourceProductionContext context,
-		DiagnosticInfo diagnostic
-	)
+	extension(SourceProductionContext context)
 	{
-		if (diagnostic is null)
-			throw new ArgumentNullException(nameof(diagnostic));
+		/// <summary>
+		/// Reports a single <see cref="DiagnosticInfo"/> to the source production context.
+		/// </summary>
+		public void ReportDiagnostic(DiagnosticInfo diagnostic)
+		{
+			if (diagnostic is null)
+				throw new ArgumentNullException(nameof(diagnostic));
 
-		context.ReportDiagnostic(diagnostic.ToDiagnostic());
-	}
+			context.ReportDiagnostic(diagnostic.ToDiagnostic());
+		}
 
-	/// <summary>
-	/// Reports a sequence of <see cref="DiagnosticInfo"/> diagnostics to the source production context.
-	/// </summary>
-	public static void ReportDiagnostics(
-		this SourceProductionContext context,
-		IEnumerable<DiagnosticInfo> diagnostics
-	)
-	{
-		if (diagnostics is null)
-			throw new ArgumentNullException(nameof(diagnostics));
+		/// <summary>
+		/// Reports a sequence of <see cref="DiagnosticInfo"/> diagnostics to the source production context.
+		/// </summary>
+		public void ReportDiagnostics(IEnumerable<DiagnosticInfo> diagnostics)
+		{
+			if (diagnostics is null)
+				throw new ArgumentNullException(nameof(diagnostics));
 
-		foreach (var diagnostic in diagnostics)
-			context.ReportDiagnostic(diagnostic);
-	}
+			foreach (var diagnostic in diagnostics)
+				context.ReportDiagnostic(diagnostic);
+		}
 
-	/// <summary>
-	/// Reports a sequence of <see cref="DiagnosticInfo"/> diagnostics to the source production context.
-	/// </summary>
-	public static void ReportDiagnostics(
-		this SourceProductionContext context,
-		EquatableArray<DiagnosticInfo> diagnostics
-	)
-	{
-		foreach (var diagnostic in diagnostics)
-			context.ReportDiagnostic(diagnostic);
+		/// <summary>
+		/// Reports a sequence of <see cref="DiagnosticInfo"/> diagnostics to the source production context.
+		/// </summary>
+		public void ReportDiagnostics(EquatableArray<DiagnosticInfo> diagnostics)
+		{
+			foreach (var diagnostic in diagnostics)
+				context.ReportDiagnostic(diagnostic);
+		}
 	}
 }

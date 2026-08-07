@@ -1,0 +1,44 @@
+<Project>
+	<PropertyGroup>
+		<_PurviewSourceGeneratorFrameworkAssembly
+			Condition="'$(_PurviewSourceGeneratorFrameworkAssembly)' == ''"
+			>$(MSBuildThisFileDirectory)..\lib\netstandard2.0\Purview.SourceGeneratorFramework.dll</_PurviewSourceGeneratorFrameworkAssembly>
+	</PropertyGroup>
+
+	<ItemGroup Condition="'$(IsRoslynComponent)' == 'true'">
+		<SourceGeneratorRuntimeDependency Include="$(_PurviewSourceGeneratorFrameworkAssembly)">
+			<DestinationSubPath>Purview.SourceGeneratorFramework.dll</DestinationSubPath>
+		</SourceGeneratorRuntimeDependency>
+
+		<None
+			Include="$(_PurviewSourceGeneratorFrameworkAssembly)"
+			Pack="true"
+			PackagePath="analyzers/dotnet/cs/"
+			Visible="false"
+		/>
+	</ItemGroup>
+
+	<Target
+		Name="CopyPurviewSourceGeneratorFrameworkToOutput"
+		AfterTargets="CopyFilesToOutputDirectory"
+		Condition="'$(IsRoslynComponent)' == 'true'"
+	>
+		<Copy
+			SourceFiles="@(SourceGeneratorRuntimeDependency)"
+			DestinationFolder="$(TargetDir)"
+			SkipUnchangedFiles="true"
+		/>
+	</Target>
+
+	<Target
+		Name="GetSourceGeneratorAnalyzerFiles"
+		DependsOnTargets="Build"
+		Returns="@(SourceGeneratorAnalyzerFile)"
+		Condition="'$(IsRoslynComponent)' == 'true'"
+	>
+		<ItemGroup>
+			<SourceGeneratorAnalyzerFile Include="$(TargetPath)" />
+			<SourceGeneratorAnalyzerFile Include="@(SourceGeneratorRuntimeDependency)" />
+		</ItemGroup>
+	</Target>
+</Project>

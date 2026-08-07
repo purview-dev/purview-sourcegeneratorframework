@@ -14,7 +14,8 @@ public readonly record struct GeneratorResult<T>
 
 	public EquatableArray<DiagnosticInfo> Diagnostics { get; private init; }
 
-	public bool IsSuccess => Value is not null;
+	public bool IsSuccess =>
+		Value is not null && !EqualityComparer<T>.Default.Equals(Value, default!);
 
 	public bool HasDiagnostics => !Diagnostics.IsEmpty;
 

@@ -5,6 +5,7 @@
 		<IsPackable>true</IsPackable>
 		<NoWarn>$(NoWarn);CS1591;</NoWarn>
 		<AssemblyName>$(RootNamespace)</AssemblyName>
+		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -22,6 +23,22 @@
 			ReferenceOutputAssembly="false"
 			OutputItemType="Analyzer"
 		/>
+	</ItemGroup>
+
+	<ItemGroup>
+		<None
+			Include="Sdk\Purview.SourceGeneratorFramework.targets"
+			Pack="true"
+			PackagePath="build\Purview.SourceGeneratorFramework.targets"
+			Visible="true"
+		/>
+		<None
+			Include="Sdk\Purview.SourceGeneratorFramework.props"
+			Pack="true"
+			PackagePath="build\Purview.SourceGeneratorFramework.props"
+			Visible="true"
+		/>
+		<None Include="README.md" Pack="true" PackagePath="/" Visible="true" />
 	</ItemGroup>
 
 	<Target Name="IncludeSGFrameworkSourceGenerator" DependsOnTargets="Build">

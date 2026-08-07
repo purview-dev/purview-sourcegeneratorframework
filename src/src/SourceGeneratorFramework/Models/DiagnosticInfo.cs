@@ -50,7 +50,7 @@ public sealed record DiagnosticInfo(
 		}
 
 		var lineSpan = location.GetLineSpan();
-		return new DiagnosticInfo(
+		return new(
 			Descriptor: descriptor,
 			FilePath: lineSpan.Path,
 			TextSpan: location.SourceSpan,

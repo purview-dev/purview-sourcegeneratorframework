@@ -1,6 +1,7 @@
 <Project>
 	<PropertyGroup>
-		<TargetFrameworks>netstandard2.1;net8.0;net9.0;net10.0;</TargetFrameworks>
+		<TestingTargetFrameworks>net8.0;net9.0;net10.0;</TestingTargetFrameworks>
+		<TargetFrameworks>netstandard2.1;$(TestingTargetFrameworks)</TargetFrameworks>
 		<NamespacePrefix>Purview.SourceGeneratorFramework</NamespacePrefix>
 		<!-- Set project-by-project -->
 		<IsPackable>false</IsPackable>
@@ -31,14 +32,28 @@
 
 	<PropertyGroup Condition="'$(IsTestProject)' == 'true'">
 		<!-- Test projects aren't executable so we need to remove .NET Standard 2.1 -->
-		<TargetFrameworks>net8.0;net9.0;net10.0;</TargetFrameworks>
+		<TargetFrameworks>$(TestingTargetFrameworks)</TargetFrameworks>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(IsPackable)' == 'true'">
 		<Authors>Purview Contributors</Authors>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
 		<PackageProjectUrl>https://github.com/purview-dev/purview-sourcegeneratorframework</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/purview-dev/purview-sourcegeneratorframework</RepositoryUrl>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageIcon>purview-logo.jpg</PackageIcon>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageRequireLicenseAcceptance>False</PackageRequireLicenseAcceptance>
 	</PropertyGroup>
+
+	<ItemGroup Label="NuGet package assets" Condition="'$(IsPackable)' == 'true'">
+		<None Include="$(MSBuildThisFileDirectory)../LICENSE.md" Pack="true" PackagePath="/" />
+		<None
+			Include="$(MSBuildThisFileDirectory)../assets/images/purview-logo.jpg"
+			Pack="true"
+			PackagePath="/"
+			Visible="false"
+		/>
+	</ItemGroup>
 </Project>

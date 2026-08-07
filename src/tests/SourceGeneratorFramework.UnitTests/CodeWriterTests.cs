@@ -106,7 +106,7 @@ public class CodeWriterTests
 		writer.Write("value");
 		writer.EnsureNewLine();
 
-		await Assert.That(writer.ToString()).EndsWith("value\r\n");
+		await Assert.That(writer.ToString()).EndsWith("value\n");
 	}
 
 	[Test]
@@ -135,10 +135,7 @@ public class CodeWriterTests
 	{
 		var writer = new CodeWriter();
 
-		using (writer.Block("public class C", w => w.WriteLine("public int P { get; set; }")))
-		{
-			// This comment exists to prevent the formatting suggestion.
-		}
+		writer.Block("public class C", w => w.WriteLine("public int P { get; set; }"));
 
 		var result = writer.ToString();
 
@@ -154,15 +151,15 @@ public class CodeWriterTests
 
 		writer.WriteUsing("System");
 
-		await Assert.That(writer.ToString()).IsEqualTo("using System;\r\n");
+		await Assert.That(writer.ToString()).IsEqualTo("using System;\n");
 	}
 
 	[Test]
-	public async Task WriteNamespace_WritesNamespaceBlock()
+	public async Task WriteBlockNamespace_WritesNamespaceBlock()
 	{
 		var writer = new CodeWriter();
 
-		using (writer.WriteNamespace("Test"))
+		using (writer.WriteBlockNamespace("Test"))
 		{
 			writer.WriteLine("public class C { }");
 		}
@@ -189,6 +186,93 @@ public class CodeWriterTests
 		await Assert.That(result).Contains("public class C");
 		await Assert.That(result).Contains("\tpublic int P { get; set; }");
 		await Assert.That(result).Contains("}");
+	}
+
+	[Test]
+	public async Task WriteClass_WithOptions_WritesModifiersInheritanceAndConstraints()
+	{
+		var writer = new CodeWriter();
+		var declaration = new TypeDeclarationOptions("Repository")
+		{
+			Accessibility = TypeDeclarationAccessibility.Public,
+			BaseType = "RepositoryBase<T>",
+			Interfaces = ["IRepository<T>", "IDisposable"],
+			GenericTypes =
+			[
+				new GenericTypeParameterOptions("T") { Constraints = ["class", "new()"] },
+			],
+		};
+
+		using (writer.WriteClass(declaration))
+		{
+			writer.WriteLine("public T Value { get; } = new();");
+		}
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"public sealed partial class Repository<T> : RepositoryBase<T>, IRepository<T>, IDisposable\n"
+					+ "where T : class, new()\n"
+					+ "{\n"
+					+ "\tpublic T Value { get; } = new();\n"
+					+ "}\n"
+			);
+	}
+
+	[Test]
+	public async Task WriteRecordStruct_WithOptions_WritesReadonlyRecordStruct()
+	{
+		var writer = new CodeWriter();
+		var declaration = new TypeDeclarationOptions("Identifier")
+		{
+			Accessibility = TypeDeclarationAccessibility.Internal,
+			IsReadOnly = true,
+			Interfaces = ["IEquatable<Identifier>"],
+		};
+
+		using (writer.WriteRecordStruct(declaration))
+		{
+			// Here to prevent IDE0555
+		}
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"internal readonly partial record struct Identifier : IEquatable<Identifier>\n"
+					+ "{\n"
+					+ "}\n"
+			);
+	}
+
+	[Test]
+	public async Task WriteType_WithoutAccessibility_OmitsAccessibility()
+	{
+		var writer = new CodeWriter();
+
+		using (
+			writer.WriteType(
+				new TypeDeclarationOptions("State")
+				{
+					Kind = TypeDeclarationKind.RecordClass,
+					IsPartial = false,
+					IsSealed = false,
+				}
+			)
+		)
+		{
+			// Here to prevent IDE0555
+		}
+
+		await Assert.That(writer.ToString()).StartsWith("record class State\n");
+	}
+
+	[Test]
+	public async Task WriteStruct_WithBaseType_Throws()
+	{
+		var writer = new CodeWriter();
+		var declaration = new TypeDeclarationOptions("Invalid") { BaseType = "BaseType" };
+
+		await Assert.That(() => writer.WriteStruct(declaration)).Throws<ArgumentException>();
 	}
 
 	[Test]

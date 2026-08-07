@@ -1,12 +1,11 @@
 using Microsoft.CodeAnalysis;
-using Purview.SourceGeneratorFramework.Helpers;
 
 namespace Purview.SourceGeneratorFramework.Models;
 
 /// <summary>
 /// Represents a simple type/value descriptor used during source generation.
 /// </summary>
-public readonly record struct TypeValueObject
+public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 {
 	/// <summary>
 	/// Initializes a new instance of the <see cref="TypeValueObject"/> struct.
@@ -94,6 +93,23 @@ public readonly record struct TypeValueObject
 	public override string ToString() => RenderFullName;
 
 	/// <summary>
+	/// Determines whether the specified <see cref="ITypeSymbol"/> is equal to the current <see cref="TypeValueObject"/>.
+	/// </summary>
+	/// <param name="other">The type symbol to compare with the current type value object.</param>
+	/// <returns><see langword="true"/> if the specified type symbol is equal to the current type value object; otherwise, <see langword="false"/>.</returns>
+	public bool Equals(ITypeSymbol other)
+	{
+		if (other is null)
+			return false;
+
+		var otherNamespace = other.ContainingNamespace.IsGlobalNamespace
+			? null
+			: other.ContainingNamespace.ToDisplayString();
+
+		return TypeName == other.Name && Namespace == otherNamespace;
+	}
+
+	/// <summary>
 	/// Implicitly converts a <see cref="TypeValueObject"/> to its rendered full name.
 	/// </summary>
 	public static implicit operator string(TypeValueObject typeValueObject) =>
@@ -132,4 +148,11 @@ public readonly record struct TypeValueObject
 	/// Gets an empty <see cref="TypeValueObject"/>.
 	/// </summary>
 	public static readonly TypeValueObject Empty;
+
+	/// <summary>
+	/// Creates a <see cref="TypeValueObject"/> from a generic type parameter.
+	/// </summary>
+	/// <typeparam name="T">The type parameter.</typeparam>
+	/// <returns>A <see cref="TypeValueObject"/> representing the type parameter.</returns>
+	public static TypeValueObject Create<T>() => new(typeof(T).Name, typeof(T).Namespace);
 }

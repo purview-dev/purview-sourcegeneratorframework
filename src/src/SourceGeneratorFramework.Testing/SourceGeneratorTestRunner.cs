@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Purview.SourceGeneratorFramework.Helpers;
 using Purview.SourceGeneratorFramework.Testing.Abstractions;
 
 namespace Purview.SourceGeneratorFramework.Testing;
@@ -34,7 +35,7 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		CancellationToken cancellationToken = default
 	)
 	{
-		options ??= new SourceGeneratorTestOptions();
+		options ??= new();
 
 		var logEntries = new List<(string Message, OutputType Type)>();
 
@@ -48,8 +49,9 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 			.ToImmutableArray();
 		var references = ResolveReferences(options);
 		var compilation = CreateCompilation(syntaxTrees, references, options);
-		var generator = new TGenerator();
+		TGenerator generator = new();
 		ConfigureLogging(generator, options, logEntries);
+
 		var driver = CreateDriver(generator, options);
 		driver = driver.RunGeneratorsAndUpdateCompilation(
 			compilation,
@@ -128,8 +130,9 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 			options.DisableSourceGeneratorPropertyName is not null
 			&& options.DisableSourceGeneratorValue is not null
 		)
-			analyzerOptions[options.DisableSourceGeneratorPropertyName] =
-				options.DisableSourceGeneratorValue.Value.ToString();
+			analyzerOptions[
+				IncrementalPipeline.BuildProperty + options.DisableSourceGeneratorPropertyName
+			] = options.DisableSourceGeneratorValue.Value.ToString();
 
 		if (analyzerOptions.Count > 0)
 			driver = driver.WithUpdatedAnalyzerConfigOptions(
@@ -156,34 +159,6 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 			);
 			return;
 		}
-
-		var logSupportType = generator
-			.GetType()
-			.GetInterfaces()
-			.FirstOrDefault(i => i.Name == "ILogSupport");
-		var setLogOutput = logSupportType?.GetMethod("SetLogOutput");
-		if (setLogOutput is null)
-			return;
-
-		var paramType = setLogOutput.GetParameters()[0].ParameterType;
-		var genericArgs = paramType.GenericTypeArguments;
-		if (genericArgs.Length < 2)
-			throw new InvalidOperationException(
-				$"SetLogOutput parameter type '{paramType}' does not have two generic arguments."
-			);
-
-		var outputTypeType = genericArgs[1];
-		var actionType = typeof(Action<,>).MakeGenericType(typeof(string), outputTypeType);
-		var factoryType = typeof(LogActionFactory<>).MakeGenericType(outputTypeType);
-		var factory = Activator.CreateInstance(factoryType, options, logEntries);
-		var actionMethod =
-			factoryType.GetMethod(nameof(LogActionFactory<>.Action))
-			?? throw new InvalidOperationException(
-				$"Method '{nameof(LogActionFactory<>.Action)}' not found on type '{factoryType}'."
-			);
-		var action = Delegate.CreateDelegate(actionType, factory, actionMethod);
-
-		setLogOutput.Invoke(generator, [action]);
 	}
 
 	static async Task<Assembly?> CompileToAssemblyAsync(
@@ -210,19 +185,5 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 			: result.GeneratedTrees.Where(tree =>
 				!exclude.Any(attr => tree.FilePath.EndsWith(attr, StringComparison.Ordinal))
 			);
-	}
-}
-
-sealed class LogActionFactory<TOutputType>(
-	SourceGeneratorTestOptions options,
-	List<(string, OutputType)> logEntries
-)
-	where TOutputType : notnull
-{
-	public void Action(string message, TOutputType type)
-	{
-		var outputType = (OutputType)Enum.ToObject(typeof(OutputType), type);
-		options.TestOutput.WriteLine($"[{outputType}] {message}");
-		logEntries.Add((message, outputType));
 	}
 }

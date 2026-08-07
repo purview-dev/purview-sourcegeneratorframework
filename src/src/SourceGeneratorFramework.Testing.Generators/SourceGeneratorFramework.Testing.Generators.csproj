@@ -13,10 +13,76 @@
 		<!-- Exclude Purview.Telemetry.SourceGenerator since this is a netstandard2.0 analyzer project -->
 		<ExcludePurviewTelemetry>true</ExcludePurviewTelemetry>
 
-		<!--<IsPackable>false</IsPackable>
-		<NoWarn>$(NoWarn);CS1591;</NoWarn>-->
 		<AssemblyName>$(RootNamespace)</AssemblyName>
 	</PropertyGroup>
+
+	<ItemGroup>
+		<Compile
+			Include="..\SourceGeneratorFramework\CodeWriter.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\CodeWriter.cs"
+		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\TypeDeclarationOptions.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\TypeDeclarationOptions.cs"
+		/>
+
+		<!-- Models -->
+		<Compile
+			Include="..\SourceGeneratorFramework\Models\DiagnosticInfo.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Models\DiagnosticInfo.cs"
+		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\Models\GenerationContext.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Models\GenerationContext.cs"
+		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\Models\GeneratorResult.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Models\GeneratorResult.cs"
+		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\Models\TypeValueObject.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Models\TypeValueObject.cs"
+		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\Models\TargetSymbolDescriptor.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Models\TargetSymbolDescriptor.cs"
+		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\Models\EquatableArray.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Models\EquatableArray.cs"
+		/>
+		<!-- Helpers -->
+		<Compile
+			Include="..\SourceGeneratorFramework\Helpers\TypeHelpers.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Helpers\TypeHelpers.cs"
+		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\Helpers\IncrementalPipeline.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Helpers\IncrementalPipeline.cs"
+		/>
+		<!-- Testing/Abstractions -->
+		<Compile
+			Include="..\SourceGeneratorFramework\Testing\Abstractions\GenerationLogger.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Testing\Abstractions\GenerationLogger.cs"
+		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\Testing\Abstractions\ILogSupport.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Testing\Abstractions\ILogSupport.cs"
+		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\Testing\Abstractions\OutputType.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Testing\Abstractions\OutputType.cs"
+		/>
+		<!-- Extensions/ Polyfills -->
+		<Compile
+			Include="..\SourceGeneratorFramework\Extensions\System\Runtime\CompilerServices\IsExternalInit.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Extensions\System\Runtime\CompilerServices\IsExternalInit.cs"
+		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\Extensions\Microsoft\CodeAnalysis\SourceProductionContextExtension.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Extensions\Microsoft\CodeAnalysis\SourceProductionContextExtension.cs"
+		/>
+	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />

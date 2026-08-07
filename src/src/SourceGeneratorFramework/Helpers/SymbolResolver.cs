@@ -1,5 +1,4 @@
 using Microsoft.CodeAnalysis;
-using Purview.SourceGeneratorFramework.Models;
 
 namespace Purview.SourceGeneratorFramework.Helpers;
 

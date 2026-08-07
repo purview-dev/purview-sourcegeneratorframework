@@ -2,7 +2,6 @@ using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Purview.SourceGeneratorFramework.Models;
 
 namespace Purview.SourceGeneratorFramework.Helpers;
 

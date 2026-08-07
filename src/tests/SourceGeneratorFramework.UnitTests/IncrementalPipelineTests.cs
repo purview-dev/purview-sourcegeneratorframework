@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Purview.SourceGeneratorFramework.Helpers;
 using Purview.SourceGeneratorFramework.Models;
@@ -5,7 +6,7 @@ using Purview.SourceGeneratorFramework.Testing;
 
 namespace Purview.SourceGeneratorFramework;
 
-public class IncrementalPipelineTests
+public class IncrementalPipelineTests2
 {
 	const string TestAttributeSource = """
 		namespace Test
@@ -86,16 +87,33 @@ public class IncrementalPipelineTests
 					node is Microsoft.CodeAnalysis.CSharp.Syntax.ClassDeclarationSyntax
 			);
 
-			var combined = targets.Collect().Combine(isDisabled);
+			var inputs = isDisabled
+				.CombineWith(
+					context.CompilationProvider.Select(
+						static (compilation, _) => compilation.AssemblyName ?? "Unknown"
+					),
+					static (disabled, assemblyName, _) =>
+						new GenerationInputs(disabled, assemblyName),
+					"CreateGenerationInputs"
+				)
+				.CollectWith(
+					targets,
+					static (state, collectedTargets, _) =>
+						state with
+						{
+							Targets = collectedTargets,
+						},
+					"AddGenerationTargets"
+				);
 
 			context.RegisterSourceOutput(
-				combined,
+				inputs,
 				static (spc, source) =>
 				{
-					if (source.Right)
+					if (source.IsDisabled)
 						return;
 
-					foreach (var target in source.Left)
+					foreach (var target in source.Targets)
 					{
 						spc.AddSource($"{target.Name}.g.cs", $"partial class {target.Name} {{ }}");
 					}
@@ -105,4 +123,9 @@ public class IncrementalPipelineTests
 	}
 
 	readonly record struct TargetInfo(string Name, string FilePath);
+
+	sealed record GenerationInputs(bool IsDisabled, string AssemblyName)
+	{
+		public ImmutableArray<TargetInfo> Targets { get; init; } = [];
+	}
 }

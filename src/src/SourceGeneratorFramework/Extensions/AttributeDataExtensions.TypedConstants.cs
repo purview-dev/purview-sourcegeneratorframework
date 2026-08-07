@@ -1,0 +1,67 @@
+using System.Globalization;
+using Microsoft.CodeAnalysis;
+
+namespace Purview.SourceGeneratorFramework.Extensions;
+
+partial class AttributeDataExtensions
+{
+	extension(TypedConstant constant)
+	{
+		/// <summary>
+		/// Converts a <see cref="TypedConstant"/> to the specified type.
+		/// </summary>
+		public T? As<T>()
+		{
+			if (constant.IsNull)
+				return default;
+
+			var targetType = typeof(T);
+			if (targetType == typeof(TypedConstant))
+				return (T?)(object)constant;
+
+			if (targetType == typeof(ITypeSymbol) || targetType == typeof(ISymbol))
+			{
+				return constant.Kind == TypedConstantKind.Type && constant.Value is T typedValue
+					? typedValue
+					: default;
+			}
+
+			if (constant.Kind == TypedConstantKind.Array)
+			{
+				var values = constant.Values.Select(As<T>).ToArray();
+				if (targetType.IsArray)
+				{
+					var elementType = targetType.GetElementType();
+					var array = Array.CreateInstance(elementType, values.Length);
+					for (var i = 0; i < values.Length; i++)
+						array.SetValue(values[i], i);
+					return (T?)(object?)array;
+				}
+				return (T?)(object?)values;
+			}
+
+			var value = constant.Value;
+			if (value == null)
+				return default;
+
+			if (targetType.IsEnum)
+			{
+				return value is string stringValue
+					? (T?)Enum.Parse(targetType, stringValue)
+					: (T?)Enum.ToObject(targetType, value);
+			}
+
+			if (value is T t)
+				return t;
+
+			try
+			{
+				return (T?)Convert.ChangeType(value, targetType, CultureInfo.InvariantCulture);
+			}
+			catch
+			{
+				return default;
+			}
+		}
+	}
+}

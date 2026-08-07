@@ -1,11 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
+		<TargetFrameworks>$(TestingTargetFrameworks)</TargetFrameworks>
 		<IsPackable>true</IsPackable>
 		<AssemblyName>$(RootNamespace)</AssemblyName>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\SourceGeneratorFramework.Testing\SourceGeneratorFramework.Testing.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None
+			Include="Sdk\Purview.SourceGeneratorFramework.Testing.TUnit.props"
+			Pack="true"
+			PackagePath="build\Purview.SourceGeneratorFramework.Testing.TUnit.props"
+			Visible="true"
+		/>
+		<None Include="README.md" Pack="true" PackagePath="/" Visible="true" />
 	</ItemGroup>
 
 	<ItemGroup>

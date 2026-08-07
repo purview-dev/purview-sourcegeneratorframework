@@ -1,0 +1,7 @@
+<Project>
+	<ItemGroup>
+		<Using Include="Purview.SourceGeneratorFramework" />
+		<Using Include="Purview.SourceGeneratorFramework.Helpers" />
+		<Using Include="Purview.SourceGeneratorFramework.Models" />
+	</ItemGroup>
+</Project>

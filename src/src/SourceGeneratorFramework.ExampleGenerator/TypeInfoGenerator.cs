@@ -91,7 +91,7 @@ public sealed class TypeInfoGenerator : IIncrementalGenerator
 		}
 		else
 		{
-			using (writer.WriteNamespace(target.Namespace))
+			using (writer.WriteBlockNamespace(target.Namespace))
 				WriteTypeInfoClass(writer, target);
 		}
 

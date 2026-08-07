@@ -1,7 +1,7 @@
 namespace Purview.SourceGeneratorFramework.Testing.Abstractions;
 
 /// <summary>
-/// Allows a source generator to receive log output from a test runner.
+/// Allows a source generator to report log information, usually as part of a test run.
 /// </summary>
 public interface ILogSupport
 {
