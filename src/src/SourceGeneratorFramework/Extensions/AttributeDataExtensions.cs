@@ -61,6 +61,44 @@ public static partial class AttributeDataExtensions
 		}
 
 		/// <summary>
+		/// Tries to get a constructor argument by its declared parameter name.
+		/// </summary>
+		public bool TryGetConstructorArgument<T>(string parameterName, out T? value)
+		{
+			if (string.IsNullOrWhiteSpace(parameterName))
+			{
+				throw new ArgumentException(
+					"Parameter name cannot be null or whitespace.",
+					nameof(parameterName)
+				);
+			}
+
+			var constructor = attribute.AttributeConstructor;
+			if (constructor is null)
+			{
+				value = default;
+				return false;
+			}
+
+			for (var index = 0; index < constructor.Parameters.Length; index++)
+			{
+				if (
+					string.Equals(
+						constructor.Parameters[index].Name,
+						parameterName,
+						StringComparison.Ordinal
+					)
+				)
+				{
+					return attribute.TryGetConstructorArgument(index, out value);
+				}
+			}
+
+			value = default;
+			return false;
+		}
+
+		/// <summary>
 		/// Gets the value of a constructor argument at the specified index, returning the default if out of range.
 		/// </summary>
 		public T? GetConstructorArgument<T>(int index, T? defaultValue = default)

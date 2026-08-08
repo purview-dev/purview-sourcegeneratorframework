@@ -25,6 +25,10 @@
 			Include="..\SourceGeneratorFramework\TypeDeclarationOptions.cs"
 			Link="Extensions\Purview\SourceGeneratorFramework\TypeDeclarationOptions.cs"
 		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\ConstructorDeclarationOptions.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\ConstructorDeclarationOptions.cs"
+		/>
 
 		<!-- Models -->
 		<Compile

@@ -467,10 +467,38 @@ public sealed class CodeWriter
 			.Write(declaration.Name);
 
 		WriteGenericTypeParameters(declaration.GenericTypes);
+		WriteParameterList(declaration.PrimaryConstructorParameters);
 		WriteBaseTypes(declaration);
 		NewLine();
 		WriteGenericConstraints(declaration.GenericTypes);
 
+		return Block();
+	}
+
+	/// <summary>
+	/// Writes an ordinary instance or static constructor and returns its body scope.
+	/// </summary>
+	/// <param name="declaration">The constructor declaration options.</param>
+	/// <returns>The constructor body scope.</returns>
+	public BlockScope WriteConstructor(ConstructorDeclarationOptions declaration)
+	{
+		if (declaration is null)
+			throw new ArgumentNullException(nameof(declaration));
+
+		ValidateConstructorDeclaration(declaration);
+
+		if (declaration.IsStatic)
+			Write("static ");
+		else if (declaration.Accessibility is { } accessibility)
+			WriteAccessibility(accessibility).Write(' ');
+
+		Write(declaration.TypeName);
+		WriteParameterList(declaration.Parameters, writeWhenEmpty: true);
+
+		if (!string.IsNullOrWhiteSpace(declaration.Initializer))
+			Write(" : ").Write(declaration.Initializer);
+
+		NewLine();
 		return Block();
 	}
 
@@ -492,7 +520,10 @@ public sealed class CodeWriter
 			WriteLine(".");
 		}
 
-		WriteLine("// Changes to this file will be lost when the source generator runs again.");
+		WriteLine("// Changes to this file will be lost when the source generator runs again.")
+			.NewLine()
+			.WriteLine("#nullable enable");
+
 		return NewLine();
 	}
 
@@ -718,6 +749,26 @@ public sealed class CodeWriter
 		Write('>');
 	}
 
+	void WriteParameterList(ImmutableArray<string> parameters, bool writeWhenEmpty = false)
+	{
+		if (parameters.IsDefaultOrEmpty && !writeWhenEmpty)
+			return;
+
+		Write('(');
+		if (!parameters.IsDefaultOrEmpty)
+		{
+			for (var index = 0; index < parameters.Length; index++)
+			{
+				if (index != 0)
+					Write(", ");
+
+				Write(parameters[index]);
+			}
+		}
+
+		Write(')');
+	}
+
 	void WriteBaseTypes(TypeDeclarationOptions declaration)
 	{
 		var hasBaseType = !string.IsNullOrWhiteSpace(declaration.BaseType);
@@ -785,6 +836,12 @@ public sealed class CodeWriter
 				nameof(declaration)
 			);
 
+		ValidateParameters(
+			declaration.PrimaryConstructorParameters,
+			"Primary-constructor parameters cannot contain null or whitespace values.",
+			nameof(declaration)
+		);
+
 		for (
 			var index = 0;
 			!declaration.Interfaces.IsDefaultOrEmpty && index < declaration.Interfaces.Length;
@@ -824,6 +881,49 @@ public sealed class CodeWriter
 						nameof(declaration)
 					);
 			}
+		}
+	}
+
+	static void ValidateConstructorDeclaration(ConstructorDeclarationOptions declaration)
+	{
+		ValidateParameters(
+			declaration.Parameters,
+			"Constructor parameters cannot contain null or whitespace values.",
+			nameof(declaration)
+		);
+
+		if (declaration.IsStatic && !declaration.Parameters.IsDefaultOrEmpty)
+			throw new ArgumentException(
+				"A static constructor cannot declare parameters.",
+				nameof(declaration)
+			);
+
+		if (declaration.IsStatic && !string.IsNullOrWhiteSpace(declaration.Initializer))
+			throw new ArgumentException(
+				"A static constructor cannot specify an initializer.",
+				nameof(declaration)
+			);
+
+		if (declaration.IsStatic && declaration.Accessibility is not null)
+			throw new ArgumentException(
+				"A static constructor cannot specify accessibility.",
+				nameof(declaration)
+			);
+	}
+
+	static void ValidateParameters(
+		ImmutableArray<string> parameters,
+		string message,
+		string parameterName
+	)
+	{
+		if (parameters.IsDefaultOrEmpty)
+			return;
+
+		for (var index = 0; index < parameters.Length; index++)
+		{
+			if (string.IsNullOrWhiteSpace(parameters[index]))
+				throw new ArgumentException(message, parameterName);
 		}
 	}
 

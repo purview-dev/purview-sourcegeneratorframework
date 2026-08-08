@@ -154,4 +154,10 @@ public sealed record TypeDeclarationOptions
 	/// Gets the generic type parameters and their constraints.
 	/// </summary>
 	public ImmutableArray<GenericTypeParameterOptions> GenericTypes { get; init; } = [];
+
+	/// <summary>
+	/// Gets the primary-constructor parameters written after the type name and generic parameters.
+	/// </summary>
+	/// <remarks>Each entry is emitted verbatim as a complete parameter declaration.</remarks>
+	public ImmutableArray<string> PrimaryConstructorParameters { get; init; } = [];
 }
