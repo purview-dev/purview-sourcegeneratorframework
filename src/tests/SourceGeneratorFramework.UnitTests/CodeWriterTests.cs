@@ -286,7 +286,10 @@ public class CodeWriterTests
 			BaseType = "RepositoryBase(connectionString)",
 		};
 
-		using (writer.WriteClass(declaration)) { }
+		using (writer.WriteClass(declaration))
+		{
+			// To stop IDE0055
+		}
 
 		await Assert
 			.That(writer.ToString())
@@ -330,7 +333,10 @@ public class CodeWriterTests
 			writer.WriteConstructor(
 				new ConstructorDeclarationOptions("Repository") { IsStatic = true }
 			)
-		) { }
+		)
+		{
+			// To stop IDE0055
+		}
 
 		await Assert.That(writer.ToString()).IsEqualTo("static Repository()\n{\n}\n");
 	}

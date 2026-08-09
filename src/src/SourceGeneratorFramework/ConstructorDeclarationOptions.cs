@@ -14,7 +14,10 @@ public sealed record ConstructorDeclarationOptions
 	public ConstructorDeclarationOptions(string typeName)
 	{
 		if (string.IsNullOrWhiteSpace(typeName))
-			throw new ArgumentException("Type name cannot be null or whitespace.", nameof(typeName));
+			throw new ArgumentException(
+				"Type name cannot be null or whitespace.",
+				nameof(typeName)
+			);
 
 		TypeName = typeName;
 	}

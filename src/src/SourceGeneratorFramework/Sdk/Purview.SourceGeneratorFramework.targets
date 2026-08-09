@@ -32,7 +32,6 @@
 
 	<Target
 		Name="GetSourceGeneratorAnalyzerFiles"
-		DependsOnTargets="Build"
 		Returns="@(SourceGeneratorAnalyzerFile)"
 		Condition="'$(IsRoslynComponent)' == 'true'"
 	>
