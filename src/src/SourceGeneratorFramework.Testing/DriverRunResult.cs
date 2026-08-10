@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Purview.SourceGeneratorFramework.Testing.Abstractions;
+using Purview.SourceGeneratorFramework.Testing.Models;
 
 namespace Purview.SourceGeneratorFramework.Testing;
 
@@ -11,9 +12,10 @@ public record class DriverRunResult(
 	GeneratorDriverRunResult Result,
 	Compilation OutputCompilation,
 	Assembly? Assembly,
+	IEnumerable<Diagnostic> CompilationDiagnostics,
 	IEnumerable<SyntaxTree> GeneratedTrees,
 	IEnumerable<SyntaxTree> NonAttributeSyntaxTrees,
-	IReadOnlyList<(string Message, OutputType Type)> LogEntries
+	IReadOnlyList<LogEntry> LogEntries
 )
 {
 	/// <summary>
@@ -59,6 +61,19 @@ public record class DriverRunResult(
 		{
 			throw new InvalidOperationException(
 				"Generator logged errors:\n" + string.Join("\n", logErrors)
+			);
+		}
+
+		if (CompilationDiagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
+		{
+			throw new InvalidOperationException(
+				"Compilation diagnostics contain errors:\n"
+					+ string.Join(
+						"\n",
+						CompilationDiagnostics
+							.Where(d => d.Severity == DiagnosticSeverity.Error)
+							.Select(d => d.ToString())
+					)
 			);
 		}
 	}

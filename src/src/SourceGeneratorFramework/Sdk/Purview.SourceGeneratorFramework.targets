@@ -5,6 +5,13 @@
 			>$(MSBuildThisFileDirectory)..\lib\netstandard2.0\Purview.SourceGeneratorFramework.dll</_PurviewSourceGeneratorFrameworkAssembly>
 	</PropertyGroup>
 
+	<!--
+		When a project is a Roslyn component (source generator/analyzer) and references
+		Purview.SourceGeneratorFramework, ensure the framework runtime DLL is treated as a
+		runtime dependency of the generator. This lets the dependency be copied next to the
+		generator and returned as part of the generator's outputs when referenced by other
+		projects, so the compiler can load it.
+	-->
 	<ItemGroup Condition="'$(IsRoslynComponent)' == 'true'">
 		<SourceGeneratorRuntimeDependency Include="$(_PurviewSourceGeneratorFrameworkAssembly)">
 			<DestinationSubPath>Purview.SourceGeneratorFramework.dll</DestinationSubPath>
@@ -22,6 +29,7 @@
 		Name="CopyPurviewSourceGeneratorFrameworkToOutput"
 		AfterTargets="CopyFilesToOutputDirectory"
 		Condition="'$(IsRoslynComponent)' == 'true'"
+		Label="Copies the Purview.SourceGeneratorFramework runtime DLL next to the source generator output."
 	>
 		<Copy
 			SourceFiles="@(SourceGeneratorRuntimeDependency)"
@@ -30,14 +38,34 @@
 		/>
 	</Target>
 
+	<!--
+		Ensure the framework runtime DLL is returned alongside the source generator when the
+		generator project is referenced by another project. The standard GetTargetPath target
+		returns @(TargetPathWithTargetPlatformMoniker), so we add the runtime dependency to that
+		item group. This makes MSBuild/Roslyn treat it as an additional analyzer file, so the
+		compiler can resolve the dependency even when analyzers are shadow-copied or loaded in
+		isolated AssemblyLoadContexts.
+	-->
+	<Target
+		Name="IncludePurviewSourceGeneratorRuntimeDependencies"
+		BeforeTargets="GetTargetPath;GetSourceGeneratorAnalyzerFiles"
+		DependsOnTargets="GetTargetPathWithTargetPlatformMoniker"
+		Condition="'$(IsRoslynComponent)' == 'true'"
+		Label="Includes the Purview.SourceGeneratorFramework runtime DLL in the project's target outputs."
+	>
+		<ItemGroup>
+			<TargetPathWithTargetPlatformMoniker Include="@(SourceGeneratorRuntimeDependency)" />
+		</ItemGroup>
+	</Target>
+
 	<Target
 		Name="GetSourceGeneratorAnalyzerFiles"
 		Returns="@(SourceGeneratorAnalyzerFile)"
 		Condition="'$(IsRoslynComponent)' == 'true'"
+		Label="Returns all analyzer files (generator + runtime dependencies) for packaging or direct MSBuild consumption."
 	>
 		<ItemGroup>
-			<SourceGeneratorAnalyzerFile Include="$(TargetPath)" />
-			<SourceGeneratorAnalyzerFile Include="@(SourceGeneratorRuntimeDependency)" />
+			<SourceGeneratorAnalyzerFile Include="@(TargetPathWithTargetPlatformMoniker)" />
 		</ItemGroup>
 	</Target>
 </Project>

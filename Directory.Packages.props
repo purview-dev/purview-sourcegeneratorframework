@@ -2,19 +2,19 @@
 	<PropertyGroup>
 		<CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
 		<RoslynCompilerVersion Condition="'$(RoslynCompilerVersion)' == ''"
-			>[4.13.0]</RoslynCompilerVersion>
+			>[4.13.0,)</RoslynCompilerVersion>
 		<RoslynAnalyzersVersion Condition="'$(RoslynAnalyzersVersion)' == ''"
-			>[5.6.0]</RoslynAnalyzersVersion>
-		<TUnitVersion>1.61.0</TUnitVersion>
+			>[5.6.0,)</RoslynAnalyzersVersion>
+		<TUnitVersion>[1.61.0,)</TUnitVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageVersion Include="Bogus" Version="35.6.5" />
+		<PackageVersion Include="Bogus" Version="[35.6.5,)" />
 		<PackageVersion
 			Include="Microsoft.Extensions.DependencyInjection.Abstractions"
-			Version="10.0.9"
+			Version="[10.0.9,)"
 		/>
-		<PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.300" />
+		<PackageVersion Include="Microsoft.SourceLink.GitHub" Version="[10.0.300,)" />
 		<PackageVersion
 			Include="Microsoft.CodeAnalysis.CSharp"
 			Version="$(RoslynCompilerVersion)"
@@ -27,13 +27,10 @@
 		<PackageVersion Include="TUnit.Core" Version="$(TUnitVersion)" />
 		<PackageVersion Include="TUnit.Assertions" Version="$(TUnitVersion)" />
 		<PackageVersion Include="TUnit.Mocks" Version="$(TUnitVersion)" />
-		<PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
-		<PackageVersion Include="System.Text.Json" Version="10.0.9" />
-		<PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
-		<PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
+		<PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="[10.0.0,)" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageVersion Include="System.Collections.Immutable" Version="8.0.0" />
+		<PackageVersion Include="System.Collections.Immutable" Version="[8.0.0,)" />
 	</ItemGroup>
 </Project>

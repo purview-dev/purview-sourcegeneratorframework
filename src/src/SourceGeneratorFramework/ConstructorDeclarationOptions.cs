@@ -38,6 +38,11 @@ public sealed record ConstructorDeclarationOptions
 	/// <remarks>Each entry is emitted verbatim as a complete parameter declaration.</remarks>
 	public ImmutableArray<string> Parameters { get; init; } = [];
 
+	/// <summary>
+	/// Gets whether the parameters are written on separate lines, with each parameter indented.
+	/// </summary>
+	public bool WriteParametersOnSeparateLines { get; init; }
+
 	/// <summary>Gets the optional constructor initializer without the leading colon.</summary>
 	/// <example><c>base(connectionString)</c> or <c>this("Default")</c>.</example>
 	public string? Initializer { get; init; }

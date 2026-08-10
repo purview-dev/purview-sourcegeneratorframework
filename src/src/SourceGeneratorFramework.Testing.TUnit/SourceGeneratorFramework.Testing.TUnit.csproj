@@ -22,6 +22,6 @@
 	<ItemGroup>
 		<PackageReference Include="TUnit.Core" />
 		<PackageReference Include="TUnit.Assertions" />
-		<PackageReference Include="System.Collections.Immutable" VersionOverride="9.0.0" />
+		<PackageReference Include="System.Collections.Immutable" VersionOverride="[9.0.0,)" />
 	</ItemGroup>
 </Project>

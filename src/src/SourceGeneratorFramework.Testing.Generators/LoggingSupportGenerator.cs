@@ -1,6 +1,4 @@
-using System.Text;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.Text;
 using Purview.SourceGeneratorFramework.Testing.Abstractions;
 
 namespace Purview.SourceGeneratorFramework.Testing.Generators;
@@ -12,13 +10,6 @@ public sealed partial class LoggingSupportGenerator : IIncrementalGenerator, ILo
 
 	public void Initialize(IncrementalGeneratorInitializationContext context)
 	{
-		context.RegisterPostInitializationOutput(static postInitContext =>
-			postInitContext.AddSource(
-				TypeLibrary.EmbeddedAttribute.SymbolFullName + ".g.cs",
-				SourceText.From(SourceLibrary.EmbeddedAttributeSource, Encoding.UTF8)
-			)
-		);
-
 		var generationModel = SourceGenLibrary.GetGeneratorValueProviders(context, _logger);
 
 		context.RegisterSourceOutput(
@@ -61,7 +52,6 @@ public sealed partial class LoggingSupportGenerator : IIncrementalGenerator, ILo
 			.WriteFileScopedNamespace(sourceGenType.Namespace);
 
 		writer
-			.WriteLine(TypeLibrary.EmbeddedAttribute)
 			.WriteLine("[global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]")
 			.WriteLine("[global::System.Runtime.CompilerServices.CompilerGenerated]")
 			.Write("[global::System.CodeDom.Compiler.GeneratedCode(")

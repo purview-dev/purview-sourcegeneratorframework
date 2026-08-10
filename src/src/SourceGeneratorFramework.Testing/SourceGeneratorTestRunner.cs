@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Purview.SourceGeneratorFramework.Helpers;
 using Purview.SourceGeneratorFramework.Testing.Abstractions;
+using Purview.SourceGeneratorFramework.Testing.Models;
 
 namespace Purview.SourceGeneratorFramework.Testing;
 
@@ -13,10 +14,6 @@ namespace Purview.SourceGeneratorFramework.Testing;
 public sealed class SourceGeneratorTestRunner<TGenerator>
 	where TGenerator : class, IIncrementalGenerator, new()
 {
-	static readonly string[] TrustedAssemblies = (
-		(string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") ?? ""
-	).Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries);
-
 	/// <summary>
 	/// Runs the generator against the provided source using the specified options.
 	/// </summary>
@@ -37,18 +34,24 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 	{
 		options ??= new();
 
-		var logEntries = new List<(string Message, OutputType Type)>();
+		List<LogEntry> logEntries = [];
 
 		var syntaxTrees = sources
 			.Select(source =>
 				CSharpSyntaxTree.ParseText(
 					PrepareSource(source, options),
+					encoding: System.Text.Encoding.UTF8,
+					options: new CSharpParseOptions(options.LanguageVersion),
 					cancellationToken: cancellationToken
 				)
 			)
 			.ToImmutableArray();
-		var references = ResolveReferences(options);
-		var compilation = CreateCompilation(syntaxTrees, references, options);
+		var references = SourceGeneratorHelpers.ResolveReferences(options);
+		var compilation = SourceGeneratorHelpers.CreateCompilation(
+			syntaxTrees,
+			references,
+			options
+		);
 		TGenerator generator = new();
 		ConfigureLogging(generator, options, logEntries);
 
@@ -62,8 +65,14 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		var result = driver.GetRunResult();
 
 		Assembly? assembly = null;
+		Diagnostic[] compilationDiagnostics = [];
 		if (options.CompileToAssembly)
-			assembly = await CompileToAssemblyAsync(outputCompilation, cancellationToken);
+		{
+			(assembly, compilationDiagnostics) = await CompileToAssemblyAsync(
+				outputCompilation,
+				cancellationToken
+			);
+		}
 
 		var nonAttributeTrees = ExcludeGeneratedAttributes(
 			result,
@@ -74,6 +83,7 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 			result,
 			outputCompilation,
 			assembly,
+			compilationDiagnostics,
 			result.GeneratedTrees,
 			nonAttributeTrees,
 			logEntries
@@ -91,39 +101,12 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		return usings + Environment.NewLine + Environment.NewLine + source;
 	}
 
-	static CSharpCompilation CreateCompilation(
-		IEnumerable<SyntaxTree> syntaxTrees,
-		ImmutableArray<MetadataReference> references,
-		SourceGeneratorTestOptions options
-	)
-	{
-		return CSharpCompilation.Create(
-			options.CompilationAssemblyName,
-			syntaxTrees,
-			references,
-			new CSharpCompilationOptions(options.OutputKind)
-		);
-	}
-
-	static ImmutableArray<MetadataReference> ResolveReferences(SourceGeneratorTestOptions options)
-	{
-		var builder = ImmutableArray.CreateBuilder<MetadataReference>();
-		builder.AddRange(TrustedAssemblies.Select(static p => MetadataReference.CreateFromFile(p)));
-		builder.AddRange(
-			options.AdditionalAssemblyTypes.Select(static a =>
-				MetadataReference.CreateFromFile(a.Assembly.Location)
-			)
-		);
-		builder.AddRange(options.AdditionalReferences);
-
-		var references = builder.ToImmutable();
-		options.PreprocessReferences?.Invoke(references);
-		return references;
-	}
-
 	static GeneratorDriver CreateDriver(TGenerator generator, SourceGeneratorTestOptions options)
 	{
-		GeneratorDriver driver = CSharpGeneratorDriver.Create(generator);
+		GeneratorDriver driver = CSharpGeneratorDriver.Create(
+			[generator.AsSourceGenerator()],
+			parseOptions: new(options.LanguageVersion)
+		);
 
 		var analyzerOptions = new Dictionary<string, string>(options.AnalyzerConfigOptions);
 		if (
@@ -145,7 +128,7 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 	static void ConfigureLogging(
 		TGenerator generator,
 		SourceGeneratorTestOptions options,
-		List<(string, OutputType)> logEntries
+		List<LogEntry> logEntries
 	)
 	{
 		if (generator is ILogSupport logSupport)
@@ -154,25 +137,26 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 				(message, type) =>
 				{
 					options.TestOutput.WriteLine($"[{type}] {message}");
-					logEntries.Add((message, type));
+					logEntries.Add(new LogEntry(type, message));
 				}
 			);
 			return;
 		}
 	}
 
-	static async Task<Assembly?> CompileToAssemblyAsync(
+	static async Task<(Assembly?, Diagnostic[])> CompileToAssemblyAsync(
 		Compilation compilation,
 		CancellationToken cancellationToken
 	)
 	{
 		await using var assemblyStream = new MemoryStream();
 		var emitResult = compilation.Emit(assemblyStream, cancellationToken: cancellationToken);
+
 		if (!emitResult.Success)
-			return null;
+			return (null, emitResult.Diagnostics.ToArray());
 
 		assemblyStream.Position = 0;
-		return Assembly.Load(assemblyStream.ToArray());
+		return (Assembly.Load(assemblyStream.ToArray()), emitResult.Diagnostics.ToArray());
 	}
 
 	static IEnumerable<SyntaxTree> ExcludeGeneratedAttributes(
@@ -183,7 +167,11 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		return exclude.IsEmpty
 			? result.GeneratedTrees
 			: result.GeneratedTrees.Where(tree =>
-				!exclude.Any(attr => tree.FilePath.EndsWith(attr, StringComparison.Ordinal))
+				!exclude.Any(attr =>
+					tree.FilePath.EndsWith(attr, StringComparison.Ordinal)
+					|| tree.FilePath.EndsWith(attr + ".g.cs", StringComparison.Ordinal)
+					|| tree.FilePath.EndsWith(attr + ".cs", StringComparison.Ordinal)
+				)
 			);
 	}
 }

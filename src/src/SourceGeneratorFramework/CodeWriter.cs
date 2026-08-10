@@ -364,23 +364,6 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>
-	/// Writes a type declaration and returns its body scope.
-	/// </summary>
-	/// <param name="declaration">The complete declaration preceding the opening brace.</param>
-	/// <returns>The type body scope.</returns>
-	public BlockScope WriteClass(string declaration)
-	{
-		if (string.IsNullOrWhiteSpace(declaration))
-			throw new ArgumentException(
-				"Declaration cannot be null or whitespace.",
-				nameof(declaration)
-			);
-
-		WriteLine(declaration);
-		return Block();
-	}
-
-	/// <summary>
 	/// Writes a class declaration from structured options and returns its body scope.
 	/// </summary>
 	/// <param name="declaration">The class declaration options.</param>
@@ -390,6 +373,23 @@ public sealed class CodeWriter
 		return declaration is null
 			? throw new ArgumentNullException(nameof(declaration))
 			: WriteType(declaration with { Kind = TypeDeclarationKind.Class });
+	}
+
+	/// <summary>
+	/// Writes a class declaration from structured options and returns its body scope.
+	/// </summary>
+	/// <param name="declaration">The class declaration options.</param>
+	/// <param name="bodyWriter">The action that writes the body of the class.</param>
+	/// <returns>The current writer.</returns>
+	public CodeWriter WriteClass(TypeDeclarationOptions declaration, Action<CodeWriter> bodyWriter)
+	{
+		if (bodyWriter is null)
+			throw new ArgumentNullException(nameof(bodyWriter));
+
+		using (WriteClass(declaration))
+			bodyWriter(this);
+
+		return this;
 	}
 
 	/// <summary>
@@ -405,6 +405,23 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>
+	/// Writes a struct declaration from structured options and returns its body scope.
+	/// </summary>
+	/// <param name="declaration">The struct declaration options.</param>
+	/// <param name="bodyWriter">The action that writes the body of the struct.</param>
+	/// <returns>The struct body scope.</returns>
+	public CodeWriter WriteStruct(TypeDeclarationOptions declaration, Action<CodeWriter> bodyWriter)
+	{
+		if (bodyWriter is null)
+			throw new ArgumentNullException(nameof(bodyWriter));
+
+		using (WriteStruct(declaration))
+			bodyWriter(this);
+
+		return this;
+	}
+
+	/// <summary>
 	/// Writes a record class declaration from structured options and returns its body scope.
 	/// </summary>
 	/// <param name="declaration">The record class declaration options.</param>
@@ -414,6 +431,26 @@ public sealed class CodeWriter
 		return declaration is null
 			? throw new ArgumentNullException(nameof(declaration))
 			: WriteType(declaration with { Kind = TypeDeclarationKind.RecordClass });
+	}
+
+	/// <summary>
+	/// Writes a record class declaration from structured options and returns its body scope.
+	/// </summary>
+	/// <param name="declaration">The record class declaration options.</param>
+	/// <param name="bodyWriter">The action that writes the body of the record class.</param>
+	/// <returns>The current writer.</returns>
+	public CodeWriter WriteRecordClass(
+		TypeDeclarationOptions declaration,
+		Action<CodeWriter> bodyWriter
+	)
+	{
+		if (bodyWriter is null)
+			throw new ArgumentNullException(nameof(bodyWriter));
+
+		using (WriteRecordClass(declaration))
+			bodyWriter(this);
+
+		return this;
 	}
 
 	/// <summary>
@@ -429,6 +466,26 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>
+	/// Writes a record struct declaration from structured options and returns its body scope.
+	/// </summary>
+	/// <param name="declaration">The record struct declaration options.</param>
+	/// <param name="bodyWriter">The action that writes the body of the record struct.</param>
+	/// <returns>The current writer.</returns>
+	public CodeWriter WriteRecordStruct(
+		TypeDeclarationOptions declaration,
+		Action<CodeWriter> bodyWriter
+	)
+	{
+		if (bodyWriter is null)
+			throw new ArgumentNullException(nameof(bodyWriter));
+
+		using (WriteRecordStruct(declaration))
+			bodyWriter(this);
+
+		return this;
+	}
+
+	/// <summary>
 	/// Writes a class, struct, record class, or record struct declaration and returns its body scope.
 	/// </summary>
 	/// <param name="declaration">The structured type declaration options.</param>
@@ -439,6 +496,20 @@ public sealed class CodeWriter
 			throw new ArgumentNullException(nameof(declaration));
 
 		ValidateTypeDeclaration(declaration);
+
+		foreach (var attribute in declaration.TypeAttributes)
+		{
+			var startsWithBracket = attribute.StartsWith("[", StringComparison.Ordinal);
+			if (!startsWithBracket)
+				Write('[');
+
+			Write(attribute);
+
+			if (!startsWithBracket)
+				Write(']');
+
+			NewLine();
+		}
 
 		if (declaration.Accessibility is { } accessibility)
 			WriteAccessibility(accessibility).Write(' ');
@@ -467,7 +538,10 @@ public sealed class CodeWriter
 			.Write(declaration.Name);
 
 		WriteGenericTypeParameters(declaration.GenericTypes);
-		WriteParameterList(declaration.PrimaryConstructorParameters);
+		WriteParameterList(
+			declaration.PrimaryConstructorParameters,
+			declaration.ConstructorParametersOnSeparateLines
+		);
 		WriteBaseTypes(declaration);
 		NewLine();
 		WriteGenericConstraints(declaration.GenericTypes);
@@ -493,7 +567,11 @@ public sealed class CodeWriter
 			WriteAccessibility(accessibility).Write(' ');
 
 		Write(declaration.TypeName);
-		WriteParameterList(declaration.Parameters, writeWhenEmpty: true);
+		WriteParameterList(
+			declaration.Parameters,
+			declaration.WriteParametersOnSeparateLines,
+			writeWhenEmpty: true
+		);
 
 		if (!string.IsNullOrWhiteSpace(declaration.Initializer))
 			Write(" : ").Write(declaration.Initializer);
@@ -507,8 +585,13 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="generatorName">The optional generator name.</param>
 	/// <param name="version">The optional generator version.</param>
+	/// <param name="pragmas">Optional warning pragmas to disable.</param>
 	/// <returns>The current writer.</returns>
-	public CodeWriter WriteAutoGeneratedHeader(string? generatorName = null, string? version = null)
+	public CodeWriter WriteAutoGeneratedHeader(
+		string? generatorName = null,
+		string? version = null,
+		params string[] pragmas
+	)
 	{
 		WriteLine("// <auto-generated />");
 		if (!string.IsNullOrEmpty(generatorName))
@@ -523,6 +606,14 @@ public sealed class CodeWriter
 		WriteLine("// Changes to this file will be lost when the source generator runs again.")
 			.NewLine()
 			.WriteLine("#nullable enable");
+
+		if (pragmas is not null && pragmas.Length > 0)
+		{
+			NewLine();
+
+			foreach (var pragma in pragmas)
+				Write("#pragma warning disable ").WriteLine(pragma);
+		}
 
 		return NewLine();
 	}
@@ -749,7 +840,11 @@ public sealed class CodeWriter
 		Write('>');
 	}
 
-	void WriteParameterList(ImmutableArray<string> parameters, bool writeWhenEmpty = false)
+	void WriteParameterList(
+		ImmutableArray<string> parameters,
+		bool writeOnSeparateLines,
+		bool writeWhenEmpty = false
+	)
 	{
 		if (parameters.IsDefaultOrEmpty && !writeWhenEmpty)
 			return;
@@ -757,13 +852,22 @@ public sealed class CodeWriter
 		Write('(');
 		if (!parameters.IsDefaultOrEmpty)
 		{
+			if (writeOnSeparateLines)
+				Indent();
+
 			for (var index = 0; index < parameters.Length; index++)
 			{
 				if (index != 0)
 					Write(", ");
 
+				if (writeOnSeparateLines)
+					NewLine();
+
 				Write(parameters[index]);
 			}
+
+			if (writeOnSeparateLines)
+				Unindent().NewLine();
 		}
 
 		Write(')');

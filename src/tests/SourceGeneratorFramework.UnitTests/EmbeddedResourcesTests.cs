@@ -41,6 +41,17 @@ public class EmbeddedResourcesTests
 	}
 
 	[Test]
+	public async Task Load_SourceFileResourceWithoutExtension_ReturnsContent()
+	{
+		var content = EmbeddedResources.Load(
+			"TestResource",
+			typeof(EmbeddedResourcesTests).Assembly
+		);
+
+		await Assert.That(content).IsEqualTo("Hello from embedded C# resource!");
+	}
+
+	[Test]
 	public async Task GetResourceNames_ReturnsResourceName()
 	{
 		var names = EmbeddedResources.GetResourceNames(typeof(EmbeddedResourcesTests).Assembly);

@@ -2,7 +2,7 @@ using Purview.SourceGeneratorFramework.Models;
 
 namespace Purview.SourceGeneratorFramework;
 
-public class TypeValueObjectTests
+public partial class TypeValueObjectTests
 {
 	[Test]
 	public async Task Constructor_WithNamespace_RendersGlobalFullName()
@@ -52,5 +52,18 @@ public class TypeValueObjectTests
 		var type = new TypeValueObject("MyAttribute", "MyNamespace");
 
 		await Assert.That(type.RenderFullName).IsEqualTo("[global::MyNamespace.My]");
+	}
+
+	[Test]
+	[MethodDataSource(nameof(SymbolTestData))]
+	public async Task Constructor_GivenISymbol_PopulatesCorrectly(SymbolTestDataInfo testData)
+	{
+		// Act
+		TypeValueObject sut = new(testData.Symbol);
+
+		// Assert
+		await Assert.That(sut.Namespace).IsEqualTo(testData.NamespaceInfo.Namespace);
+		await Assert.That(sut.IsGlobalNamespace).IsEqualTo(!testData.NamespaceInfo.HasNamespace);
+		await Assert.That(sut.TypeName).IsEqualTo(testData.TypeName);
 	}
 }

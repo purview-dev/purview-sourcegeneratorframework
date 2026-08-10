@@ -160,4 +160,16 @@ public sealed record TypeDeclarationOptions
 	/// </summary>
 	/// <remarks>Each entry is emitted verbatim as a complete parameter declaration.</remarks>
 	public ImmutableArray<string> PrimaryConstructorParameters { get; init; } = [];
+
+	/// <summary>
+	/// If <see  langword="true" />, the primary-constructor parameters are emitted on separate lines with one parameter per line.
+	/// </summary>
+	public bool ConstructorParametersOnSeparateLines { get; init; }
+
+	/// <summary>
+	/// Gets the attributes applied to the generated type.
+	/// </summary>
+	public ImmutableArray<string> TypeAttributes { get; init; } = [];
+
+	public static implicit operator TypeDeclarationOptions(string value) => new(value);
 }

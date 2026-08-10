@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 
 namespace Purview.SourceGeneratorFramework.Testing;
 
@@ -85,7 +86,17 @@ public sealed record SourceGeneratorTestOptions
 	public OutputKind OutputKind { get; init; } = OutputKind.DynamicallyLinkedLibrary;
 
 	/// <summary>
+	/// Gets the language version of the test compilation.
+	/// </summary>
+	public LanguageVersion LanguageVersion { get; init; } = LanguageVersion.Preview;
+
+	/// <summary>
 	/// Gets generated attribute file names to exclude from the non-attribute syntax tree collection.
 	/// </summary>
 	public ImmutableArray<string> ExcludeGeneratedAttributes { get; init; } = [];
+
+	/// <summary>
+	/// Gets a state object that can be used to pass arbitrary data to the test runner. Useful for the <see cref="SourceGeneratorTestBase{TGenerator}.OnBeforeRun(IEnumerable{string}, SourceGeneratorTestOptions, CancellationToken)"/>
+	/// </summary>
+	public object? State { get; init; }
 }

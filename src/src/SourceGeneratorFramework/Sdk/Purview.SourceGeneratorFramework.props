@@ -3,5 +3,6 @@
 		<Using Include="Purview.SourceGeneratorFramework" />
 		<Using Include="Purview.SourceGeneratorFramework.Helpers" />
 		<Using Include="Purview.SourceGeneratorFramework.Models" />
+		<Using Include="Purview.SourceGeneratorFramework.Testing.Abstractions" />
 	</ItemGroup>
 </Project>

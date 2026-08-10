@@ -48,19 +48,42 @@ public static class EmbeddedResources
 	static string ResolveResourceName(string resourceName, Assembly assembly)
 	{
 		var names = assembly.GetManifestResourceNames();
+
+		// Try the exact name first.
 		if (names.Contains(resourceName, StringComparer.Ordinal))
 			return resourceName;
 
-		var prefix = assembly.GetName().Name;
-		if (!string.IsNullOrEmpty(prefix))
+		// Source generators often embed .cs files. Try the common source-file extensions
+		// so callers can ask for "Template" and resolve to "Template.cs" automatically.
+		foreach (var extension in new[] { ".cs", ".vb" })
 		{
-			var candidate = prefix + "." + resourceName;
+			var candidate = resourceName + extension;
 			if (names.Contains(candidate, StringComparer.Ordinal))
 				return candidate;
 		}
 
+		// Try with the assembly name as a prefix.
+		var prefix = assembly.GetName().Name;
+		if (!string.IsNullOrEmpty(prefix))
+		{
+			var prefixedName = prefix + "." + resourceName;
+			if (names.Contains(prefixedName, StringComparer.Ordinal))
+				return prefixedName;
+
+			foreach (var extension in new[] { ".cs", ".vb" })
+			{
+				var candidate = prefixedName + extension;
+				if (names.Contains(candidate, StringComparer.Ordinal))
+					return candidate;
+			}
+		}
+
+		// Try a suffix match, including common source-file extensions, so nested
+		// resources such as "Namespace.Template.cs" resolve when asked for "Template".
 		var suffixMatch = names.FirstOrDefault(n =>
 			n.EndsWith("." + resourceName, StringComparison.Ordinal)
+			|| n.EndsWith("." + resourceName + ".cs", StringComparison.Ordinal)
+			|| n.EndsWith("." + resourceName + ".vb", StringComparison.Ordinal)
 		);
 		if (suffixMatch != null)
 			return suffixMatch;
