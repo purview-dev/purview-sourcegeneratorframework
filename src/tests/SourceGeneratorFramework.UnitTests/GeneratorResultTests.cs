@@ -27,8 +27,7 @@ public class GeneratorResultTests
 				"Test",
 				Microsoft.CodeAnalysis.DiagnosticSeverity.Warning,
 				true
-			),
-			null
+			)
 		);
 		var result = GeneratorResult<string>.Ok("value", diagnostic);
 
@@ -48,8 +47,7 @@ public class GeneratorResultTests
 				"Test",
 				Microsoft.CodeAnalysis.DiagnosticSeverity.Warning,
 				true
-			),
-			null
+			)
 		);
 		var result = GeneratorResult<string>.Fail(diagnostic);
 

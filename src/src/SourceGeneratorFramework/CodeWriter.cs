@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
@@ -19,7 +20,9 @@ public sealed class CodeWriter
 	const int DefaultCapacity = 4096;
 
 	readonly StringBuilder _builder;
+	readonly Dictionary<int, CodeWriterOpenScope>? _openScopes;
 	int _indentLevel;
+	int _nextScopeId;
 	bool _atLineStart = true;
 
 	/// <summary>
@@ -32,17 +35,47 @@ public sealed class CodeWriter
 	/// <paramref name="initialCapacity"/> is less than zero.
 	/// </exception>
 	public CodeWriter(int initialCapacity = DefaultCapacity)
+		: this(throwOnUnclosedScopes: false, initialCapacity) { }
+
+	/// <summary>
+	/// Initializes a new writer with optional validation for undisposed scopes.
+	/// </summary>
+	/// <param name="throwOnUnclosedScopes">
+	/// Whether materializing the generated source throws while disposable scopes remain open.
+	/// </param>
+	/// <param name="initialCapacity">
+	/// The initial number of characters that the internal buffer can contain without growing.
+	/// </param>
+	public CodeWriter(bool throwOnUnclosedScopes, int initialCapacity = DefaultCapacity)
 	{
 		if (initialCapacity < 0)
 			throw new ArgumentOutOfRangeException(nameof(initialCapacity));
 
 		_builder = new StringBuilder(initialCapacity);
+		ThrowOnUnclosedScopes = throwOnUnclosedScopes;
+		if (throwOnUnclosedScopes)
+			_openScopes = [];
 	}
 
 	/// <summary>
 	/// Gets the number of characters currently written.
 	/// </summary>
 	public int Length => _builder.Length;
+
+	/// <summary>
+	/// Gets the number of block or indentation scopes that have been opened but not disposed.
+	/// </summary>
+	public int OpenScopeCount { get; private set; }
+
+	/// <summary>
+	/// Gets or sets whether <see cref="ToString"/> throws when disposable scopes remain open.
+	/// </summary>
+	/// <remarks>
+	/// This validation is disabled by default and is intended for generator development and tests.
+	/// Scope tracking remains active when validation is disabled, so this option may be enabled at
+	/// any point before the generated source is materialized.
+	/// </remarks>
+	public bool ThrowOnUnclosedScopes { get; }
 
 	/// <summary>
 	/// Increases the current indentation level.
@@ -281,19 +314,16 @@ public sealed class CodeWriter
 	/// <param name="header">Optional content written before the opening token.</param>
 	/// <param name="separator">The opening token, or <see langword="null"/> for none.</param>
 	/// <param name="closingSeparator">The closing token, or <see langword="null"/> to infer it.</param>
-	/// <param name="additionalParts">Optional content appended to the header.</param>
 	/// <returns>A scope that restores indentation and writes the closing token.</returns>
 	public BlockScope Block(
 		string? header = null,
 		string? separator = "{",
-		string? closingSeparator = null,
-		Action<CodeWriter>? additionalParts = null
+		string? closingSeparator = null
 	)
 	{
 		if (header is not null)
 		{
 			Write(header);
-			additionalParts?.Invoke(this);
 			EnsureNewLine();
 		}
 
@@ -302,7 +332,39 @@ public sealed class CodeWriter
 
 		Indent();
 		closingSeparator ??= GetDefaultClosingToken(separator);
-		return new BlockScope(this, closingSeparator);
+		return OpenBlock(header, closingSeparator);
+	}
+
+	/// <summary>
+	/// Opens an indented scope whose header is completed by a callback before the opening token.
+	/// </summary>
+	/// <param name="header">Optional content written before the additional header parts.</param>
+	/// <param name="additionalHeaderParts">Content appended to the header.</param>
+	/// <param name="separator">The opening token, or <see langword="null"/> for none.</param>
+	/// <param name="closingSeparator">The closing token, or <see langword="null"/> to infer it.</param>
+	/// <returns>A scope that restores indentation and writes the closing token.</returns>
+	public BlockScope BlockWithHeaderParts(
+		string? header,
+		Action<CodeWriter> additionalHeaderParts,
+		string? separator = "{",
+		string? closingSeparator = null
+	)
+	{
+		if (additionalHeaderParts is null)
+			throw new ArgumentNullException(nameof(additionalHeaderParts));
+
+		if (header is not null)
+			Write(header);
+
+		additionalHeaderParts(this);
+		EnsureNewLine();
+
+		if (separator is not null)
+			WriteLine(separator);
+
+		Indent();
+		closingSeparator ??= GetDefaultClosingToken(separator);
+		return OpenBlock(header, closingSeparator);
 	}
 
 	/// <summary>
@@ -310,17 +372,39 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="header">Optional content written before the opening token.</param>
 	/// <param name="body">The block body.</param>
+	/// <param name="separator">The opening token, or <see langword="null"/> for none.</param>
+	/// <param name="closingSeparator">The closing token, or <see langword="null"/> to infer it.</param>
 	/// <returns>The current writer.</returns>
-	public CodeWriter Block(string? header, Action<CodeWriter> body)
+	public CodeWriter Block(
+		string? header,
+		Action<CodeWriter> body,
+		string? separator = "{",
+		string? closingSeparator = null
+	)
 	{
 		if (body is null)
 			throw new ArgumentNullException(nameof(body));
 
-		using (Block(header))
+		using (Block(header, separator, closingSeparator))
 			body(this);
 
 		return this;
 	}
+
+	/// <summary>
+	/// Writes a complete delimited block by invoking the supplied body.
+	/// </summary>
+	/// <param name="header">Optional content written before the opening token.</param>
+	/// <param name="separator">The opening token, or <see langword="null"/> for none.</param>
+	/// <param name="closingSeparator">The closing token, or <see langword="null"/> to infer it.</param>
+	/// <param name="body">The block body.</param>
+	/// <returns>The current writer.</returns>
+	public CodeWriter Block(
+		string? header,
+		string? separator,
+		string? closingSeparator,
+		Action<CodeWriter> body
+	) => Block(header, body, separator, closingSeparator);
 
 	/// <summary>
 	/// Writes a C# using directive.
@@ -517,7 +601,9 @@ public sealed class CodeWriter
 		var isStruct =
 			declaration.Kind is TypeDeclarationKind.Struct or TypeDeclarationKind.RecordStruct;
 
-		if (isStruct && declaration.IsReadOnly)
+		if (declaration.IsStatic)
+			Write("static ");
+		else if (isStruct && declaration.IsReadOnly)
 			Write("readonly ");
 		else if (!isStruct && declaration.IsSealed)
 			Write("sealed ");
@@ -756,7 +842,7 @@ public sealed class CodeWriter
 	public IndentScope Indented()
 	{
 		Indent();
-		return new(this);
+		return new(this, OpenScope("indentation", header: null, stackFramesToSkip: 2));
 	}
 
 	/// <summary>
@@ -786,7 +872,19 @@ public sealed class CodeWriter
 	/// Creates the generated source string.
 	/// </summary>
 	/// <returns>The complete contents of the writer.</returns>
-	public override string ToString() => _builder.ToString();
+	[SuppressMessage(
+		"Design",
+		"CA1065:Do not raise exceptions in unexpected locations",
+		Justification = "Throwing is explicit opt-in validation for detecting unclosed generated-code scopes during development and tests."
+	)]
+	public override string ToString()
+	{
+		if (ThrowOnUnclosedScopes && OpenScopeCount != 0)
+			throw new CodeWriterScopeValidationException(_openScopes!.Values);
+
+		// Note: StringBuilder.ToString() is optimized to avoid copying the buffer when possible, so this is a low-cost operation.
+		return _builder.ToString();
+	}
 
 	/// <summary>
 	/// Creates a <see cref="Microsoft.CodeAnalysis.Text.SourceText"/> from the writer's contents.
@@ -804,6 +902,61 @@ public sealed class CodeWriter
 			_builder.Append(IndentCharacter, _indentLevel);
 
 		_atLineStart = false;
+	}
+
+	BlockScope OpenBlock(string? header, string? closingSeparator)
+	{
+		return new BlockScope(
+			this,
+			closingSeparator,
+			OpenScope("block", header, stackFramesToSkip: 3)
+		);
+	}
+
+	int OpenScope(string kind, string? header, int stackFramesToSkip)
+	{
+		OpenScopeCount++;
+		if (_openScopes is null)
+			return 0;
+
+		var scopeId = ++_nextScopeId;
+		_openScopes.Add(
+			scopeId,
+			new CodeWriterOpenScope(
+				kind,
+				header,
+				new StackTrace(stackFramesToSkip, fNeedFileInfo: true).ToString()
+			)
+		);
+		return scopeId;
+	}
+
+	void CloseBlock(string? closingSeparator, int scopeId)
+	{
+		CloseScope(scopeId, "block");
+
+		Unindent();
+		if (closingSeparator is not null)
+			WriteLine(closingSeparator);
+	}
+
+	void CloseIndentScope(int scopeId)
+	{
+		CloseScope(scopeId, "indentation");
+		Unindent();
+	}
+
+	void CloseScope(int scopeId, string kind)
+	{
+		if (OpenScopeCount <= 0)
+			throw new InvalidOperationException(
+				$"A {kind} scope was closed without a matching open scope."
+			);
+
+		if (_openScopes is not null && !_openScopes.Remove(scopeId))
+			throw new InvalidOperationException($"The {kind} scope has already been closed.");
+
+		OpenScopeCount--;
 	}
 
 	CodeWriter WriteAccessibility(TypeDeclarationAccessibility accessibility)
@@ -928,6 +1081,30 @@ public sealed class CodeWriter
 		var isStruct =
 			declaration.Kind is TypeDeclarationKind.Struct or TypeDeclarationKind.RecordStruct;
 
+		if (declaration.IsStatic && declaration.Kind != TypeDeclarationKind.Class)
+			throw new ArgumentException(
+				"Only class declarations can be static.",
+				nameof(declaration)
+			);
+
+		if (declaration.IsStatic && !string.IsNullOrWhiteSpace(declaration.BaseType))
+			throw new ArgumentException(
+				"A static class cannot specify a base type.",
+				nameof(declaration)
+			);
+
+		if (declaration.IsStatic && !declaration.Interfaces.IsDefaultOrEmpty)
+			throw new ArgumentException(
+				"A static class cannot implement interfaces.",
+				nameof(declaration)
+			);
+
+		if (declaration.IsStatic && !declaration.PrimaryConstructorParameters.IsDefaultOrEmpty)
+			throw new ArgumentException(
+				"A static class cannot declare primary-constructor parameters.",
+				nameof(declaration)
+			);
+
 		if (isStruct && !string.IsNullOrWhiteSpace(declaration.BaseType))
 			throw new ArgumentException(
 				"Struct and record struct declarations cannot specify a base type.",
@@ -1050,7 +1227,7 @@ public sealed class CodeWriter
 		"CA1815:Override equals and operator equals on value types",
 		Justification = "This type is a mutable lifetime token and has no meaningful value equality."
 	)]
-	public struct IndentScope(CodeWriter writer) : IDisposable
+	public struct IndentScope(CodeWriter writer, int scopeId) : IDisposable
 	{
 		CodeWriter? _writer = writer;
 
@@ -1064,7 +1241,7 @@ public sealed class CodeWriter
 				return;
 
 			_writer = null;
-			writer.Unindent();
+			writer.CloseIndentScope(scopeId);
 		}
 	}
 
@@ -1076,7 +1253,7 @@ public sealed class CodeWriter
 		"CA1815:Override equals and operator equals on value types",
 		Justification = "This type is a mutable lifetime token and has no meaningful value equality."
 	)]
-	public struct BlockScope(CodeWriter writer, string? closingSeparator) : IDisposable
+	public struct BlockScope(CodeWriter writer, string? closingSeparator, int scopeId) : IDisposable
 	{
 		CodeWriter? _writer = writer;
 
@@ -1090,9 +1267,7 @@ public sealed class CodeWriter
 				return;
 
 			_writer = null;
-			writer.Unindent();
-			if (closingSeparator is not null)
-				writer.WriteLine(closingSeparator);
+			writer.CloseBlock(closingSeparator, scopeId);
 		}
 	}
 }

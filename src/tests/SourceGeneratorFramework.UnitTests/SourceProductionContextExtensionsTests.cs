@@ -41,7 +41,7 @@ public class SourceProductionContextExtensionsTests
 						DiagnosticSeverity.Warning,
 						true
 					);
-					spc.ReportDiagnostic(DiagnosticInfo.Create(descriptor, null));
+					spc.ReportDiagnostic(DiagnosticInfo.Create(descriptor));
 				}
 			);
 		}

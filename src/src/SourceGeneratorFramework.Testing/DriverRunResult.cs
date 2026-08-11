@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Purview.SourceGeneratorFramework.Testing.Abstractions;
@@ -24,59 +25,50 @@ public record class DriverRunResult(
 	public IEnumerable<SyntaxTree> SyntaxTrees => NonAttributeSyntaxTrees;
 
 	/// <summary>
-	/// Throws <see cref="InvalidOperationException"/> if the run contains generation exceptions,
-	/// compilation errors, or generator log errors (depending on configured options).
+	/// Throws <see cref="DriverRunValidationException"/> containing all generation exceptions,
+	/// compilation errors, emit errors, and generator log errors found in the run.
 	/// </summary>
 	public void EnsureValid()
 	{
 		var generationExceptions = Result
-			.Results.Select(r => r.Exception)
-			.Where(e => e != null)
+			.Results.Where(result => result.Exception is not null)
+			.Select(result => new GeneratorFailure(
+				result.Generator.GetType().FullName ?? result.Generator.GetType().Name,
+				result.Exception!
+			))
 			.ToList();
-		if (generationExceptions.Count > 0)
-		{
-			throw new InvalidOperationException(
-				"Generator threw exceptions:\n"
-					+ string.Join("\n", generationExceptions.Select(e => e!.ToString()))
-			);
-		}
 
 		var compilationErrors = OutputCompilation
 			.GetDiagnostics()
 			.Where(d => d.Severity == DiagnosticSeverity.Error)
 			.ToList();
-		if (compilationErrors.Count > 0)
-		{
-			throw new InvalidOperationException(
-				"Compilation errors:\n"
-					+ string.Join("\n", compilationErrors.Select(d => d.ToString()))
-			);
-		}
-
-		var logErrors = LogEntries
-			.Where(e => e.Type == OutputType.Error)
-			.Select(e => e.Message)
+		var logErrors = LogEntries.Where(e => e.Type == OutputType.Error).ToList();
+		var compilationErrorKeys = compilationErrors.Select(GetDiagnosticKey).ToHashSet();
+		var emitErrors = CompilationDiagnostics
+			.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+			.Where(diagnostic => !compilationErrorKeys.Contains(GetDiagnosticKey(diagnostic)))
 			.ToList();
-		if (logErrors.Count > 0)
-		{
-			throw new InvalidOperationException(
-				"Generator logged errors:\n" + string.Join("\n", logErrors)
-			);
-		}
 
-		if (CompilationDiagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
-		{
-			throw new InvalidOperationException(
-				"Compilation diagnostics contain errors:\n"
-					+ string.Join(
-						"\n",
-						CompilationDiagnostics
-							.Where(d => d.Severity == DiagnosticSeverity.Error)
-							.Select(d => d.ToString())
-					)
-			);
-		}
+		if (
+			generationExceptions.Count == 0
+			&& compilationErrors.Count == 0
+			&& emitErrors.Count == 0
+			&& logErrors.Count == 0
+		)
+			return;
+
+		throw new DriverRunValidationException(
+			generationExceptions,
+			compilationErrors,
+			emitErrors,
+			logErrors,
+			GeneratedTrees,
+			OutputCompilation.SyntaxTrees
+		);
 	}
+
+	static string GetDiagnosticKey(Diagnostic diagnostic) =>
+		$"{diagnostic.Id}|{diagnostic.Location.SourceTree?.FilePath}|{diagnostic.Location.SourceSpan.Start}|{diagnostic.Location.SourceSpan.Length}|{diagnostic.GetMessage(CultureInfo.InvariantCulture)}";
 
 	/// <summary>
 	/// Gets the source text of the first non-attribute generated tree.

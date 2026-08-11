@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using Microsoft.CodeAnalysis;
 
 namespace Purview.SourceGeneratorFramework;
 
@@ -45,6 +46,37 @@ public enum TypeDeclarationAccessibility
 
 	/// <summary>The <c>file</c> accessibility modifier.</summary>
 	File,
+}
+
+/// <summary>
+/// Converts Roslyn symbol accessibility values to C# declaration accessibility values.
+/// </summary>
+public static class TypeDeclarationAccessibilityExtensions
+{
+	/// <summary>
+	/// Converts a Roslyn <see cref="Accessibility"/> value to the corresponding
+	/// <see cref="TypeDeclarationAccessibility"/> value.
+	/// </summary>
+	/// <param name="accessibility">The Roslyn accessibility value.</param>
+	/// <returns>
+	/// The corresponding declaration accessibility, or <see langword="null"/> when Roslyn reports
+	/// <see cref="Accessibility.NotApplicable"/> or an unknown future value.
+	/// </returns>
+	/// <remarks>This method never throws for an accessibility value.</remarks>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0072:Add missing cases")]
+	public static TypeDeclarationAccessibility? ToTypeDeclarationAccessibility(
+		this Accessibility accessibility
+	) =>
+		accessibility switch
+		{
+			Accessibility.Private => TypeDeclarationAccessibility.Private,
+			Accessibility.ProtectedAndInternal => TypeDeclarationAccessibility.PrivateProtected,
+			Accessibility.Protected => TypeDeclarationAccessibility.Protected,
+			Accessibility.Internal => TypeDeclarationAccessibility.Internal,
+			Accessibility.ProtectedOrInternal => TypeDeclarationAccessibility.ProtectedInternal,
+			Accessibility.Public => TypeDeclarationAccessibility.Public,
+			_ => null,
+		};
 }
 
 /// <summary>
@@ -133,6 +165,16 @@ public sealed record TypeDeclarationOptions
 	/// The default is <see langword="true"/>. This option is ignored for struct declarations.
 	/// </summary>
 	public bool IsSealed { get; init; } = true;
+
+	/// <summary>
+	/// Gets whether the <c>static</c> modifier is emitted for a class declaration.
+	/// </summary>
+	/// <remarks>
+	/// Static classes cannot declare a base type, implement interfaces, or declare
+	/// primary-constructor parameters. <see cref="IsSealed"/> is ignored when this value is
+	/// <see langword="true"/>.
+	/// </remarks>
+	public bool IsStatic { get; init; }
 
 	/// <summary>
 	/// Gets whether the <c>readonly</c> modifier is emitted for a struct or record struct.

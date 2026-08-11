@@ -51,6 +51,17 @@ public sealed record SourceGeneratorTestOptions
 	public bool CompileToAssembly { get; init; } = true;
 
 	/// <summary>
+	/// Gets whether code writers created by the generation context should throw when generated
+	/// source is materialized while disposable scopes remain open.
+	/// </summary>
+	/// <remarks>
+	/// The default is <see langword="true"/> for generator tests so incomplete generated source is
+	/// detected at its point of creation. This value is passed to the generator driver as the
+	/// <c>PurviewSourceGeneratorFrameworkValidateCodeWriterScopes</c> compiler-visible property.
+	/// </remarks>
+	public bool ValidateCodeWriterScopes { get; init; } = true;
+
+	/// <summary>
 	/// Gets a value indicating whether generator log errors should cause <see cref="DriverRunResult.EnsureValid"/> to throw.
 	/// </summary>
 	public bool ThrowOnLogError { get; init; } = true;

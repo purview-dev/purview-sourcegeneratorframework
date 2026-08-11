@@ -171,18 +171,41 @@ public static class IncrementalPipeline
 		if (factory is null)
 			throw new ArgumentNullException(nameof(factory));
 
-		// All valid...
+		return GenerationContextValueProvider(
+			context,
+			(compilation, _, cancellationToken) => factory(compilation, cancellationToken),
+			logger
+		);
+	}
+
+	/// <summary>
+	/// Creates a value provider that builds a generation context from the compilation and the
+	/// CodeWriter scope-validation build property.
+	/// </summary>
+	public static IncrementalValueProvider<TContext> GenerationContextValueProvider<TContext>(
+		IncrementalGeneratorInitializationContext context,
+		Func<Compilation, bool, CancellationToken, TContext> factory,
+		GenerationLogger? logger = null
+	)
+		where TContext : notnull, GenerationContext
+	{
+		if (factory is null)
+			throw new ArgumentNullException(nameof(factory));
+
 		return context
-			.CompilationProvider.Select(
-				(compilation, cancellationToken) =>
+			.CompilationProvider.Combine(CodeWriterScopeValidationValueProvider(context))
+			.Select(
+				(input, cancellationToken) =>
 				{
 					cancellationToken.ThrowIfCancellationRequested();
 
 					logger?.Info(
-						$"Creating generation context ({nameof(TContext)}) for compilation '{compilation.AssemblyName}'."
+						$"Creating generation context ({nameof(TContext)}) for compilation '{input.Left.AssemblyName}'."
 					);
 
-					return factory(compilation, cancellationToken);
+					var generationContext = factory(input.Left, input.Right, cancellationToken);
+					generationContext.ConfigureCodeWriterScopeValidation(input.Right);
+					return generationContext;
 				}
 			)
 			.WithTrackingName($"GetGenerationContext_{typeof(TContext).Name}");
@@ -196,22 +219,29 @@ public static class IncrementalPipeline
 		GenerationLogger? logger = null
 	)
 	{
-		// All valid...
-		return context
-			.CompilationProvider.Select(
-				(compilation, cancellationToken) =>
+		return GenerationContextValueProvider(
+			context,
+			static (compilation, validateScopes, _) =>
+				new GenerationContext(compilation, validateScopes),
+			logger
+		);
+	}
+
+	static IncrementalValueProvider<bool> CodeWriterScopeValidationValueProvider(
+		IncrementalGeneratorInitializationContext context
+	) =>
+		context
+			.AnalyzerConfigOptionsProvider.Select(
+				static (options, _) =>
 				{
-					cancellationToken.ThrowIfCancellationRequested();
-
-					logger?.Info(
-						$"Creating generation context ({nameof(GenerationContext)}) for compilation '{compilation.AssemblyName}'."
+					options.GlobalOptions.TryGetValue(
+						BuildProperty + GenerationContext.ValidateCodeWriterScopesBuildProperty,
+						out var value
 					);
-
-					return new GenerationContext(compilation);
+					return bool.TryParse(value, out var enabled) && enabled;
 				}
 			)
-			.WithTrackingName($"GetGenerationContext_{nameof(GenerationContext)}");
-	}
+			.WithTrackingName("GetCodeWriterScopeValidation");
 
 	/// <summary>
 	/// Creates a values provider for syntax nodes annotated with a specific attribute.

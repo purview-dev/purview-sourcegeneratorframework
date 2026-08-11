@@ -3,6 +3,7 @@ using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Purview.SourceGeneratorFramework.Helpers;
+using Purview.SourceGeneratorFramework.Models;
 using Purview.SourceGeneratorFramework.Testing.Abstractions;
 using Purview.SourceGeneratorFramework.Testing.Models;
 
@@ -108,7 +109,13 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 			parseOptions: new(options.LanguageVersion)
 		);
 
-		var analyzerOptions = new Dictionary<string, string>(options.AnalyzerConfigOptions);
+		var analyzerOptions = new Dictionary<string, string>(options.AnalyzerConfigOptions)
+		{
+			[
+				IncrementalPipeline.BuildProperty
+					+ GenerationContext.ValidateCodeWriterScopesBuildProperty
+			] = options.ValidateCodeWriterScopes ? "true" : "false",
+		};
 		if (
 			options.DisableSourceGeneratorPropertyName is not null
 			&& options.DisableSourceGeneratorValue is not null

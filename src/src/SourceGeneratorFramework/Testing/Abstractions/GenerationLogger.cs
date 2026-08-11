@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Purview.SourceGeneratorFramework.Testing.Abstractions;
 
 /// <summary>
@@ -44,6 +46,27 @@ public sealed class GenerationLogger(Action<string, OutputType> logger)
 	/// </summary>
 	public void Diagnostic(string message, int indentation) =>
 		LogIndented(message, OutputType.Diagnostic, indentation);
+
+	/// <summary>
+	/// Logs a diagnostic message.
+	/// </summary>
+	public void Diagnostic(DiagnosticInfo diagnostic) => Diagnostic(diagnostic, 0);
+
+	/// <summary>
+	/// Logs a diagnostic message with the specified indentation.
+	/// </summary>
+	public void Diagnostic(DiagnosticInfo diagnostic, int indentation)
+	{
+		if (diagnostic is null)
+			throw new ArgumentNullException(nameof(diagnostic));
+
+		var d = diagnostic.ToDiagnostic();
+		LogIndented(
+			$"{d.Id}: {d.GetMessage(CultureInfo.InvariantCulture)}",
+			OutputType.Diagnostic,
+			indentation
+		);
+	}
 
 	/// <summary>
 	/// Logs a warning message.

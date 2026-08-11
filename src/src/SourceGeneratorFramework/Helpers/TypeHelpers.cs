@@ -37,17 +37,58 @@ public static class TypeHelpers
 		("nuint", SpecialType.System_UIntPtr),
 	];
 
+	static readonly (Type Type, SpecialType SpecialType)[] TypeMap =
+	[
+		(typeof(bool), SpecialType.System_Boolean),
+		(typeof(byte), SpecialType.System_Byte),
+		(typeof(sbyte), SpecialType.System_SByte),
+		(typeof(char), SpecialType.System_Char),
+		(typeof(decimal), SpecialType.System_Decimal),
+		(typeof(double), SpecialType.System_Double),
+		(typeof(float), SpecialType.System_Single),
+		(typeof(int), SpecialType.System_Int32),
+		(typeof(uint), SpecialType.System_UInt32),
+		(typeof(long), SpecialType.System_Int64),
+		(typeof(ulong), SpecialType.System_UInt64),
+		(typeof(short), SpecialType.System_Int16),
+		(typeof(ushort), SpecialType.System_UInt16),
+		(typeof(string), SpecialType.System_String),
+		(typeof(object), SpecialType.System_Object),
+		(typeof(void), SpecialType.System_Void),
+		(typeof(nint), SpecialType.System_IntPtr),
+		(typeof(nuint), SpecialType.System_UIntPtr),
+	];
+
 	static readonly ImmutableDictionary<string, SpecialType> KeywordToSpecialType =
 		Map.ToImmutableDictionary(m => m.Keyword, m => m.SpecialType, StringComparer.Ordinal);
 
 	static readonly ImmutableDictionary<SpecialType, string> SpecialTypeToKeyword =
 		Map.ToImmutableDictionary(m => m.SpecialType, m => m.Keyword);
 
+	static readonly ImmutableDictionary<Type, SpecialType> SpecialTypeToType =
+		TypeMap.ToImmutableDictionary(m => m.Type, m => m.SpecialType);
+
 	/// <summary>
 	/// Tries to map a C# keyword to its corresponding <see cref="SpecialType"/>.
 	/// </summary>
 	public static bool TryGetSpecialType(string keyword, out SpecialType specialType) =>
 		KeywordToSpecialType.TryGetValue(keyword, out specialType);
+
+	/// <summary>
+	/// Tries to map a <see cref="Type"/> to its corresponding <see cref="SpecialType"/>.
+	/// </summary>
+	public static bool TryGetSpecialType(Type type, out SpecialType specialType) =>
+		SpecialTypeToType.TryGetValue(type, out specialType);
+
+	/// <summary>
+	/// Tries to map a <see cref="Type"/> to its corresponding C# keyword.
+	/// </summary>
+	public static bool TryGetKeyword(Type type, out string? keyword)
+	{
+		keyword = null;
+		return SpecialTypeToType.TryGetValue(type, out var specialType)
+			&& SpecialTypeToKeyword.TryGetValue(specialType, out keyword);
+	}
 
 	/// <summary>
 	/// Tries to map a <see cref="SpecialType"/> to its corresponding C# keyword.
@@ -444,6 +485,123 @@ public static class TypeHelpers
 			Accessibility.ProtectedAndInternal => "private protected",
 			_ => string.Empty,
 		};
+
+	/// <summary>
+	/// Creates the declaration options required to reopen a containing type as a partial type.
+	/// </summary>
+	/// <param name="containingType">The containing type symbol to describe.</param>
+	/// <returns>Options that reproduce the containing type declaration.</returns>
+	/// <remarks>
+	/// Base types, interfaces, attributes, and primary-constructor parameters are intentionally
+	/// omitted because the returned declaration reopens an existing partial type.
+	/// </remarks>
+	/// <exception cref="ArgumentNullException">
+	/// Thrown when <paramref name="containingType"/> is <see langword="null"/>.
+	/// </exception>
+	/// <exception cref="ArgumentException">
+	/// Thrown when the symbol is not a class, struct, record class, or record struct.
+	/// </exception>
+	public static TypeDeclarationOptions CreatePartialTypeDeclarationOptions(
+		INamedTypeSymbol containingType
+	) => CreatePartialTypeDeclarationOptions(containingType, includeOptionalParts: true);
+
+	/// <summary>
+	/// Creates the declaration options required to reopen a containing type as a partial type.
+	/// </summary>
+	/// <param name="containingType">The containing type symbol to describe.</param>
+	/// <param name="includeOptionalParts">
+	/// <see langword="true"/> to reproduce optional accessibility, sealed modifiers, and generic
+	/// constraints; <see langword="false"/> to emit only the declaration parts required to reopen
+	/// the partial type.
+	/// </param>
+	/// <returns>Options that reproduce the containing partial type.</returns>
+	/// <remarks>
+	/// The basic form still preserves the type kind, generic parameter names and order,
+	/// <c>static</c>, and <c>readonly</c>, because those affect declaration compatibility.
+	/// </remarks>
+	public static TypeDeclarationOptions CreatePartialTypeDeclarationOptions(
+		INamedTypeSymbol containingType,
+		bool includeOptionalParts
+	)
+	{
+		if (containingType == null)
+			throw new ArgumentNullException(nameof(containingType));
+
+		var kind = GetTypeDeclarationKind(containingType);
+		var isStatic = containingType.IsStatic;
+
+		return new(containingType.Name)
+		{
+			Kind = kind,
+			Accessibility = includeOptionalParts
+				? containingType.IsFileLocal
+					? TypeDeclarationAccessibility.File
+					: containingType.DeclaredAccessibility.ToTypeDeclarationAccessibility()
+				: null,
+			IsPartial = true,
+			IsStatic = isStatic,
+			IsSealed = includeOptionalParts && !isStatic && containingType.IsSealed,
+			IsReadOnly = containingType.IsReadOnly,
+			GenericTypes =
+			[
+				.. containingType.TypeParameters.Select(typeParameter =>
+					CreateGenericTypeParameterOptions(typeParameter, includeOptionalParts)
+				),
+			],
+		};
+	}
+
+	static TypeDeclarationKind GetTypeDeclarationKind(INamedTypeSymbol typeSymbol) =>
+		(typeSymbol.TypeKind, typeSymbol.IsRecord) switch
+		{
+			(TypeKind.Class, false) => TypeDeclarationKind.Class,
+			(TypeKind.Class, true) => TypeDeclarationKind.RecordClass,
+			(TypeKind.Struct, false) => TypeDeclarationKind.Struct,
+			(TypeKind.Struct, true) => TypeDeclarationKind.RecordStruct,
+			_ => throw new ArgumentException(
+				$"Type '{typeSymbol.ToDisplayString()}' is not a supported containing type.",
+				nameof(typeSymbol)
+			),
+		};
+
+	static GenericTypeParameterOptions CreateGenericTypeParameterOptions(
+		ITypeParameterSymbol typeParameter,
+		bool includeConstraints
+	)
+	{
+		var constraints = ImmutableArray.CreateBuilder<string>();
+		if (!includeConstraints)
+			return new(typeParameter.Name) { Constraints = constraints.ToImmutable() };
+
+		if (typeParameter.HasUnmanagedTypeConstraint)
+			constraints.Add("unmanaged");
+		else if (typeParameter.HasValueTypeConstraint)
+			constraints.Add("struct");
+		else if (typeParameter.HasReferenceTypeConstraint)
+			constraints.Add(
+				typeParameter.ReferenceTypeConstraintNullableAnnotation
+				== NullableAnnotation.Annotated
+					? "class?"
+					: "class"
+			);
+		else if (typeParameter.HasNotNullConstraint)
+			constraints.Add("notnull");
+
+		constraints.AddRange(
+			typeParameter.ConstraintTypes.Select(static constraint =>
+				constraint.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
+			)
+		);
+
+		if (
+			typeParameter.HasConstructorConstraint
+			&& !typeParameter.HasValueTypeConstraint
+			&& !typeParameter.HasUnmanagedTypeConstraint
+		)
+			constraints.Add("new()");
+
+		return new(typeParameter.Name) { Constraints = constraints.ToImmutable() };
+	}
 
 	/// <summary>
 	/// Determines whether the symbol is accessible from public or internal scopes.

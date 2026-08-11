@@ -14,7 +14,7 @@ public class DiagnosticInfoTests
 	[Test]
 	public async Task Create_WithNullLocation_ReturnsDiagnosticInfoWithEmptyPath()
 	{
-		var info = DiagnosticInfo.Create(TestDescriptor, null, "arg");
+		var info = DiagnosticInfo.Create(TestDescriptor, (Location?)null, "arg");
 
 		await Assert.That(info.FilePath).IsEqualTo(string.Empty);
 		await Assert.That(info.TextSpan).IsEqualTo(default);
@@ -39,7 +39,7 @@ public class DiagnosticInfoTests
 	[Test]
 	public async Task ToDiagnostic_WithNullLocation_CreatesDiagnostic()
 	{
-		var info = DiagnosticInfo.Create(TestDescriptor, null, "arg");
+		var info = DiagnosticInfo.Create(TestDescriptor, (Location?)null, "arg");
 		var diagnostic = info.ToDiagnostic();
 
 		await Assert.That(diagnostic.Descriptor).IsEqualTo(TestDescriptor);

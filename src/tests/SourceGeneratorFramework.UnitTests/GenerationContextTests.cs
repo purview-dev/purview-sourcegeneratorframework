@@ -53,4 +53,35 @@ public class GenerationContextTests
 		await Assert.That(symbol).IsNotNull();
 		await Assert.That(symbol!.Name).IsEqualTo("Object");
 	}
+
+	[Test]
+	public async Task CreateCodeWriter_GivenScopeValidationEnabled_ConfiguresEveryWriter()
+	{
+		// Arrange
+		var compilation = CreateCompilation();
+		var context = new GenerationContext(compilation, validateCodeWriterScopes: true);
+
+		// Act
+		var writer = context.CreateCodeWriter();
+
+		// Assert
+		await Assert.That(context.CodeWriter.ThrowOnUnclosedScopes).IsTrue();
+		await Assert.That(writer.ThrowOnUnclosedScopes).IsTrue();
+		await Assert.That(ReferenceEquals(writer, context.CodeWriter)).IsTrue();
+	}
+
+	[Test]
+	public async Task ConfigureCodeWriterScopeValidation_GivenFactoryDefault_UpdatesOwnedWriter()
+	{
+		// Arrange
+		var compilation = CreateCompilation();
+		var context = new TestContext(compilation);
+
+		// Act
+		context.ConfigureCodeWriterScopeValidation(enabled: true);
+
+		// Assert
+		await Assert.That(context.ValidateCodeWriterScopes).IsTrue();
+		await Assert.That(context.CodeWriter.ThrowOnUnclosedScopes).IsTrue();
+	}
 }

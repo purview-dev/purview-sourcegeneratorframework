@@ -272,6 +272,94 @@ public class TypeHelpersTests
 	}
 
 	[Test]
+	public async Task CreatePartialTypeDeclarationOptions_GivenStaticGenericClass_RecreatesContainer()
+	{
+		// Arrange
+		const string source = """
+			public static partial class Container<T>
+				where T : class, new()
+			{
+			}
+			""";
+		var symbol = await GetTypeSymbolAsync(source, "Container");
+
+		// Act
+		var declaration = TypeHelpers.CreatePartialTypeDeclarationOptions(symbol);
+		var writer = new CodeWriter();
+		using (writer.WriteType(declaration))
+		{
+			// Intentionally empty.
+		}
+
+		// Assert
+		await Assert.That(declaration.Kind).IsEqualTo(TypeDeclarationKind.Class);
+		await Assert.That(declaration.IsStatic).IsTrue();
+		await Assert.That(declaration.GenericTypes).Count().IsEqualTo(1);
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"public static partial class Container<T>\n"
+					+ "where T : class, new()\n"
+					+ "{\n"
+					+ "}\n"
+			);
+	}
+
+	[Test]
+	public async Task CreatePartialTypeDeclarationOptions_GivenReadonlyRecordStruct_RecreatesContainer()
+	{
+		// Arrange
+		const string source = """
+			internal readonly partial record struct Container<T>
+				where T : unmanaged
+			{
+			}
+			""";
+		var symbol = await GetTypeSymbolAsync(source, "Container");
+
+		// Act
+		var declaration = TypeHelpers.CreatePartialTypeDeclarationOptions(symbol);
+
+		// Assert
+		await Assert.That(declaration.Kind).IsEqualTo(TypeDeclarationKind.RecordStruct);
+		await Assert
+			.That(declaration.Accessibility)
+			.IsEqualTo(TypeDeclarationAccessibility.Internal);
+		await Assert.That(declaration.IsReadOnly).IsTrue();
+		await Assert.That(declaration.GenericTypes[0].Constraints).Contains("unmanaged");
+	}
+
+	[Test]
+	public async Task CreatePartialTypeDeclarationOptions_GivenBasicMode_OmitsOptionalParts()
+	{
+		// Arrange
+		const string source = """
+			public sealed partial class Container<T>
+				where T : class, new()
+			{
+			}
+			""";
+		var symbol = await GetTypeSymbolAsync(source, "Container");
+
+		// Act
+		var declaration = TypeHelpers.CreatePartialTypeDeclarationOptions(
+			symbol,
+			includeOptionalParts: false
+		);
+		var writer = new CodeWriter();
+		using (writer.WriteType(declaration))
+		{
+			// Intentionally empty.
+		}
+
+		// Assert
+		await Assert.That(declaration.Accessibility).IsNull();
+		await Assert.That(declaration.IsSealed).IsFalse();
+		await Assert.That(declaration.GenericTypes[0].Constraints).IsEmpty();
+		await Assert.That(writer.ToString()).IsEqualTo("partial class Container<T>\n{\n}\n");
+	}
+
+	[Test]
 	public async Task IsAccessibleAsPublicOrInternal_PublicType_ReturnsTrue()
 	{
 		var source = "public class MyClass { }";

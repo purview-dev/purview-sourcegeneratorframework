@@ -1,5 +1,15 @@
 <Project>
+	<PropertyGroup>
+		<PurviewSourceGeneratorFrameworkValidateCodeWriterScopes
+			Condition="'$(PurviewSourceGeneratorFrameworkValidateCodeWriterScopes)' == ''"
+			>false</PurviewSourceGeneratorFrameworkValidateCodeWriterScopes>
+	</PropertyGroup>
+
 	<ItemGroup>
+		<CompilerVisibleProperty Include="PurviewSourceGeneratorFrameworkValidateCodeWriterScopes">
+			<Description>Throws when generated source is materialized while CodeWriter scopes remain undisposed.</Description>
+		</CompilerVisibleProperty>
+
 		<Using Include="Purview.SourceGeneratorFramework" />
 		<Using Include="Purview.SourceGeneratorFramework.Helpers" />
 		<Using Include="Purview.SourceGeneratorFramework.Models" />

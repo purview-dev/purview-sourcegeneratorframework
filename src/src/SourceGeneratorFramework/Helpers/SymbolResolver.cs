@@ -21,7 +21,7 @@ public static class SymbolResolver
 	public static INamedTypeSymbol? Resolve(Compilation compilation, TypeValueObject type) =>
 		compilation is null
 			? throw new ArgumentNullException(nameof(compilation))
-			: Resolve(compilation, type.SymbolFullName);
+			: Resolve(compilation, type.MetadataFullName);
 
 	/// <summary>
 	/// Resolves a type from a <see cref="TypeValueObject"/> and returns a value indicating whether it was found.

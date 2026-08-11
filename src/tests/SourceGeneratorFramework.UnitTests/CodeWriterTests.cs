@@ -267,6 +267,47 @@ public class CodeWriterTests
 	}
 
 	[Test]
+	public async Task WriteClass_GivenStaticDeclaration_WritesStaticClass()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+		var declaration = new TypeDeclarationOptions("Extensions")
+		{
+			Accessibility = TypeDeclarationAccessibility.Public,
+			IsStatic = true,
+		};
+
+		// Act
+		using (writer.WriteClass(declaration))
+		{
+			// Intentionally empty.
+		}
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("public static partial class Extensions\n{\n}\n");
+	}
+
+	[Test]
+	public async Task WriteType_GivenStaticStruct_ThrowsArgumentException()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+		var declaration = new TypeDeclarationOptions("Invalid")
+		{
+			Kind = TypeDeclarationKind.Struct,
+			IsStatic = true,
+		};
+
+		// Act
+		CodeWriter.BlockScope Action() => writer.WriteType(declaration);
+
+		// Assert
+		await Assert.That(Action).Throws<ArgumentException>();
+	}
+
+	[Test]
 	public async Task WriteStruct_WithBaseType_Throws()
 	{
 		var writer = new CodeWriter();
@@ -339,6 +380,115 @@ public class CodeWriterTests
 		}
 
 		await Assert.That(writer.ToString()).IsEqualTo("static Repository()\n{\n}\n");
+	}
+
+	[Test]
+	public async Task Block_WithBodyAndCustomSeparators_WritesDelimitedBody()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+
+		// Act
+		writer.Block(
+			"Create",
+			body =>
+			{
+				body.Quote("value").WriteLine(",");
+				body.WriteLine("EmptyPath");
+			},
+			separator: "(",
+			closingSeparator: ");"
+		);
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("Create\n(\n\t\"value\",\n\tEmptyPath\n);\n");
+	}
+
+	[Test]
+	public async Task Block_WithBodyLast_WritesBodyInsideCustomSeparators()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+
+		// Act
+		writer.Block("Create", "(", ");", body => body.Quote("value").WriteLine());
+
+		// Assert
+		await Assert.That(writer.ToString()).IsEqualTo("Create\n(\n\t\"value\"\n);\n");
+	}
+
+	[Test]
+	public async Task ToString_GivenOpenBlockAndValidationEnabled_ThrowsScopeValidationException()
+	{
+		// Arrange
+		var writer = new CodeWriter(throwOnUnclosedScopes: true);
+		var scope = writer.Block("public sealed class Example");
+
+		// Act
+		string Action() => writer.ToString();
+
+		// Assert
+		await Assert.That(writer.OpenScopeCount).IsEqualTo(1);
+		var exception = await Assert.That(Action).Throws<CodeWriterScopeValidationException>();
+		await Assert.That(exception!.OpenScopeCount).IsEqualTo(1);
+		await Assert.That(exception.OpenScopes[0].Kind).IsEqualTo("block");
+		await Assert.That(exception.OpenScopes[0].Header).IsEqualTo("public sealed class Example");
+		await Assert
+			.That(exception.OpenScopes[0].OpeningStackTrace)
+			.Contains(
+				nameof(ToString_GivenOpenBlockAndValidationEnabled_ThrowsScopeValidationException)
+			);
+		await Assert.That(exception.Message).Contains("public sealed class Example");
+
+		scope.Dispose();
+		await Assert.That(writer.OpenScopeCount).IsEqualTo(0);
+		await Assert.That(writer.ToString()).Contains("public sealed class Example");
+	}
+
+	[Test]
+	public async Task ToString_GivenOpenBlockAndValidationDisabled_ReturnsPartialSource()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+		var scope = writer.Block("public sealed class Example");
+
+		// Act
+		var source = writer.ToString();
+
+		// Assert
+		await Assert.That(writer.OpenScopeCount).IsEqualTo(1);
+		await Assert.That(source).Contains("public sealed class Example");
+
+		scope.Dispose();
+	}
+
+	[Test]
+	public async Task ToString_GivenOpenIndentScopeAndValidationEnabled_ThrowsScopeValidationException()
+	{
+		// Arrange
+		var writer = new CodeWriter(throwOnUnclosedScopes: true);
+		var scope = writer.Indented();
+
+		// Act
+		string Action() => writer.ToString();
+
+		// Assert
+		await Assert.That(writer.OpenScopeCount).IsEqualTo(1);
+		var exception = await Assert.That(Action).Throws<CodeWriterScopeValidationException>();
+		await Assert.That(exception!.OpenScopeCount).IsEqualTo(1);
+		await Assert.That(exception.OpenScopes[0].Kind).IsEqualTo("indentation");
+		await Assert
+			.That(exception.OpenScopes[0].OpeningStackTrace)
+			.Contains(
+				nameof(
+					ToString_GivenOpenIndentScopeAndValidationEnabled_ThrowsScopeValidationException
+				)
+			);
+
+		scope.Dispose();
+		await Assert.That(writer.OpenScopeCount).IsEqualTo(0);
 	}
 
 	[Test]

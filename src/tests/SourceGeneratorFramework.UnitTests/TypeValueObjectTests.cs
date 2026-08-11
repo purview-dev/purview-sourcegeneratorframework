@@ -1,4 +1,7 @@
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Purview.SourceGeneratorFramework.Models;
+using Purview.SourceGeneratorFramework.Testing;
 
 namespace Purview.SourceGeneratorFramework;
 
@@ -52,6 +55,80 @@ public partial class TypeValueObjectTests
 		var type = new TypeValueObject("MyAttribute", "MyNamespace");
 
 		await Assert.That(type.RenderFullName).IsEqualTo("[global::MyNamespace.My]");
+	}
+
+	[Test]
+	public async Task Constructor_GivenOpenGenericReflectionType_PreservesDefinition()
+	{
+		// Arrange and Act
+		TypeValueObject type = new(typeof(List<>));
+
+		// Assert
+		await Assert.That(type.TypeName).IsEqualTo("List");
+		await Assert.That(type.GenericArity).IsEqualTo(1);
+		await Assert.That(type.IsGenericTypeDefinition).IsTrue();
+		await Assert.That(type.MetadataFullName).IsEqualTo("System.Collections.Generic.List`1");
+		await Assert
+			.That(type.RenderFullName)
+			.IsEqualTo("global::System.Collections.Generic.List<>");
+	}
+
+	[Test]
+	public async Task Constructor_GivenClosedGenericReflectionType_PreservesArguments()
+	{
+		// Arrange and Act
+		TypeValueObject type = new(typeof(Dictionary<string, List<int>>));
+
+		// Assert
+		await Assert.That(type.GenericArity).IsEqualTo(2);
+		await Assert.That(type.IsGenericTypeDefinition).IsFalse();
+		await Assert.That(type.TypeArguments).Count().IsEqualTo(2);
+		await Assert
+			.That(type.RenderFullName)
+			.IsEqualTo(
+				"global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.List<int>>"
+			);
+	}
+
+	[Test]
+	public async Task Constructor_GivenClosedGenericSymbol_PreservesArguments(
+		CancellationToken cancellationToken
+	)
+	{
+		// Arrange
+		const string source = """
+			using System.Collections.Generic;
+			public sealed class Holder
+			{
+				public Dictionary<string, List<int>> Value = new();
+			}
+			""";
+		SourceGeneratorTestOptions options = new();
+		var syntax = CSharpSyntaxTree.ParseText(
+			source,
+			options: new CSharpParseOptions(LanguageVersion.Preview),
+			cancellationToken: cancellationToken
+		);
+		var compilation = SourceGeneratorHelpers.CreateCompilation(
+			[syntax],
+			SourceGeneratorHelpers.ResolveReferences(options),
+			options
+		);
+		var holder = compilation.GetTypeByMetadataName("Holder");
+		var field = holder?.GetMembers("Value").OfType<IFieldSymbol>().Single();
+
+		// Act
+		TypeValueObject type = new(field!.Type);
+
+		// Assert
+		await Assert.That(type.TypeName).IsEqualTo("Dictionary");
+		await Assert.That(type.GenericArity).IsEqualTo(2);
+		await Assert.That(type.TypeArguments).Count().IsEqualTo(2);
+		await Assert
+			.That(type.RenderFullName)
+			.IsEqualTo(
+				"global::System.Collections.Generic.Dictionary<string, global::System.Collections.Generic.List<int>>"
+			);
 	}
 
 	[Test]

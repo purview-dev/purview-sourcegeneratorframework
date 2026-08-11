@@ -22,6 +22,10 @@
 			Link="Extensions\Purview\SourceGeneratorFramework\CodeWriter.cs"
 		/>
 		<Compile
+			Include="..\SourceGeneratorFramework\CodeWriterScopeValidationException.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\CodeWriterScopeValidationException.cs"
+		/>
+		<Compile
 			Include="..\SourceGeneratorFramework\TypeDeclarationOptions.cs"
 			Link="Extensions\Purview\SourceGeneratorFramework\TypeDeclarationOptions.cs"
 		/>
