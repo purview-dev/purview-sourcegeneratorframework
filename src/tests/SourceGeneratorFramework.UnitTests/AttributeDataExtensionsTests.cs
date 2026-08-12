@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -28,6 +29,7 @@ public class AttributeDataExtensionsTests
 				MetadataReference.CreateFromFile(typeof(CodeWriter).Assembly.Location),
 				MetadataReference.CreateFromFile(typeof(Testing.ITestOutput).Assembly.Location),
 				MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+				MetadataReference.CreateFromFile(typeof(ImmutableArray<>).Assembly.Location),
 			],
 			new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
 		);
@@ -203,5 +205,39 @@ public class AttributeDataExtensionsTests
 		var value = attribute.ConstructorArguments[0].As<AttributeTargets>();
 
 		await Assert.That(value).IsEqualTo(AttributeTargets.Class | AttributeTargets.Struct);
+	}
+
+	[Test]
+	public async Task As_ImmutableArrayTypedConstant_ReturnsValues(
+		CancellationToken cancellationToken
+	)
+	{
+		var source = """
+			using System;
+			using Microsoft.CodeAnalysis;
+			using System.Collections.Immutable;
+
+			[AttributeUsage(AttributeTargets.Class)]
+			public class TestAttribute : Attribute
+			{
+				public TestAttribute(params object?[] values) { }
+			}
+
+			[Test("one", 2, true)]
+			public class MyClass { }
+			""";
+		var attribute = await GetAttributeAsync(
+			source,
+			"MyClass",
+			"TestAttribute",
+			cancellationToken
+		);
+
+		var value = attribute.ConstructorArguments[0].As<ImmutableArray<TypedConstant>>();
+
+		await Assert.That(value).Count().IsEqualTo(3);
+		await Assert.That(value[0].Value).IsEqualTo("one");
+		await Assert.That(value[1].Value).IsEqualTo(2);
+		await Assert.That((bool?)value[2].Value).IsTrue();
 	}
 }

@@ -16,6 +16,7 @@ dotnet add package Purview.SourceGeneratorFramework
 - **`GeneratorResult<T>`** — a value-or-diagnostics result type for incremental source generator transforms.
 - **`TypeValueObject`**, **`TargetSymbolDescriptor`**, **`EquatableArray<T>`**, **`DiagnosticInfo`** — reusable models for generator inputs and outputs.
 - **`SymbolResolver`**, **`TypeHelpers`**, **`EmbeddedResources`** — helper classes for common symbol and resource tasks.
+- **`AttributeDataModelGenerator`** — bundled source generator that emits `readonly record struct` attribute parser models from `[GenerateAttributeDataModel]` declarations, eliminating repetitive `FromAttributeData` boilerplate. Supports manual mapping, auto-discovery, nested models, and inheritance matching.
 - **MSBuild `.props` / `.targets`** — automatically adds `global using` directives for the main namespaces and supports packaging source generators that reference this framework.
 
 ## Usage
@@ -89,6 +90,50 @@ public sealed class MyGenerator : IIncrementalGenerator
 ```
 
 See [`SourceGeneratorFramework.ExampleGenerator`](../SourceGeneratorFramework.ExampleGenerator) for a complete reference implementation.
+
+## Attribute model generation
+
+The package includes `AttributeDataModelGenerator`, which generates `readonly record struct` parser models for .NET attributes. Instead of hand-writing `FromAttributeData` methods for every attribute you inspect, declare a `readonly partial record struct` with `[GenerateAttributeDataModel]` and let the generator fill in the `Empty` sentinel, `FromAttributeData` overloads, and property extraction logic.
+
+```csharp
+using Microsoft.CodeAnalysis;
+using Purview.SourceGeneratorFramework.Testing.Generators;
+using System.ComponentModel.DataAnnotations;
+
+namespace MySourceGenerator.Models;
+
+[GenerateAttributeDataModel(typeof(ValidationAttribute), MatchByInheritance = true)]
+public readonly partial record struct ValidationAttributeData(
+    [AttributeProperty] string? ErrorMessage,
+    [AttributeProperty] string? ErrorMessageResourceName,
+    [AttributeProperty] ITypeSymbol? ErrorMessageResourceType
+);
+
+[GenerateAttributeDataModel(typeof(RequiredAttribute))]
+public readonly partial record struct RequiredAttributeData(
+    [AttributeProperty] bool AllowEmptyStrings,
+    [AttributeProperty(Source = AttributePropertySource.NestedModel)] ValidationAttributeData ValidationAttribute
+);
+```
+
+Supported mapping sources:
+- `NamedArgument` — reads a named attribute property
+- `ConstructorIndex` — reads a constructor argument by position
+- `ConstructorName` — reads a constructor argument by parameter name
+- `NestedModel` — populates a nested `[GenerateAttributeDataModel]` type
+
+You can also target an attribute by fully-qualified name, which is useful when the attribute type is not available in the generator project (e.g., `LengthAttribute` in .NET 8+ or a self-generated attribute):
+
+```csharp
+[GenerateAttributeDataModel("System.ComponentModel.DataAnnotations.RequiredAttribute")]
+public readonly partial record struct RequiredAttributeData(
+    [AttributeProperty] bool AllowEmptyStrings
+);
+```
+
+Enable auto-discovery with `[GenerateAttributeDataModel(typeof(MyAttribute), AutoDiscover = true)]` to generate properties for every constructor parameter and public named property. Auto-discovery requires the `Type` overload. Override defaults with `[AttributeProperty(DefaultValue = ...)]` or rely on inferred defaults from optional constructor parameters.
+
+See [`SourceGeneratorFramework.Testing.Generators`](../SourceGeneratorFramework.Testing.Generators) for full documentation and additional examples.
 
 ## Structured member declarations
 

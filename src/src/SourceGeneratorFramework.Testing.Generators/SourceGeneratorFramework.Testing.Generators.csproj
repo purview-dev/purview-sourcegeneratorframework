@@ -16,6 +16,11 @@
 		<AssemblyName>$(RootNamespace)</AssemblyName>
 	</PropertyGroup>
 
+	<ItemGroup Label="Template/ Source Files">
+		<Compile Remove="Templates\**\*.cs" />
+		<EmbeddedResource Include="Templates\**\*.cs" />
+	</ItemGroup>
+
 	<ItemGroup>
 		<Compile
 			Include="..\SourceGeneratorFramework\CodeWriter.cs"
@@ -75,6 +80,10 @@
 		<Compile
 			Include="..\SourceGeneratorFramework\Helpers\TypeHelpers.cs"
 			Link="Extensions\Purview\SourceGeneratorFramework\Helpers\TypeHelpers.cs"
+		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\Helpers\EmbeddedResources.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Helpers\EmbeddedResources.cs"
 		/>
 		<Compile
 			Include="..\SourceGeneratorFramework\Helpers\IncrementalPipeline.cs"

@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Globalization;
 using Microsoft.CodeAnalysis;
 
@@ -28,6 +29,11 @@ partial class AttributeDataExtensions
 
 			if (constant.Kind == TypedConstantKind.Array)
 			{
+				if (targetType == typeof(ImmutableArray<TypedConstant>))
+				{
+					return (T?)(object?)ImmutableArray.CreateRange(constant.Values);
+				}
+
 				var values = constant.Values.Select(As<T>).ToArray();
 				if (targetType.IsArray)
 				{

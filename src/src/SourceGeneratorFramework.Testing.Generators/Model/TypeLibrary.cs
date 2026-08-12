@@ -2,6 +2,8 @@ namespace Purview.SourceGeneratorFramework.Testing.Generators.Model;
 
 static class TypeLibrary
 {
+	const string GeneratorsNamespace = "Purview.SourceGeneratorFramework.Testing.Generators";
+
 	public static readonly TypeValueObject ILogSupport =
 		TypeValueObject.Create<Abstractions.ILogSupport>();
 
@@ -19,4 +21,19 @@ static class TypeLibrary
 
 	public static readonly TypeValueObject EmbeddedAttribute =
 		TypeValueObject.Create<Microsoft.CodeAnalysis.EmbeddedAttribute>();
+
+	public static readonly TypeValueObject GenerateAttributeDataModelAttribute = new(
+		nameof(GenerateAttributeDataModelAttribute),
+		GeneratorsNamespace
+	);
+
+	public static readonly TypeValueObject AttributePropertyAttribute = new(
+		nameof(AttributePropertyAttribute),
+		GeneratorsNamespace
+	);
+
+	public static readonly TypeValueObject AttributePropertySource = new(
+		nameof(AttributePropertySource),
+		GeneratorsNamespace
+	);
 }

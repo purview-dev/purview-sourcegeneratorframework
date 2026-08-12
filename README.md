@@ -36,6 +36,21 @@ just tests
 dotnet test src/SourceGeneratorFramework.slnx -c Release
 ```
 
+## Generators
+
+### AttributeDataModelGenerator
+
+The framework package includes `AttributeDataModelGenerator` (implemented in `SourceGeneratorFramework.Testing.Generators`), which generates `readonly record struct` parser models for .NET attributes. It removes the repetitive boilerplate of hand-writing `FromAttributeData` methods for every attribute you want to inspect in a source generator.
+
+Supported features:
+- Manual mapping of named arguments, constructor arguments by index, and constructor arguments by name
+- Auto-discovery of all constructor parameters and public named properties
+- Nested generated models (e.g., a shared `ValidationAttributeData` model reused inside `RequiredAttributeData`)
+- Inheritance matching for base attribute models
+- Optional default values for the `Empty` sentinel
+
+See the [`SourceGeneratorFramework.Testing.Generators` README](src/src/SourceGeneratorFramework.Testing.Generators) for examples, including validation attributes with nested types.
+
 ## Packaging
 
 ```bash
