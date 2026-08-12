@@ -3,7 +3,7 @@ namespace Purview.SourceGeneratorFramework.Testing.Generators;
 public class AttributeDataModelGeneratorTests
 {
 	[Test]
-	public async Task Generate_RequiredAttributeData_NamedArgumentAndNestedModel(
+	public async Task Generate_RequiredAttributeData_DefaultNamedAndNestedModel(
 		CancellationToken cancellationToken
 	)
 	{
@@ -14,18 +14,18 @@ public class AttributeDataModelGeneratorTests
 
 			namespace Test
 			{
-			[GenerateAttributeDataModel(typeof(ValidationAttribute), MatchByInheritance = true)]
-			public readonly partial record struct ValidationAttributeData(
-				[AttributeProperty] string? ErrorMessage,
-				[AttributeProperty] string? ErrorMessageResourceName,
-				[AttributeProperty] ITypeSymbol? ErrorMessageResourceType
-			);
+				[GenerateAttributeDataModel(typeof(ValidationAttribute), MatchByInheritance = true)]
+				public readonly partial record struct ValidationAttributeData(
+					string? ErrorMessage,
+					string? ErrorMessageResourceName,
+					ITypeSymbol? ErrorMessageResourceType
+				);
 
-			[GenerateAttributeDataModel(typeof(RequiredAttribute))]
-			public readonly partial record struct RequiredAttributeData(
-				[AttributeProperty] bool AllowEmptyStrings,
-				[AttributeProperty(Source = AttributePropertySource.NestedModel)] ValidationAttributeData ValidationAttribute
-			);
+				[GenerateAttributeDataModel(typeof(RequiredAttribute))]
+				public readonly partial record struct RequiredAttributeData(
+					bool AllowEmptyStrings,
+					[AttributeNestedModelProperty] ValidationAttributeData ValidationAttribute
+				);
 			}
 			""";
 
@@ -62,20 +62,10 @@ public class AttributeDataModelGeneratorTests
 			.Contains(
 				"public static readonly RequiredAttributeData Empty = new(false, default(bool), default(global::Test.ValidationAttributeData))"
 			);
-		await Assert
-			.That(generated)
-			.Contains(
-				"global::System.Collections.Immutable.ImmutableArray<global::Microsoft.CodeAnalysis.AttributeData> attributes)"
-			);
-		await Assert
-			.That(generated)
-			.Contains("out global::Microsoft.CodeAnalysis.AttributeData? attribute)");
 	}
 
 	[Test]
-	public async Task Generate_LengthAttributeData_ConstructorIndex(
-		CancellationToken cancellationToken
-	)
+	public async Task Generate_LengthAttributeData_CtorIndex(CancellationToken cancellationToken)
 	{
 		var source = """
 			using Purview.SourceGeneratorFramework.Testing.Generators;
@@ -85,8 +75,8 @@ public class AttributeDataModelGeneratorTests
 			{
 				[GenerateAttributeDataModel(typeof(LengthAttribute))]
 				public readonly partial record struct LengthAttributeData(
-					[AttributeProperty(Source = AttributePropertySource.ConstructorIndex, Index = 0)] int MinimumLength,
-					[AttributeProperty(Source = AttributePropertySource.ConstructorIndex, Index = 1)] int MaximumLength
+					[AttributeCtorProperty(0)] int MinimumLength,
+					[AttributeCtorProperty(1)] int MaximumLength
 				);
 			}
 			""";
@@ -118,52 +108,7 @@ public class AttributeDataModelGeneratorTests
 	}
 
 	[Test]
-	public async Task Generate_LengthAttributeData_PositionalConstructorSource(
-		CancellationToken cancellationToken
-	)
-	{
-		var source = """
-			using Purview.SourceGeneratorFramework.Testing.Generators;
-			using System.ComponentModel.DataAnnotations;
-
-			namespace Test
-			{
-				[GenerateAttributeDataModel(typeof(LengthAttribute))]
-				public readonly partial record struct LengthAttributeData(
-					[AttributeProperty(AttributePropertySource.ConstructorIndex, Index = 0)] int MinimumLength,
-					[AttributeProperty(AttributePropertySource.ConstructorIndex, Index = 1)] int MaximumLength
-				);
-			}
-			""";
-
-		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
-		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
-
-		var generated = await GetGeneratedStringAsync(
-			result,
-			"LengthAttributeData.AttributeDataModel.g.cs",
-			cancellationToken
-		);
-
-		await Assert.That(generated).IsNotNull();
-		await Assert.That(generated).Contains("readonly partial record struct LengthAttributeData");
-		await Assert.That(generated).Contains("int MinimumLength");
-		await Assert.That(generated).Contains("int MaximumLength");
-		await Assert
-			.That(generated)
-			.Contains("attributeData.TryGetConstructorArgument<int>(0, out var minimumLength)");
-		await Assert
-			.That(generated)
-			.Contains("attributeData.TryGetConstructorArgument<int>(1, out var maximumLength)");
-		await Assert
-			.That(generated)
-			.Contains(
-				"public static readonly LengthAttributeData Empty = new(false, default(int), default(int))"
-			);
-	}
-
-	[Test]
-	public async Task Generate_StringLengthAttributeData_ConstructorNameAndDefaultValue(
+	public async Task Generate_StringLengthAttributeData_CtorNameAndDefaultValue(
 		CancellationToken cancellationToken
 	)
 	{
@@ -174,17 +119,17 @@ public class AttributeDataModelGeneratorTests
 
 			namespace Test
 			{
-			[GenerateAttributeDataModel(typeof(ValidationAttribute), MatchByInheritance = true)]
-			public readonly partial record struct ValidationAttributeData(
-				[AttributeProperty] string? ErrorMessage
-			);
+				[GenerateAttributeDataModel(typeof(ValidationAttribute), MatchByInheritance = true)]
+				public readonly partial record struct ValidationAttributeData(
+					string? ErrorMessage
+				);
 
-			[GenerateAttributeDataModel(typeof(StringLengthAttribute))]
-			public readonly partial record struct StringLengthAttributeData(
-				[AttributeProperty(Source = AttributePropertySource.ConstructorName, Name = "maximumLength", DefaultValue = int.MaxValue)] int MaximumLength,
-				[AttributeProperty] int MinimumLength,
-				[AttributeProperty(Source = AttributePropertySource.NestedModel)] ValidationAttributeData ValidationAttribute
-			);
+				[GenerateAttributeDataModel(typeof(StringLengthAttribute))]
+				public readonly partial record struct StringLengthAttributeData(
+					[AttributeCtorProperty("maximumLength", DefaultValue = int.MaxValue)] int MaximumLength,
+					int MinimumLength,
+					[AttributeNestedModelProperty] ValidationAttributeData ValidationAttribute
+				);
 			}
 			""";
 
@@ -203,7 +148,7 @@ public class AttributeDataModelGeneratorTests
 		await Assert
 			.That(generated)
 			.Contains(
-				"attributeData.TryGetConstructorArgument<int>(\"maximumLength\", out var maximumLength)"
+				"var maximumLength = attributeData.GetConstructorArgument<int>(\"maximumLength\", 2147483647)"
 			);
 		await Assert
 			.That(generated)
@@ -213,8 +158,65 @@ public class AttributeDataModelGeneratorTests
 		await Assert
 			.That(generated)
 			.Contains(
-				"public static readonly StringLengthAttributeData Empty = new(false, 2147483647, default(int), default(global::Test.ValidationAttributeData))"
+				"public static readonly StringLengthAttributeData Empty = new(false, default(int), default(int), default(global::Test.ValidationAttributeData))"
 			);
+	}
+
+	[Test]
+	public async Task Generate_HostKitAttribute_CtorAndNamedCombined(
+		CancellationToken cancellationToken
+	)
+	{
+		var source = """
+			using Purview.SourceGeneratorFramework.Testing.Generators;
+
+			namespace Test
+			{
+				[GenerateAttributeDataModel("Test.HostKitAttribute")]
+				public readonly partial record struct HostKitAttributeData(
+					[AttributeCtorProperty("name")] string? Name,
+					string? ExtensionMethodName,
+					[AttributeCtorProperty("generateOptions")] [AttributeNamedProperty(DefaultValue = true)] bool GenerateOptions
+				);
+
+				public class HostKitAttribute : System.Attribute
+				{
+					public HostKitAttribute() { }
+					public HostKitAttribute(string name, bool generateOptions = true) { }
+					public HostKitAttribute(bool generateOptions) { }
+				}
+			}
+			""";
+
+		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
+		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+
+		var generated = await GetGeneratedStringAsync(
+			result,
+			"HostKitAttributeData.AttributeDataModel.g.cs",
+			cancellationToken
+		);
+
+		await Assert.That(generated).IsNotNull();
+		await Assert
+			.That(generated)
+			.Contains("readonly partial record struct HostKitAttributeData");
+		await Assert.That(generated).Contains("string? Name");
+		await Assert.That(generated).Contains("bool GenerateOptions");
+		await Assert
+			.That(generated)
+			.Contains("attributeData.TryGetConstructorArgument<string>(\"name\", out var name)");
+		await Assert
+			.That(generated)
+			.Contains(
+				"if (!attributeData.TryGetConstructorArgument<bool>(\"generateOptions\", out generateOptions))"
+			);
+		await Assert
+			.That(generated)
+			.Contains(
+				"if (!attributeData.TryGetNamedArgument<bool>(\"GenerateOptions\", out generateOptions))"
+			);
+		await Assert.That(generated).Contains("generateOptions = true");
 	}
 
 	[Test]
@@ -260,6 +262,42 @@ public class AttributeDataModelGeneratorTests
 	}
 
 	[Test]
+	public async Task Generate_Exclude_SkipsProperty(CancellationToken cancellationToken)
+	{
+		var source = """
+			using Purview.SourceGeneratorFramework.Testing.Generators;
+			using System.ComponentModel.DataAnnotations;
+
+			namespace Test
+			{
+				[GenerateAttributeDataModel(typeof(RequiredAttribute))]
+				public readonly partial record struct RequiredAttributeData(
+					bool AllowEmptyStrings,
+					[AttributeExcludeProperty] int Ignored
+				);
+			}
+			""";
+
+		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
+		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+
+		var generated = await GetGeneratedStringAsync(
+			result,
+			"RequiredAttributeData.AttributeDataModel.g.cs",
+			cancellationToken
+		);
+
+		await Assert.That(generated).IsNotNull();
+		await Assert.That(generated).Contains("bool AllowEmptyStrings");
+		await Assert.That(generated).DoesNotContain("int Ignored");
+		await Assert
+			.That(generated)
+			.Contains(
+				"public static readonly RequiredAttributeData Empty = new(false, default(bool))"
+			);
+	}
+
+	[Test]
 	public async Task Generate_NestedModelNotGenerated_ReportsDiagnostic(
 		CancellationToken cancellationToken
 	)
@@ -272,7 +310,7 @@ public class AttributeDataModelGeneratorTests
 			{
 				[GenerateAttributeDataModel(typeof(RequiredAttribute))]
 				public readonly partial record struct RequiredAttributeData(
-					[AttributeProperty(Source = AttributePropertySource.NestedModel)] NotAModel NotAModel
+					[AttributeNestedModelProperty] NotAModel NotAModel
 				);
 
 				public readonly partial record struct NotAModel;
@@ -298,7 +336,7 @@ public class AttributeDataModelGeneratorTests
 			{
 				[GenerateAttributeDataModel("System.ComponentModel.DataAnnotations.RequiredAttribute")]
 				public readonly partial record struct RequiredAttributeData(
-					[AttributeProperty] bool AllowEmptyStrings
+					bool AllowEmptyStrings
 				);
 			}
 			""";
@@ -363,11 +401,7 @@ public class AttributeDataModelGeneratorTests
 			{
 				[GenerateAttributeDataModel("TestAttribute")]
 				public readonly partial record struct TestAttributeData(
-					[AttributeProperty(
-						Source = AttributePropertySource.ConstructorIndex,
-						Index = 0
-					)]
-					ImmutableArray<TypedConstant> Values
+					[AttributeCtorProperty(0)] ImmutableArray<TypedConstant> Values
 				);
 
 				public class TestAttribute : System.Attribute

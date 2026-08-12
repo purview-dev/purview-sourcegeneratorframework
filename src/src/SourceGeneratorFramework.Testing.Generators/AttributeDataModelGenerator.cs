@@ -4,8 +4,10 @@ using Microsoft.CodeAnalysis;
 namespace Purview.SourceGeneratorFramework.Testing.Generators;
 
 [Generator]
-public sealed class AttributeDataModelGenerator : IIncrementalGenerator
+public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstractions.ILogSupport
 {
+	Abstractions.GenerationLogger? _logger;
+
 	public void Initialize(IncrementalGeneratorInitializationContext context)
 	{
 		context.RegisterPostInitializationOutput(context =>
@@ -16,7 +18,7 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 			context.AddSource("AttributeDataModelAttributes.g.cs", attributeSource);
 		});
 
-		var targets = AttributeDataModelLibrary.GetTargets(context);
+		var targets = AttributeDataModelLibrary.GetTargets(context, _logger);
 
 		context.RegisterSourceOutput(
 			targets,
@@ -164,7 +166,7 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 		var values = new List<string> { "false" };
 		foreach (var property in target.Properties)
 		{
-			values.Add(property.DefaultValueExpression);
+			values.Add($"default({property.FullyQualifiedTypeName})");
 		}
 
 		writer.WriteLine(
@@ -327,41 +329,176 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 		var variableName = ToCamelCase(property.PropertyName);
 		var typeName = GetNonNullableTypeName(property.FullyQualifiedTypeName);
 
-		switch (property.Source)
+		if (property.IsNestedModel)
 		{
-			case AttributePropertySource.NamedArgument:
-				var namedArgName = property.MappedName ?? property.PropertyName;
-				writer.WriteLine(
-					$"attributeData.TryGetNamedArgument<{typeName}>(\"{namedArgName}\", out var {variableName});"
-				);
-				break;
-
-			case AttributePropertySource.ConstructorIndex:
-				writer.WriteLine(
-					$"attributeData.TryGetConstructorArgument<{typeName}>({property.ConstructorIndex}, out var {variableName});"
-				);
-				break;
-
-			case AttributePropertySource.ConstructorName:
-				var ctorName =
-					property.MappedName
-					?? throw new InvalidOperationException("Constructor name mapping is required.");
-				writer.WriteLine(
-					$"attributeData.TryGetConstructorArgument<{typeName}>(\"{ctorName}\", out var {variableName});"
-				);
-				break;
-
-			case AttributePropertySource.NestedModel:
-				writer.WriteLine(
-					$"var {variableName} = {property.NestedModelTypeName}.FromAttributeData(attributeData);"
-				);
-				break;
-
-			default:
-				throw new InvalidOperationException(
-					$"Unsupported property source: {property.Source}"
-				);
+			writer.WriteLine(
+				$"var {variableName} = {property.NestedModelTypeName}.FromAttributeData(attributeData);"
+			);
+			return;
 		}
+
+		var sources = property.Sources;
+		if (sources.IsEmpty)
+		{
+			writer.WriteLine($"var {variableName} = default({typeName});");
+			return;
+		}
+
+		if (sources.Length == 1)
+		{
+			var source = sources[0];
+			if (property.HasDefaultValue)
+			{
+				WriteSingleSourceExtractionWithDefault(
+					writer,
+					source,
+					variableName,
+					typeName,
+					property.DefaultValueExpression
+				);
+			}
+			else
+			{
+				WriteSingleSourceExtraction(writer, source, variableName, typeName);
+			}
+			return;
+		}
+
+		WriteMultiSourceExtraction(
+			writer,
+			sources,
+			variableName,
+			typeName,
+			property.HasDefaultValue,
+			property.DefaultValueExpression
+		);
+	}
+
+	static void WriteSingleSourceExtraction(
+		CodeWriter writer,
+		PropertySource source,
+		string variableName,
+		string typeName
+	)
+	{
+		var extraction = GetSingleSourceExtractionExpression(source, variableName, typeName);
+		writer.WriteLine(extraction);
+	}
+
+	static void WriteSingleSourceExtractionWithDefault(
+		CodeWriter writer,
+		PropertySource source,
+		string variableName,
+		string typeName,
+		string defaultValueExpression
+	)
+	{
+		var extraction = GetSingleSourceExtractionWithDefaultExpression(
+			source,
+			variableName,
+			typeName,
+			defaultValueExpression
+		);
+		writer.WriteLine(extraction);
+	}
+
+	static void WriteMultiSourceExtraction(
+		CodeWriter writer,
+		ImmutableArray<PropertySource> sources,
+		string variableName,
+		string typeName,
+		bool hasDefaultValue,
+		string defaultValueExpression
+	)
+	{
+		writer.WriteLine($"{typeName} {variableName};");
+
+		void WriteFallback(int index)
+		{
+			if (index >= sources.Length)
+			{
+				if (hasDefaultValue)
+				{
+					writer.WriteLine($"{variableName} = {defaultValueExpression};");
+				}
+				return;
+			}
+
+			var source = sources[index];
+			var isLast = index == sources.Length - 1 && !hasDefaultValue;
+			var methodCall = GetTryGetMethodCall(
+				source,
+				variableName,
+				typeName,
+				declareVariable: false
+			);
+
+			if (isLast)
+			{
+				writer.WriteLine(methodCall + ";");
+			}
+			else
+			{
+				writer.WriteLine($"if (!{methodCall})");
+				writer.WriteBlock(null, body => WriteFallback(index + 1));
+			}
+		}
+
+		WriteFallback(0);
+	}
+
+	static string GetSingleSourceExtractionExpression(
+		PropertySource source,
+		string variableName,
+		string typeName
+	)
+	{
+		var methodCall = GetTryGetMethodCall(source, variableName, typeName, declareVariable: true);
+		// TryGet method declares the variable via out var, so we just call it.
+		return methodCall + ";";
+	}
+
+	static string GetSingleSourceExtractionWithDefaultExpression(
+		PropertySource source,
+		string variableName,
+		string typeName,
+		string defaultValueExpression
+	)
+	{
+		return source.Source switch
+		{
+			AttributePropertySource.NamedArgument =>
+				$"var {variableName} = attributeData.GetNamedArgument<{typeName}>(\"{source.MappedName}\", {defaultValueExpression});",
+			AttributePropertySource.ConstructorIndex =>
+				$"var {variableName} = attributeData.GetConstructorArgument<{typeName}>({source.ConstructorIndex}, {defaultValueExpression});",
+			AttributePropertySource.ConstructorName =>
+				$"var {variableName} = attributeData.GetConstructorArgument<{typeName}>(\"{source.MappedName}\", {defaultValueExpression});",
+			_ => throw new InvalidOperationException(
+				$"Unsupported property source: {source.Source}"
+			),
+		};
+	}
+
+	static string GetTryGetMethodCall(
+		PropertySource source,
+		string variableName,
+		string typeName,
+		bool declareVariable
+	)
+	{
+		var outVariable = declareVariable ? $"out var {variableName}" : $"out {variableName}";
+		return source.Source switch
+		{
+			AttributePropertySource.NamedArgument =>
+				$"attributeData.TryGetNamedArgument<{typeName}>(\"{source.MappedName}\", {outVariable})",
+			AttributePropertySource.ConstructorIndex =>
+				$"attributeData.TryGetConstructorArgument<{typeName}>({source.ConstructorIndex}, {outVariable})",
+			AttributePropertySource.ConstructorName =>
+				$"attributeData.TryGetConstructorArgument<{typeName}>(\"{source.MappedName}\", {outVariable})",
+			_ => throw new InvalidOperationException(
+				$"Unsupported property source: {source.Source}"
+			),
+		};
 	}
 
 	static string GetNonNullableTypeName(string typeName) =>
@@ -371,4 +508,8 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 
 	static string ToCamelCase(string value) =>
 		string.IsNullOrEmpty(value) ? value : char.ToLowerInvariant(value[0]) + value.Substring(1);
+
+	void Abstractions.ILogSupport.SetLogOutput(
+		global::System.Action<string, Abstractions.OutputType> action
+	) => _logger = new Abstractions.GenerationLogger(action);
 }

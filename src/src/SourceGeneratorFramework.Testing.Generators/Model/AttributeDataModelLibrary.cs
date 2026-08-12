@@ -2,31 +2,34 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Text;
 using Microsoft.CodeAnalysis;
+using Purview.SourceGeneratorFramework.Testing.Abstractions;
 
 namespace Purview.SourceGeneratorFramework.Testing.Generators.Model;
 
 static class AttributeDataModelLibrary
 {
 	public static IncrementalValuesProvider<GeneratorResult<AttributeDataModelTarget>> GetTargets(
-		IncrementalGeneratorInitializationContext context
+		IncrementalGeneratorInitializationContext context,
+		GenerationLogger? logger
 	)
 	{
 		return IncrementalPipeline.ForAttributeWithMetadataName(
 			context,
 			TypeLibrary.GenerateAttributeDataModelAttribute,
-			static (ctx, ct) =>
+			(ctx, ct) =>
 			{
 				var symbol = ctx.SemanticModel.GetDeclaredSymbol(ctx.TargetNode, ct);
 				if (symbol is not INamedTypeSymbol { TypeKind: TypeKind.Struct } structSymbol)
 					return GeneratorResult<AttributeDataModelTarget>.Empty;
 
-				return BuildTarget(structSymbol, ct);
+				return BuildTarget(structSymbol, logger, ct);
 			}
 		);
 	}
 
 	static GeneratorResult<AttributeDataModelTarget> BuildTarget(
 		INamedTypeSymbol structSymbol,
+		GenerationLogger? logger,
 		CancellationToken cancellationToken
 	)
 	{
@@ -90,9 +93,12 @@ static class AttributeDataModelLibrary
 			);
 		}
 
+		var excludedNames = new HashSet<string>(StringComparer.Ordinal);
 		var explicitProperties = ReadExplicitProperties(
 			structSymbol,
+			excludedNames,
 			diagnostics,
+			logger,
 			cancellationToken
 		);
 		var discoveredProperties =
@@ -100,7 +106,9 @@ static class AttributeDataModelLibrary
 				? DiscoverProperties(
 					targetAttributeType,
 					explicitProperties,
+					excludedNames,
 					diagnostics,
+					logger,
 					cancellationToken
 				)
 				: ImmutableArray<AttributeDataModelProperty>.Empty;
@@ -128,7 +136,9 @@ static class AttributeDataModelLibrary
 
 	static ImmutableArray<AttributeDataModelProperty> ReadExplicitProperties(
 		INamedTypeSymbol structSymbol,
+		HashSet<string> excludedNames,
 		ImmutableArray<DiagnosticInfo>.Builder diagnostics,
+		GenerationLogger? logger,
 		CancellationToken cancellationToken
 	)
 	{
@@ -141,15 +151,7 @@ static class AttributeDataModelLibrary
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 
-			var attributeProperty = GetAttribute(parameter, TypeLibrary.AttributePropertyAttribute);
-			if (attributeProperty is null)
-				continue;
-
-			var source = GetPropertySource(attributeProperty);
-			var name = GetNamedArgument(attributeProperty, "Name", (string?)null);
-			var index = GetNamedArgument(attributeProperty, "Index", -1);
-			var defaultValue = GetNamedArgument(attributeProperty, "DefaultValue", (object?)null);
-
+			var propertyName = ToPascalCase(parameter.Name);
 			var propertyType = parameter.Type;
 			if (!IsSupportedType(propertyType))
 			{
@@ -157,11 +159,41 @@ static class AttributeDataModelLibrary
 					DiagnosticInfo.Create(
 						AttributeDataModelDiagnosticDescriptors.PropertyTypeNotSupported,
 						parameter.Locations.FirstOrDefault(static loc => loc.IsInSource),
-						ToPascalCase(parameter.Name),
+						propertyName,
 						TypeHelpers.ToFullyQualifiedDisplayString(propertyType)
 					)
 				);
 				continue;
+			}
+
+			var info = ReadParameterAttributes(parameter, propertyName, logger);
+
+			if (info.IsExcluded)
+			{
+				excludedNames.Add(propertyName);
+				continue;
+			}
+
+			if (info.IsNestedModel && !IsGeneratedAttributeModel(propertyType))
+			{
+				diagnostics.Add(
+					DiagnosticInfo.Create(
+						AttributeDataModelDiagnosticDescriptors.NestedModelNotGenerated,
+						parameter.Locations.FirstOrDefault(static loc => loc.IsInSource),
+						TypeHelpers.ToFullyQualifiedDisplayString(propertyType)
+					)
+				);
+			}
+
+			var sources = info.Sources;
+			if (sources.IsEmpty)
+			{
+				sources = ImmutableArray.Create(
+					new PropertySource(AttributePropertySource.NamedArgument, propertyName, -1)
+				);
+				logger?.Debug(
+					$"Parameter '{propertyName}' has no source attribute; defaulting to named argument."
+				);
 			}
 
 			var (modelTypeName, isNonNullableReferenceType) = GetModelTypeInfo(
@@ -169,38 +201,23 @@ static class AttributeDataModelLibrary
 				autoDiscover: false
 			);
 			var defaultValueExpression = GetDefaultValueExpression(
-				defaultValue,
+				info.DefaultValue,
 				modelTypeName,
-				isNonNullableReferenceType,
 				propertyType,
-				ToPascalCase(parameter.Name),
 				diagnostics
 			);
 
-			var isNestedModel = source == AttributePropertySource.NestedModel;
-			if (isNestedModel && !IsGeneratedAttributeModel(propertyType))
-			{
-				diagnostics.Add(
-					DiagnosticInfo.Create(
-						AttributeDataModelDiagnosticDescriptors.NestedModelNotGenerated,
-						parameter.Locations.FirstOrDefault(static loc => loc.IsInSource),
-						modelTypeName
-					)
-				);
-			}
-
 			properties.Add(
 				new AttributeDataModelProperty(
-					PropertyName: ToPascalCase(parameter.Name),
+					PropertyName: propertyName,
 					FullyQualifiedTypeName: modelTypeName,
-					Source: source,
-					MappedName: name,
-					ConstructorIndex: index,
+					Sources: sources,
 					DefaultValueExpression: defaultValueExpression,
+					HasDefaultValue: info.HasDefaultValue,
 					IsExplicit: true,
 					IsNonNullableReferenceType: isNonNullableReferenceType,
-					IsNestedModel: isNestedModel,
-					NestedModelTypeName: isNestedModel ? modelTypeName : null
+					IsNestedModel: info.IsNestedModel,
+					NestedModelTypeName: info.IsNestedModel ? modelTypeName : null
 				)
 			);
 		}
@@ -208,10 +225,169 @@ static class AttributeDataModelLibrary
 		return properties.ToImmutable();
 	}
 
+	static ParameterAttributeInfo ReadParameterAttributes(
+		IParameterSymbol parameter,
+		string propertyName,
+		GenerationLogger? logger
+	)
+	{
+		var sources = ImmutableArray.CreateBuilder<PropertySource>();
+		var isExcluded = false;
+		var isNestedModel = false;
+		object? defaultValue = null;
+		var hasDefaultValue = false;
+
+		var excludeAttribute = GetAttribute(
+			parameter,
+			TypeLibrary.AttributeExcludePropertyAttribute
+		);
+		if (excludeAttribute is not null)
+		{
+			isExcluded = true;
+			logger?.Debug($"Parameter '{propertyName}' is excluded from the attribute model.");
+		}
+
+		var nestedModelAttribute = GetAttribute(
+			parameter,
+			TypeLibrary.AttributeNestedModelPropertyAttribute
+		);
+		if (nestedModelAttribute is not null)
+		{
+			if (isExcluded)
+			{
+				logger?.Debug(
+					$"Parameter '{propertyName}' has both [AttributeExclude] and [AttributeNestedModelProperty]; excluding takes precedence."
+				);
+			}
+			else
+			{
+				isNestedModel = true;
+				defaultValue = GetNamedArgument(
+					nestedModelAttribute,
+					"DefaultValue",
+					(object?)null
+				);
+				hasDefaultValue = defaultValue is not null;
+				sources.Add(new PropertySource(AttributePropertySource.NestedModel, null, -1));
+			}
+		}
+
+		var hasExclusive = isExcluded || isNestedModel;
+
+		var ctorAttribute = GetAttribute(parameter, TypeLibrary.AttributeCtorPropertyAttribute);
+		if (ctorAttribute is not null && !hasExclusive)
+		{
+			var ctorName = GetCtorPropertyName(ctorAttribute);
+			var ctorIndex = GetCtorPropertyIndex(ctorAttribute);
+			var ctorDefaultValue = GetNamedArgument(ctorAttribute, "DefaultValue", (object?)null);
+
+			if (ctorName is not null)
+			{
+				sources.Add(
+					new PropertySource(AttributePropertySource.ConstructorName, ctorName, -1)
+				);
+				logger?.Debug(
+					$"Parameter '{propertyName}' maps to constructor parameter '{ctorName}'."
+				);
+			}
+			else if (ctorIndex >= 0)
+			{
+				sources.Add(
+					new PropertySource(AttributePropertySource.ConstructorIndex, null, ctorIndex)
+				);
+				logger?.Debug(
+					$"Parameter '{propertyName}' maps to constructor argument index {ctorIndex}."
+				);
+			}
+
+			if (ctorDefaultValue is not null)
+			{
+				defaultValue = ctorDefaultValue;
+				hasDefaultValue = true;
+			}
+		}
+		else if (ctorAttribute is not null)
+		{
+			logger?.Debug(
+				$"Parameter '{propertyName}' has conflicting attributes; [AttributeCtorProperty] is ignored."
+			);
+		}
+
+		var namedAttribute = GetAttribute(parameter, TypeLibrary.AttributeNamedPropertyAttribute);
+		if (namedAttribute is not null && !hasExclusive)
+		{
+			var namedName = GetNamedArgument(namedAttribute, "Name", (string?)null);
+			var namedDefaultValue = GetNamedArgument(namedAttribute, "DefaultValue", (object?)null);
+
+			sources.Add(
+				new PropertySource(
+					AttributePropertySource.NamedArgument,
+					namedName ?? propertyName,
+					-1
+				)
+			);
+			logger?.Debug(
+				$"Parameter '{propertyName}' maps to named argument '{namedName ?? propertyName}'."
+			);
+
+			if (namedDefaultValue is not null)
+			{
+				defaultValue = namedDefaultValue;
+				hasDefaultValue = true;
+			}
+		}
+		else if (namedAttribute is not null)
+		{
+			logger?.Debug(
+				$"Parameter '{propertyName}' has conflicting attributes; [AttributeNamedProperty] is ignored."
+			);
+		}
+
+		return new ParameterAttributeInfo(
+			isExcluded,
+			isNestedModel,
+			sources.ToImmutable(),
+			defaultValue,
+			hasDefaultValue
+		);
+	}
+
+	sealed record ParameterAttributeInfo(
+		bool IsExcluded,
+		bool IsNestedModel,
+		ImmutableArray<PropertySource> Sources,
+		object? DefaultValue,
+		bool HasDefaultValue
+	);
+
+	static string? GetCtorPropertyName(AttributeData attributeData)
+	{
+		if (
+			attributeData.ConstructorArguments.Length > 0
+			&& attributeData.ConstructorArguments[0].Value is string name
+		)
+			return name;
+
+		return GetNamedArgument(attributeData, "Name", (string?)null);
+	}
+
+	static int GetCtorPropertyIndex(AttributeData attributeData)
+	{
+		if (
+			attributeData.ConstructorArguments.Length > 0
+			&& attributeData.ConstructorArguments[0].Value is int index
+		)
+			return index;
+
+		return GetNamedArgument(attributeData, "Index", -1);
+	}
+
 	static ImmutableArray<AttributeDataModelProperty> DiscoverProperties(
 		ITypeSymbol targetAttributeType,
 		ImmutableArray<AttributeDataModelProperty> explicitProperties,
+		HashSet<string> excludedNames,
 		ImmutableArray<DiagnosticInfo>.Builder diagnostics,
+		GenerationLogger? logger,
 		CancellationToken cancellationToken
 	)
 	{
@@ -232,6 +408,14 @@ static class AttributeDataModelLibrary
 
 				if (discoveredNames.Contains(propertyName))
 					continue;
+
+				if (excludedNames.Contains(propertyName))
+				{
+					logger?.Debug(
+						$"Skipping discovered constructor parameter '{propertyName}' because it is explicitly excluded."
+					);
+					continue;
+				}
 
 				if (explicitProperties.Any(p => p.PropertyName == propertyName))
 					continue;
@@ -258,7 +442,6 @@ static class AttributeDataModelLibrary
 				var defaultValueExpression = GetInferredDefaultExpression(
 					parameter,
 					modelTypeName,
-					propertyName,
 					diagnostics
 				);
 
@@ -266,10 +449,15 @@ static class AttributeDataModelLibrary
 					new AttributeDataModelProperty(
 						PropertyName: propertyName,
 						FullyQualifiedTypeName: modelTypeName,
-						Source: AttributePropertySource.ConstructorName,
-						MappedName: parameter.Name,
-						ConstructorIndex: i,
+						Sources: ImmutableArray.Create(
+							new PropertySource(
+								AttributePropertySource.ConstructorName,
+								parameter.Name,
+								i
+							)
+						),
 						DefaultValueExpression: defaultValueExpression,
+						HasDefaultValue: parameter.HasExplicitDefaultValue,
 						IsExplicit: false,
 						IsNonNullableReferenceType: isNonNullableReferenceType,
 						IsNestedModel: false,
@@ -289,6 +477,14 @@ static class AttributeDataModelLibrary
 			var propertyName = property.Name;
 			if (discoveredNames.Contains(propertyName))
 				continue;
+
+			if (excludedNames.Contains(propertyName))
+			{
+				logger?.Debug(
+					$"Skipping discovered named property '{propertyName}' because it is explicitly excluded."
+				);
+				continue;
+			}
 
 			if (explicitProperties.Any(p => p.PropertyName == propertyName))
 				continue;
@@ -315,9 +511,7 @@ static class AttributeDataModelLibrary
 			var defaultValueExpression = GetDefaultValueExpression(
 				null,
 				modelTypeName,
-				isNonNullableReferenceType: false,
 				property.Type,
-				propertyName,
 				diagnostics
 			);
 
@@ -325,10 +519,11 @@ static class AttributeDataModelLibrary
 				new AttributeDataModelProperty(
 					PropertyName: propertyName,
 					FullyQualifiedTypeName: modelTypeName,
-					Source: AttributePropertySource.NamedArgument,
-					MappedName: property.Name,
-					ConstructorIndex: -1,
+					Sources: ImmutableArray.Create(
+						new PropertySource(AttributePropertySource.NamedArgument, property.Name, -1)
+					),
 					DefaultValueExpression: defaultValueExpression,
+					HasDefaultValue: false,
 					IsExplicit: false,
 					IsNonNullableReferenceType: isNonNullableReferenceType,
 					IsNestedModel: false,
@@ -369,9 +564,7 @@ static class AttributeDataModelLibrary
 	static string GetDefaultValueExpression(
 		object? defaultValue,
 		string modelTypeName,
-		bool isNonNullableReferenceType,
 		ITypeSymbol originalType,
-		string propertyName,
 		ImmutableArray<DiagnosticInfo>.Builder diagnostics
 	)
 	{
@@ -390,24 +583,12 @@ static class AttributeDataModelLibrary
 			);
 		}
 
-		if (isNonNullableReferenceType)
-		{
-			diagnostics.Add(
-				DiagnosticInfo.Create(
-					AttributeDataModelDiagnosticDescriptors.NonNullableReferenceTypeRequiresDefault,
-					Location.None,
-					propertyName
-				)
-			);
-		}
-
 		return $"default({modelTypeName})";
 	}
 
 	static string GetInferredDefaultExpression(
 		IParameterSymbol parameter,
 		string modelTypeName,
-		string propertyName,
 		ImmutableArray<DiagnosticInfo>.Builder diagnostics
 	)
 	{
@@ -416,9 +597,7 @@ static class AttributeDataModelLibrary
 			return GetDefaultValueExpression(
 				parameter.ExplicitDefaultValue,
 				modelTypeName,
-				isNonNullableReferenceType: false,
 				parameter.Type,
-				propertyName,
 				diagnostics
 			);
 		}
@@ -588,28 +767,6 @@ static class AttributeDataModelLibrary
 		var typeName = fullyQualifiedName.Substring(lastDot + 1);
 		var namespaceName = fullyQualifiedName.Substring(0, lastDot);
 		return new TypeValueObject(typeName, namespaceName);
-	}
-
-	static AttributePropertySource GetPropertySource(AttributeData attributeData)
-	{
-		foreach (var arg in attributeData.NamedArguments)
-		{
-			if (arg.Key != "Source")
-				continue;
-
-			var value = arg.Value.Value;
-			if (value is int intValue)
-				return (AttributePropertySource)intValue;
-		}
-
-		if (attributeData.ConstructorArguments.Length > 0)
-		{
-			var value = attributeData.ConstructorArguments[0].Value;
-			if (value is int intValue)
-				return (AttributePropertySource)intValue;
-		}
-
-		return AttributePropertySource.NamedArgument;
 	}
 
 	static T? GetNamedArgument<T>(AttributeData attributeData, string name, T? defaultValue)

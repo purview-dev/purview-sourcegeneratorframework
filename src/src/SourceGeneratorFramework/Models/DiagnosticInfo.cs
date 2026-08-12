@@ -21,7 +21,9 @@ public sealed record DiagnosticInfo(
 	/// </summary>
 	public Diagnostic ToDiagnostic()
 	{
-		var location = Location.Create(FilePath, TextSpan, LinePositionSpan);
+		var location = string.IsNullOrEmpty(FilePath)
+			? Location.None
+			: Location.Create(FilePath, TextSpan, LinePositionSpan);
 
 		var args = MessageArgs;
 		var objArgs = new object?[args.Count];

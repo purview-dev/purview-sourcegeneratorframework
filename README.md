@@ -47,7 +47,8 @@ Supported features:
 - Auto-discovery of all constructor parameters and public named properties
 - Nested generated models (e.g., a shared `ValidationAttributeData` model reused inside `RequiredAttributeData`)
 - Inheritance matching for base attribute models
-- Optional default values for the `Empty` sentinel
+- Optional `DefaultValue` runtime fallback when a property is not found on the attribute
+- An `Empty` sentinel that uses `default(T)` for every property
 
 See the [`SourceGeneratorFramework.Testing.Generators` README](src/src/SourceGeneratorFramework.Testing.Generators) for examples, including validation attributes with nested types.
 

@@ -36,46 +36,63 @@ sealed class GenerateAttributeDataModelAttribute : global::System.Attribute
 	public bool AutoDiscover { get; set; }
 }
 
-/// <summary>Describes how a generated model property is read from Roslyn attribute data.</summary>
+/// <summary>Marks a record parameter as a named attribute argument.</summary>
 [global::System.AttributeUsage(global::System.AttributeTargets.Parameter, AllowMultiple = false, Inherited = false)]
 [global::Microsoft.CodeAnalysis.Embedded]
-sealed class AttributePropertyAttribute : global::System.Attribute
+sealed class AttributeNamedPropertyAttribute : global::System.Attribute
 {
-	/// <summary>Initializes a new instance of the <see cref="AttributePropertyAttribute"/> class.</summary>
-	/// <param name="source">The source of the attribute value.</param>
-	public AttributePropertyAttribute(
-		AttributePropertySource source = AttributePropertySource.NamedArgument
-	)
+	/// <summary>Initializes a new instance of the <see cref="AttributeNamedPropertyAttribute"/> class.</summary>
+	public AttributeNamedPropertyAttribute() { }
+
+	/// <summary>Gets or sets an optional named-property mapping.</summary>
+	public string? Name { get; set; }
+
+	/// <summary>Gets or sets the value used when the named argument is not specified.</summary>
+	public object? DefaultValue { get; set; }
+}
+
+/// <summary>Marks a record parameter as a constructor argument.</summary>
+[global::System.AttributeUsage(global::System.AttributeTargets.Parameter, AllowMultiple = false, Inherited = false)]
+[global::Microsoft.CodeAnalysis.Embedded]
+sealed class AttributeCtorPropertyAttribute : global::System.Attribute
+{
+	/// <summary>Initializes a new instance of the <see cref="AttributeCtorPropertyAttribute"/> class.</summary>
+	public AttributeCtorPropertyAttribute() { }
+
+	/// <summary>Initializes a new instance of the <see cref="AttributeCtorPropertyAttribute"/> class.</summary>
+	/// <param name="name">The constructor parameter name.</param>
+	public AttributeCtorPropertyAttribute(string name)
 	{
-		Source = source;
+		Name = name;
 	}
 
-	/// <summary>Gets or sets the source of the attribute value.</summary>
-	public AttributePropertySource Source { get; set; } = AttributePropertySource.NamedArgument;
+	/// <summary>Initializes a new instance of the <see cref="AttributeCtorPropertyAttribute"/> class.</summary>
+	/// <param name="index">The constructor argument index.</param>
+	public AttributeCtorPropertyAttribute(int index)
+	{
+		Index = index;
+	}
 
-	/// <summary>Gets or sets an optional constructor parameter or named-property mapping.</summary>
+	/// <summary>Gets or sets the constructor parameter name.</summary>
 	public string? Name { get; set; }
 
 	/// <summary>Gets or sets the constructor argument index.</summary>
 	public int Index { get; set; } = -1;
 
-	/// <summary>Gets or sets the value used by the generated empty model.</summary>
+	/// <summary>Gets or sets the value used when the constructor argument is not specified.</summary>
 	public object? DefaultValue { get; set; }
 }
 
-/// <summary>Identifies the source used to populate an attribute model property.</summary>
+/// <summary>Marks a record parameter as a nested generated attribute-data model.</summary>
+[global::System.AttributeUsage(global::System.AttributeTargets.Parameter, AllowMultiple = false, Inherited = false)]
 [global::Microsoft.CodeAnalysis.Embedded]
-enum AttributePropertySource
+sealed class AttributeNestedModelPropertyAttribute : global::System.Attribute
 {
-	/// <summary>Reads a named attribute argument.</summary>
-	NamedArgument,
+}
 
-	/// <summary>Reads a constructor argument by ordinal index.</summary>
-	ConstructorIndex,
-
-	/// <summary>Reads a constructor argument by parameter name.</summary>
-	ConstructorName,
-
-	/// <summary>Populates another generated attribute-data model from the same attribute.</summary>
-	NestedModel,
+/// <summary>Excludes a record parameter from the generated attribute-data model.</summary>
+[global::System.AttributeUsage(global::System.AttributeTargets.Parameter, AllowMultiple = false, Inherited = false)]
+[global::Microsoft.CodeAnalysis.Embedded]
+sealed class AttributeExcludePropertyAttribute : global::System.Attribute
+{
 }

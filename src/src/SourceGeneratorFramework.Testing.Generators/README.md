@@ -10,12 +10,23 @@ This project is not published as a standalone NuGet package. It is referenced as
 
 ### Marker attributes
 
-The generator emits three marker attributes into your compilation:
+The generator emits marker attributes into your compilation:
 
 - `[GenerateAttributeDataModel(Type targetAttribute)]` — placed on a `readonly partial record struct` to opt into generation.
 - `[GenerateAttributeDataModel(string targetAttribute)]` — same as above, but resolves the attribute by fully-qualified name. Use this when the attribute type is not available in the generator's compilation (e.g., `LengthAttribute` in .NET 8+ or a self-generated attribute).
-- `[AttributeProperty]` — placed on a record parameter to describe how to populate it from the attribute.
-- `AttributePropertySource` — describes the source of a property: `NamedArgument`, `ConstructorIndex`, `ConstructorName`, or `NestedModel`.
+- `[AttributeNamedProperty]` — a record parameter is populated from a named attribute property (the property name is inferred from the parameter name unless overridden).
+- `[AttributeNamedProperty(string name)]` — explicit named property source.
+- `[AttributeCtorProperty]` — a record parameter is populated from a constructor argument (the parameter name is inferred from the parameter name unless overridden).
+- `[AttributeCtorProperty(string name)]` — constructor argument by parameter name.
+- `[AttributeCtorProperty(int index)]` — constructor argument by parameter index.
+- `[AttributeNestedModelProperty]` — a record parameter is populated by recursively calling `FromAttributeData` on a nested generated model.
+- `[AttributeExcludeProperty]` — skips auto-discovery for this parameter.
+
+### Default values
+
+`DefaultValue` is a runtime fallback. If the requested property is not found on the attribute, the generated `FromAttributeData` method uses the supplied `DefaultValue` instead of `default(T)`.
+
+The `Empty` sentinel always uses `default(T)` for every property, including an `Exists` field set to `false`.
 
 ### Manual mapping
 
@@ -28,7 +39,7 @@ namespace MySourceGenerator.Models;
 
 [GenerateAttributeDataModel(typeof(RequiredAttribute))]
 public readonly partial record struct RequiredAttributeData(
-    [AttributeProperty] bool AllowEmptyStrings
+    bool AllowEmptyStrings
 );
 ```
 
@@ -62,7 +73,7 @@ When the attribute type is not referenced in the generator project, pass the ful
 ```csharp
 [GenerateAttributeDataModel("System.ComponentModel.DataAnnotations.RequiredAttribute")]
 public readonly partial record struct RequiredAttributeData(
-    [AttributeProperty] bool AllowEmptyStrings
+    bool AllowEmptyStrings
 );
 ```
 
@@ -73,18 +84,8 @@ A plain type name (`"RequiredAttribute"`) can also be used, which matches an att
 ```csharp
 [GenerateAttributeDataModel(typeof(LengthAttribute))]
 public readonly partial record struct LengthAttributeData(
-    [AttributeProperty(Source = AttributePropertySource.ConstructorIndex, Index = 0)] int MinimumLength,
-    [AttributeProperty(Source = AttributePropertySource.ConstructorIndex, Index = 1)] int MaximumLength
-);
-```
-
-Or equivalently, by passing `Source` positionally:
-
-```csharp
-[GenerateAttributeDataModel(typeof(LengthAttribute))]
-public readonly partial record struct LengthAttributeData(
-    [AttributeProperty(AttributePropertySource.ConstructorIndex, Index = 0)] int MinimumLength,
-    [AttributeProperty(AttributePropertySource.ConstructorIndex, Index = 1)] int MaximumLength
+    [AttributeCtorProperty(0)] int MinimumLength,
+    [AttributeCtorProperty(1)] int MaximumLength
 );
 ```
 
@@ -93,8 +94,8 @@ Or by constructor parameter name:
 ```csharp
 [GenerateAttributeDataModel(typeof(StringLengthAttribute))]
 public readonly partial record struct StringLengthAttributeData(
-    [AttributeProperty(Source = AttributePropertySource.ConstructorName, Name = "maximumLength", DefaultValue = int.MaxValue)] int MaximumLength,
-    [AttributeProperty] int MinimumLength
+    [AttributeCtorProperty("maximumLength", DefaultValue = 2147483647)] int MaximumLength,
+    int MinimumLength
 );
 ```
 
@@ -105,15 +106,15 @@ Any property whose type is itself annotated with `[GenerateAttributeDataModel]` 
 ```csharp
 [GenerateAttributeDataModel(typeof(ValidationAttribute), MatchByInheritance = true)]
 public readonly partial record struct ValidationAttributeData(
-    [AttributeProperty] string? ErrorMessage,
-    [AttributeProperty] string? ErrorMessageResourceName,
-    [AttributeProperty] ITypeSymbol? ErrorMessageResourceType
+    string? ErrorMessage,
+    string? ErrorMessageResourceName,
+    ITypeSymbol? ErrorMessageResourceType
 );
 
 [GenerateAttributeDataModel(typeof(RequiredAttribute))]
 public readonly partial record struct RequiredAttributeData(
-    [AttributeProperty] bool AllowEmptyStrings,
-    [AttributeProperty(Source = AttributePropertySource.NestedModel)] ValidationAttributeData ValidationAttribute
+    bool AllowEmptyStrings,
+    [AttributeNestedModelProperty] ValidationAttributeData ValidationAttribute
 );
 ```
 
@@ -132,12 +133,13 @@ This generates the same `RequiredAttributeData` as the manual example above. Nes
 
 ### Default values
 
-The `Empty` sentinel uses `default(T)` unless a different value is provided via `DefaultValue` or inferred from an optional constructor parameter. The `DefaultValue` property accepts any attribute-legal constant, including `null`, primitives, strings, and `typeof(...)`.
+Use `DefaultValue` to provide a runtime fallback when the attribute does not contain the requested property. The `Empty` sentinel still uses `default(T)`.
 
 ```csharp
-[GenerateAttributeDataModel(typeof(StringLengthAttribute))]
-public readonly partial record struct StringLengthAttributeData(
-    [AttributeProperty(Source = AttributePropertySource.ConstructorName, Name = "maximumLength", DefaultValue = int.MaxValue)] int MaximumLength
+[GenerateAttributeDataModel(typeof(HostKitAttribute))]
+public readonly partial record struct HostKitAttributeData(
+    [AttributeCtorProperty("name", DefaultValue = "MyApp")] string Name,
+    [AttributeCtorProperty("generateOptions", DefaultValue = true)] bool GenerateOptions
 );
 ```
 

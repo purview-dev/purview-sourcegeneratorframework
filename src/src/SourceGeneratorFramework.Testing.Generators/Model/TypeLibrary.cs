@@ -27,13 +27,23 @@ static class TypeLibrary
 		GeneratorsNamespace
 	);
 
-	public static readonly TypeValueObject AttributePropertyAttribute = new(
-		nameof(AttributePropertyAttribute),
+	public static readonly TypeValueObject AttributeNamedPropertyAttribute = new(
+		nameof(AttributeNamedPropertyAttribute),
 		GeneratorsNamespace
 	);
 
-	public static readonly TypeValueObject AttributePropertySource = new(
-		nameof(AttributePropertySource),
+	public static readonly TypeValueObject AttributeCtorPropertyAttribute = new(
+		nameof(AttributeCtorPropertyAttribute),
+		GeneratorsNamespace
+	);
+
+	public static readonly TypeValueObject AttributeNestedModelPropertyAttribute = new(
+		nameof(AttributeNestedModelPropertyAttribute),
+		GeneratorsNamespace
+	);
+
+	public static readonly TypeValueObject AttributeExcludePropertyAttribute = new(
+		nameof(AttributeExcludePropertyAttribute),
 		GeneratorsNamespace
 	);
 }
