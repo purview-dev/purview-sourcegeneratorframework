@@ -475,9 +475,7 @@ public class CodeWriterTests
 
 		writer.WriteClass(declaration, static _ => { });
 
-		await Assert
-			.That(writer.ToString())
-			.IsEqualTo("sealed partial class ResourceKit\n{\n}\n");
+		await Assert.That(writer.ToString()).IsEqualTo("sealed partial class ResourceKit\n{\n}\n");
 	}
 
 	[Test]
