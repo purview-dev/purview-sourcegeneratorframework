@@ -47,13 +47,9 @@ public sealed class CodeWriterScopeValidationException : InvalidOperationExcepti
 	/// </summary>
 	public IReadOnlyList<CodeWriterOpenScope> OpenScopes => _openScopes;
 
-	static ImmutableArray<CodeWriterOpenScope> Capture(IEnumerable<CodeWriterOpenScope> openScopes)
-	{
-		if (openScopes is null)
-			throw new ArgumentNullException(nameof(openScopes));
-
-		return [.. openScopes];
-	}
+	static ImmutableArray<CodeWriterOpenScope> Capture(
+		IEnumerable<CodeWriterOpenScope> openScopes
+	) => openScopes is null ? throw new ArgumentNullException(nameof(openScopes)) : [.. openScopes];
 
 	static string CreateMessage(ImmutableArray<CodeWriterOpenScope> openScopes)
 	{

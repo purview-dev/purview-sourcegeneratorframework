@@ -169,8 +169,7 @@ public static class TypeHelpers
 			throw new ArgumentNullException(nameof(descriptor));
 		if (descriptor.Symbol.BaseType is not null)
 		{
-			TypeValueObject baseType = new(descriptor.Symbol.BaseType);
-			if (baseType == expectedBase)
+			if (IsCompatibleExpectedBase(descriptor.Symbol.BaseType, expectedBase))
 				return true;
 		}
 
@@ -191,6 +190,53 @@ public static class TypeHelpers
 		}
 
 		return false;
+	}
+
+	static bool IsCompatibleExpectedBase(INamedTypeSymbol actualBase, TypeValueObject expectedBase)
+	{
+		if (expectedBase.Equals(actualBase))
+			return true;
+
+		var actualDefinition = actualBase.OriginalDefinition;
+		var actualNamespace = actualDefinition.ContainingNamespace.IsGlobalNamespace
+			? null
+			: actualDefinition.ContainingNamespace.ToDisplayString();
+		if (
+			actualDefinition.Name != expectedBase.TypeName
+			|| actualNamespace != expectedBase.Namespace
+		)
+			return false;
+
+		// A name-only TypeValueObject has no generic shape information. Treat it as the generic
+		// definition identified by that name, allowing callers such as TypeLibrary.ResourceKitBase
+		// to validate any constructed ResourceKitBase<T>.
+		if (expectedBase.GenericArity == 0 && expectedBase.TypeArguments.IsDefaultOrEmpty)
+			return true;
+
+		if (
+			actualDefinition.Arity != expectedBase.GenericArity
+			|| expectedBase.TypeArguments.IsDefaultOrEmpty
+			|| actualBase.TypeArguments.Length != expectedBase.TypeArguments.Length
+		)
+			return false;
+
+		// This helper validates a generator contract rather than CLR generic assignability. For
+		// example, ResourceKitBase<ConcreteResource> satisfies ResourceKitBase<IResourceKit> when
+		// ConcreteResource implements IResourceKit, despite constructed generic invariance.
+		for (var index = 0; index < expectedBase.TypeArguments.Length; index++)
+		{
+			var expectedArgument = expectedBase.TypeArguments[index];
+			var actualArgument = actualBase.TypeArguments[index];
+			if (
+				!expectedArgument.Equals(actualArgument)
+				&& !MatchesFullyQualifiedName(actualArgument, expectedArgument.SymbolFullName)
+				&& !Implements(actualArgument, expectedArgument)
+				&& !InheritsFrom(actualArgument, expectedArgument)
+			)
+				return false;
+		}
+
+		return true;
 	}
 
 	/// <summary>
@@ -541,6 +587,7 @@ public static class TypeHelpers
 			IsPartial = true,
 			IsStatic = isStatic,
 			IsSealed = includeOptionalParts && !isStatic && containingType.IsSealed,
+			IsAbstract = includeOptionalParts && !isStatic && containingType.IsAbstract,
 			IsReadOnly = containingType.IsReadOnly,
 			GenericTypes =
 			[
@@ -558,6 +605,7 @@ public static class TypeHelpers
 			(TypeKind.Class, true) => TypeDeclarationKind.RecordClass,
 			(TypeKind.Struct, false) => TypeDeclarationKind.Struct,
 			(TypeKind.Struct, true) => TypeDeclarationKind.RecordStruct,
+			(TypeKind.Interface, _) => TypeDeclarationKind.Interface,
 			_ => throw new ArgumentException(
 				$"Type '{typeSymbol.ToDisplayString()}' is not a supported containing type.",
 				nameof(typeSymbol)

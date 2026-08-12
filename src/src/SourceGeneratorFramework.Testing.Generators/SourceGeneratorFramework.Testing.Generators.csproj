@@ -33,6 +33,18 @@
 			Include="..\SourceGeneratorFramework\ConstructorDeclarationOptions.cs"
 			Link="Extensions\Purview\SourceGeneratorFramework\ConstructorDeclarationOptions.cs"
 		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\MemberDeclarationOptions.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\MemberDeclarationOptions.cs"
+		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\DeclarationSyntaxOptions.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\DeclarationSyntaxOptions.cs"
+		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\TypeReferenceOptions.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\TypeReferenceOptions.cs"
+		/>
 
 		<!-- Models -->
 		<Compile

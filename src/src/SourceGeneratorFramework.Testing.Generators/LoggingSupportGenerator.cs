@@ -61,8 +61,11 @@ public sealed partial class LoggingSupportGenerator : IIncrementalGenerator, ILo
 			.WriteLine(")]");
 
 		using (
-			var classWriter = writer.WriteClass(
-				new TypeDeclarationOptions(sourceGenType) { Interfaces = [TypeLibrary.ILogSupport] }
+			var classWriter = writer.WriteClassScope(
+				new TypeDeclarationOptions(sourceGenType)
+				{
+					Interfaces = [new TypeReferenceOptions(TypeLibrary.ILogSupport)],
+				}
 			)
 		)
 		{

@@ -8,6 +8,23 @@ namespace Purview.SourceGeneratorFramework;
 public partial class TypeValueObjectTests
 {
 	[Test]
+	public async Task TypeReferenceOptions_WithEmpty_ReturnsEmptySentinel()
+	{
+		TypeReferenceOptions sut = TypeValueObject.Empty;
+
+		await Assert.That(sut).IsEqualTo(TypeReferenceOptions.Empty);
+		await Assert.That(sut.IsEmpty).IsTrue();
+	}
+
+	[Test]
+	public async Task TypeReferenceOptions_WithNull_ReturnsNull()
+	{
+		TypeReferenceOptions? sut = (TypeValueObject?)null;
+
+		await Assert.That(sut).IsNull();
+	}
+
+	[Test]
 	public async Task Constructor_WithNamespace_RendersGlobalFullName()
 	{
 		var type = new TypeValueObject("MyType", "MyNamespace");

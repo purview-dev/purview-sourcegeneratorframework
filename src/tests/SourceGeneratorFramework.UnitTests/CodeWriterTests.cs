@@ -2,13 +2,53 @@ namespace Purview.SourceGeneratorFramework;
 
 public class CodeWriterTests
 {
+	static TypeReferenceOptions Type(string name) => new(name);
+
+	[Test]
+	public async Task MemberDeclarationOptions_AreValueTypes()
+	{
+		// Arrange / Act / Assert
+		await Assert.That(typeof(MethodDeclarationOptions).IsValueType).IsTrue();
+		await Assert.That(typeof(PropertyDeclarationOptions).IsValueType).IsTrue();
+		await Assert.That(typeof(FieldDeclarationOptions).IsValueType).IsTrue();
+		await Assert.That(typeof(ConstructorDeclarationOptions).IsValueType).IsTrue();
+	}
+
+	[Test]
+	[Arguments(null)]
+	[Arguments("")]
+	[Arguments("   ")]
+	public async Task TypeReferenceOptions_GivenMissingName_Throws(string? name)
+	{
+		await Assert.That(() => new TypeReferenceOptions(name!)).Throws<ArgumentException>();
+	}
+
+	[Test]
+	public async Task EmptyTypeReference_IsIgnoredByMemberEmitters()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+
+		// Act
+		writer.WriteField(new FieldDeclarationOptions("field", TypeReferenceOptions.Empty));
+		writer.WriteProperty(
+			new PropertyDeclarationOptions("Property", TypeReferenceOptions.Empty)
+		);
+		writer
+			.WriteMethodScope(new MethodDeclarationOptions("Method", TypeReferenceOptions.Empty))
+			.Dispose();
+
+		// Assert
+		await Assert.That(writer.ToString()).IsEmpty();
+	}
+
 	[Test]
 	public async Task WriteLine_AppendsLineWithIndent()
 	{
 		var writer = new CodeWriter();
 
 		writer.WriteLine("public class C");
-		using (writer.Block())
+		using (writer.OpenBlockScope())
 		{
 			writer.WriteLine("public int P { get; set; }");
 		}
@@ -135,7 +175,7 @@ public class CodeWriterTests
 	{
 		var writer = new CodeWriter();
 
-		writer.Block("public class C", w => w.WriteLine("public int P { get; set; }"));
+		writer.WriteBlock("public class C", w => w.WriteLine("public int P { get; set; }"));
 
 		var result = writer.ToString();
 
@@ -159,7 +199,7 @@ public class CodeWriterTests
 	{
 		var writer = new CodeWriter();
 
-		using (writer.WriteBlockNamespace("Test"))
+		using (writer.WriteBlockNamespaceScope("Test"))
 		{
 			writer.WriteLine("public class C { }");
 		}
@@ -172,11 +212,55 @@ public class CodeWriterTests
 	}
 
 	[Test]
+	public async Task WriteBlockNamespaces_GivenMultipleNamespaces_InsertsBlankLineBetweenThem()
+	{
+		var writer = new CodeWriter();
+
+		writer.WriteBlockNamespace("First", body => body.WriteLine("class A { }"));
+		writer.WriteBlockNamespace("Second", body => body.WriteLine("class B { }"));
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"namespace First\n{\n\tclass A { }\n}\n\n"
+					+ "namespace Second\n{\n\tclass B { }\n}\n"
+			);
+	}
+
+	[Test]
+	public async Task WriteBlockNamespaceAndTopLevelType_InsertsBlankLineBetweenDeclarations()
+	{
+		var writer = new CodeWriter();
+		var declaration = new TypeDeclarationOptions("TopLevel");
+
+		writer.WriteBlockNamespace("First", body => body.WriteLine("class Nested { }"));
+		writer.WriteClass(declaration, static _ => { });
+		writer.WriteBlockNamespace("Second", body => body.WriteLine("class Other { }"));
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"namespace First\n{\n\tclass Nested { }\n}\n\n"
+					+ "sealed partial class TopLevel\n{\n}\n\n"
+					+ "namespace Second\n{\n\tclass Other { }\n}\n"
+			);
+	}
+
+	[Test]
 	public async Task WriteClass_WritesClassBlock()
 	{
 		var writer = new CodeWriter();
 
-		using (writer.WriteClass("public class C"))
+		using (
+			writer.WriteClassScope(
+				new TypeDeclarationOptions("C")
+				{
+					Accessibility = TypeDeclarationAccessibility.Public,
+					IsPartial = false,
+					IsSealed = false,
+				}
+			)
+		)
 		{
 			writer.WriteLine("public int P { get; set; }");
 		}
@@ -195,15 +279,15 @@ public class CodeWriterTests
 		var declaration = new TypeDeclarationOptions("Repository")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
-			BaseType = "RepositoryBase<T>",
-			Interfaces = ["IRepository<T>", "IDisposable"],
+			BaseType = Type("RepositoryBase").MakeGeneric(Type("T")),
+			Interfaces = [Type("IRepository").MakeGeneric(Type("T")), Type("IDisposable")],
 			GenericTypes =
 			[
 				new GenericTypeParameterOptions("T") { Constraints = ["class", "new()"] },
 			],
 		};
 
-		using (writer.WriteClass(declaration))
+		using (writer.WriteClassScope(declaration))
 		{
 			writer.WriteLine("public T Value { get; } = new();");
 		}
@@ -227,10 +311,10 @@ public class CodeWriterTests
 		{
 			Accessibility = TypeDeclarationAccessibility.Internal,
 			IsReadOnly = true,
-			Interfaces = ["IEquatable<Identifier>"],
+			Interfaces = [Type("IEquatable").MakeGeneric(Type("Identifier"))],
 		};
 
-		using (writer.WriteRecordStruct(declaration))
+		using (writer.WriteRecordStructScope(declaration))
 		{
 			// Here to prevent IDE0555
 		}
@@ -250,7 +334,7 @@ public class CodeWriterTests
 		var writer = new CodeWriter();
 
 		using (
-			writer.WriteType(
+			writer.WriteTypeScope(
 				new TypeDeclarationOptions("State")
 				{
 					Kind = TypeDeclarationKind.RecordClass,
@@ -278,7 +362,7 @@ public class CodeWriterTests
 		};
 
 		// Act
-		using (writer.WriteClass(declaration))
+		using (writer.WriteClassScope(declaration))
 		{
 			// Intentionally empty.
 		}
@@ -287,6 +371,43 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo("public static partial class Extensions\n{\n}\n");
+	}
+
+	[Test]
+	public async Task WriteClass_GivenAbstractDeclaration_WritesAbstractInsteadOfDefaultSealed()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+		var declaration = new TypeDeclarationOptions("ServiceBase")
+		{
+			Accessibility = TypeDeclarationAccessibility.Public,
+			IsAbstract = true,
+		};
+
+		// Act
+		using (writer.WriteClassScope(declaration))
+		{
+			// Intentionally empty.
+		}
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("public abstract partial class ServiceBase\n{\n}\n");
+	}
+
+	[Test]
+	public async Task WriteStruct_GivenAbstractDeclaration_ThrowsArgumentException()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+		var declaration = new TypeDeclarationOptions("Invalid") { IsAbstract = true };
+
+		// Act
+		CodeWriter.BlockScope Action() => writer.WriteStructScope(declaration);
+
+		// Assert
+		await Assert.That(Action).Throws<ArgumentException>();
 	}
 
 	[Test]
@@ -301,7 +422,7 @@ public class CodeWriterTests
 		};
 
 		// Act
-		CodeWriter.BlockScope Action() => writer.WriteType(declaration);
+		CodeWriter.BlockScope Action() => writer.WriteTypeScope(declaration);
 
 		// Assert
 		await Assert.That(Action).Throws<ArgumentException>();
@@ -311,9 +432,9 @@ public class CodeWriterTests
 	public async Task WriteStruct_WithBaseType_Throws()
 	{
 		var writer = new CodeWriter();
-		var declaration = new TypeDeclarationOptions("Invalid") { BaseType = "BaseType" };
+		var declaration = new TypeDeclarationOptions("Invalid") { BaseType = Type("BaseType") };
 
-		await Assert.That(() => writer.WriteStruct(declaration)).Throws<ArgumentException>();
+		await Assert.That(() => writer.WriteStructScope(declaration)).Throws<ArgumentException>();
 	}
 
 	[Test]
@@ -323,11 +444,15 @@ public class CodeWriterTests
 		var declaration = new TypeDeclarationOptions("Repository")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
-			PrimaryConstructorParameters = ["string connectionString", "ILogger logger"],
-			BaseType = "RepositoryBase(connectionString)",
+			PrimaryConstructorParameters =
+			[
+				new("connectionString", Type("string")),
+				new("logger", Type("ILogger")),
+			],
+			BaseType = Type("RepositoryBase(connectionString)"),
 		};
 
-		using (writer.WriteClass(declaration))
+		using (writer.WriteClassScope(declaration))
 		{
 			// To stop IDE0055
 		}
@@ -340,17 +465,55 @@ public class CodeWriterTests
 	}
 
 	[Test]
+	public async Task WriteClass_WithEmptyBaseType_DoesNotWriteBaseListColon()
+	{
+		var writer = new CodeWriter();
+		var declaration = new TypeDeclarationOptions("ResourceKit")
+		{
+			BaseType = TypeReferenceOptions.Empty,
+		};
+
+		writer.WriteClass(declaration, static _ => { });
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("sealed partial class ResourceKit\n{\n}\n");
+	}
+
+	[Test]
+	public async Task WriteClass_WithEmptyBaseAndInterfaces_WritesOnlyNonEmptyInterfaces()
+	{
+		var writer = new CodeWriter();
+		var declaration = new TypeDeclarationOptions("ResourceKit")
+		{
+			BaseType = TypeReferenceOptions.Empty,
+			Interfaces =
+			[
+				TypeReferenceOptions.Empty,
+				new TypeReferenceOptions("IResourceKit"),
+				TypeReferenceOptions.Empty,
+			],
+		};
+
+		writer.WriteClass(declaration, static _ => { });
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("sealed partial class ResourceKit : IResourceKit\n{\n}\n");
+	}
+
+	[Test]
 	public async Task WriteConstructor_WritesParametersInitializerAndBody()
 	{
 		var writer = new CodeWriter();
 		var declaration = new ConstructorDeclarationOptions("Repository")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
-			Parameters = ["string connectionString", "ILogger logger"],
+			Parameters = [new("connectionString", Type("string")), new("logger", Type("ILogger"))],
 			Initializer = "base(connectionString)",
 		};
 
-		using (writer.WriteConstructor(declaration))
+		using (writer.WriteConstructorScope(declaration))
 		{
 			writer.WriteLine("_logger = logger;");
 		}
@@ -358,7 +521,8 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				"public Repository(string connectionString, ILogger logger) : base(connectionString)\n"
+				"public Repository(string connectionString, ILogger logger)\n"
+					+ "\t: base(connectionString)\n"
 					+ "{\n"
 					+ "\t_logger = logger;\n"
 					+ "}\n"
@@ -371,7 +535,7 @@ public class CodeWriterTests
 		var writer = new CodeWriter();
 
 		using (
-			writer.WriteConstructor(
+			writer.WriteConstructorScope(
 				new ConstructorDeclarationOptions("Repository") { IsStatic = true }
 			)
 		)
@@ -383,21 +547,633 @@ public class CodeWriterTests
 	}
 
 	[Test]
+	public async Task WriteMethod_GivenShortParameters_WritesSingleLineDeclaration()
+	{
+		var writer = new CodeWriter();
+
+		using (
+			writer.WriteMethodScope(
+				new MethodDeclarationOptions("Execute", Type("void"))
+				{
+					Accessibility = TypeDeclarationAccessibility.Public,
+					IsStatic = true,
+					Parameters = [new("name", Type("string")), new("enabled", Type("bool"))],
+				}
+			)
+		)
+		{
+			writer.WriteLine("Run(name, enabled);");
+		}
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"public static void Execute(string name, bool enabled)\n"
+					+ "{\n"
+					+ "\tRun(name, enabled);\n"
+					+ "}\n"
+			);
+	}
+
+	[Test]
+	public async Task WriteInterface_WithInheritanceAndConstraints_WritesInterface()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+		var declaration = new TypeDeclarationOptions("IRepository")
+		{
+			Accessibility = TypeDeclarationAccessibility.Public,
+			Interfaces = [Type("IAsyncDisposable")],
+			GenericTypes = [new GenericTypeParameterOptions("T") { Constraints = ["class"] }],
+		};
+
+		// Act
+		writer.WriteInterface(declaration, body => body.WriteLine("T Get();"));
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"public partial interface IRepository<T> : IAsyncDisposable\n"
+					+ "where T : class\n"
+					+ "{\n"
+					+ "\tT Get();\n"
+					+ "}\n"
+			);
+	}
+
+	[Test]
+	public async Task WriteEnum_WithUnderlyingType_WritesEnum()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+		var declaration = new TypeDeclarationOptions("Status")
+		{
+			Accessibility = TypeDeclarationAccessibility.Public,
+			EnumUnderlyingType = Type("byte"),
+		};
+
+		// Act
+		writer.WriteEnum(declaration, body => body.WriteLine("None = 0,").WriteLine("Ready = 1,"));
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("public enum Status : byte\n{\n\tNone = 0,\n\tReady = 1,\n}\n");
+	}
+
+	[Test]
+	public async Task WriteDelegate_WithGenericConstraints_WritesCompleteDeclaration()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+		var declaration = new TypeDeclarationOptions("Factory")
+		{
+			Accessibility = TypeDeclarationAccessibility.Public,
+			DelegateReturnType = Type("TResult"),
+			DelegateParameters = [new("value", Type("T"))],
+			GenericTypes =
+			[
+				new GenericTypeParameterOptions("T") { Constraints = ["class"] },
+				new GenericTypeParameterOptions("TResult"),
+			],
+		};
+
+		// Act
+		writer.WriteDelegate(declaration);
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("public delegate TResult Factory<T, TResult>(T value)\nwhere T : class;\n");
+	}
+
+	[Test]
+	public async Task WriteMethod_GivenLongParameters_WritesOneParameterPerLine()
+	{
+		var writer = new CodeWriter();
+
+		using (
+			writer.WriteMethodScope(
+				new MethodDeclarationOptions(
+					"AddAspireResourceKit",
+					Type("global::Aspire.Hosting.IDistributedApplicationBuilder")
+				)
+				{
+					Accessibility = TypeDeclarationAccessibility.Public,
+					Parameters =
+					[
+						new(
+							"onBuilt",
+							Type(
+									"global::System.Action<global::Testing.HostKitNamespace.TestingHostKit, global::Aspire.Hosting.IDistributedApplicationBuilder>"
+								)
+								.Nullable()
+						)
+						{
+							DefaultValue = "null",
+						},
+						new(
+							"onConfigured",
+							Type(
+									"global::System.Action<global::Testing.HostKitNamespace.TestingHostKit>"
+								)
+								.Nullable()
+						)
+						{
+							DefaultValue = "null",
+						},
+						new(
+							"configureOptions",
+							Type(
+									"global::System.Action<global::Microsoft.Extensions.Options.OptionsBuilder<global::Testing.HostKitNamespace.TestingHostKit.TestingHostKitOptions>>"
+								)
+								.Nullable()
+						)
+						{
+							DefaultValue = "null",
+						},
+					],
+				}
+			)
+		)
+		{
+			writer.WriteLine("return builder;");
+		}
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"public global::Aspire.Hosting.IDistributedApplicationBuilder AddAspireResourceKit(\n"
+					+ "\tglobal::System.Action<global::Testing.HostKitNamespace.TestingHostKit, global::Aspire.Hosting.IDistributedApplicationBuilder>? onBuilt = null,\n"
+					+ "\tglobal::System.Action<global::Testing.HostKitNamespace.TestingHostKit>? onConfigured = null,\n"
+					+ "\tglobal::System.Action<global::Microsoft.Extensions.Options.OptionsBuilder<global::Testing.HostKitNamespace.TestingHostKit.TestingHostKitOptions>>? configureOptions = null)\n"
+					+ "{\n"
+					+ "\treturn builder;\n"
+					+ "}\n"
+			);
+	}
+
+	[Test]
+	public async Task WriteMethod_GivenStructuredOptions_WritesModifiersGenericsAndBody()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+		var declaration = new MethodDeclarationOptions(
+			"CreateAsync",
+			Type("Task").MakeGeneric(Type("T"))
+		)
+		{
+			Accessibility = TypeDeclarationAccessibility.Public,
+			IsStatic = true,
+			IsAsync = true,
+			Parameters =
+			[
+				new("value", Type("T")),
+				new("cancellationToken", Type("CancellationToken")),
+			],
+			GenericTypes = [new GenericTypeParameterOptions("T") { Constraints = ["class"] }],
+		};
+
+		// Act
+		writer.WriteMethod(declaration, body => body.WriteLine("return await SaveAsync(value);"));
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"public static async Task<T> CreateAsync<T>(T value, CancellationToken cancellationToken)\n"
+					+ "where T : class\n"
+					+ "{\n"
+					+ "\treturn await SaveAsync(value);\n"
+					+ "}\n"
+			);
+	}
+
+	[Test]
+	public async Task StructuredDeclarations_GivenAttributes_WritesTypeMemberReturnAndParameterAttributes()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+		var generatedCode = new AttributeDeclarationOptions("GeneratedCode")
+		{
+			Arguments =
+			[
+				new("\"Generator\""),
+				new("\"1.0\"") { Name = "version" },
+				new(false) { Name = "Enabled", IsPropertyAssignment = true },
+			],
+		};
+		var type = new TypeDeclarationOptions("Service")
+		{
+			Accessibility = TypeDeclarationAccessibility.Public,
+			Attributes = [generatedCode],
+		};
+		var method = new MethodDeclarationOptions("TryGet", Type("bool"))
+		{
+			Accessibility = TypeDeclarationAccessibility.Public,
+			Attributes = [new("Obsolete")],
+			ReturnAttributes = [new("NotNull")],
+			Parameters =
+			[
+				new("value", Type("string").Nullable())
+				{
+					Modifier = ParameterModifier.Out,
+					Attributes = [new("NotNullWhen") { Arguments = [new(true)] }],
+				},
+			],
+		};
+
+		// Act
+		writer.WriteClass(
+			type,
+			body => body.WriteMethod(method, methodBody => methodBody.WriteLine("throw null;"))
+		);
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"[GeneratedCode(\"Generator\", version: \"1.0\", Enabled = false)]\n"
+					+ "public sealed partial class Service\n"
+					+ "{\n"
+					+ "\t[Obsolete]\n"
+					+ "\t[return: NotNull]\n"
+					+ "\tpublic bool TryGet([NotNullWhen(true)] out string? value)\n"
+					+ "\t{\n"
+					+ "\t\tthrow null;\n"
+					+ "\t}\n"
+					+ "}\n"
+			);
+	}
+
+	[Test]
+	public async Task PublicScopeReturningMethods_EndWithScope()
+	{
+		// Arrange / Act
+		var invalidMethodNames = typeof(CodeWriter)
+			.GetMethods()
+			.Where(static method =>
+				method.ReturnType == typeof(CodeWriter.BlockScope)
+				|| method.ReturnType == typeof(CodeWriter.IndentScope)
+			)
+			.Where(static method => !method.Name.EndsWith("Scope", StringComparison.Ordinal))
+			.Select(static method => method.Name)
+			.ToArray();
+
+		// Assert
+		await Assert.That(invalidMethodNames).IsEmpty();
+	}
+
+	[Test]
+	public async Task PublicScopeReturningMethods_HaveCallbackCounterparts()
+	{
+		// Arrange
+		var methods = typeof(CodeWriter).GetMethods();
+
+		// Act
+		var missingCounterparts = methods
+			.Where(static method =>
+				method.ReturnType == typeof(CodeWriter.BlockScope)
+				|| method.ReturnType == typeof(CodeWriter.IndentScope)
+			)
+			.Where(scopeMethod =>
+			{
+				var scopeParameters = scopeMethod.GetParameters();
+				var counterpartName = scopeMethod.Name[..^"Scope".Length];
+				return !methods.Any(method =>
+				{
+					if (method.Name != counterpartName || method.ReturnType != typeof(CodeWriter))
+						return false;
+
+					var parameters = method.GetParameters();
+					if (
+						parameters.Length != scopeParameters.Length + 1
+						|| parameters[^1].ParameterType != typeof(Action<CodeWriter>)
+					)
+						return false;
+
+					for (var index = 0; index < scopeParameters.Length; index++)
+					{
+						if (parameters[index].ParameterType != scopeParameters[index].ParameterType)
+							return false;
+					}
+					return true;
+				});
+			})
+			.Select(static method => method.Name)
+			.ToArray();
+
+		// Assert
+		await Assert.That(missingCounterparts).IsEmpty();
+	}
+
+	[Test]
+	public async Task WriteClass_GivenAttributeTypeValueObject_DoesNotDuplicateAttributeBrackets()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+		var attribute = new AttributeDeclarationOptions(
+			new Models.TypeValueObject("HostKitAttribute", "Purview.Aspire.ResourceKit")
+		)
+		{
+			Arguments =
+			[
+				new AttributeArgumentOptions(true)
+				{
+					Name = "GenerateOptions",
+					IsPropertyAssignment = true,
+				},
+			],
+		};
+
+		// Act
+		writer
+			.WriteClassScope(new TypeDeclarationOptions("Host") { Attributes = [attribute] })
+			.Dispose();
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"[global::Purview.Aspire.ResourceKit.HostKit(GenerateOptions = true)]\n"
+					+ "sealed partial class Host\n"
+					+ "{\n"
+					+ "}\n"
+			);
+	}
+
+	[Test]
+	public async Task TypeReference_GivenNestedNullableGenericAndArray_RendersStructuredType()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+		var valueType = Type("global::System.Collections.Generic.Dictionary")
+			.MakeGeneric(Type("string"), Type("Widget").Nullable())
+			.MakeArray()
+			.Nullable();
+		var method = new MethodDeclarationOptions("Load", valueType)
+		{
+			Parameters =
+			[
+				new(
+					"items",
+					Type("global::System.Collections.Generic.List")
+						.MakeGeneric(Type("Widget").Nullable())
+						.Nullable()
+				),
+			],
+			ExpressionBody = "items.ToArray()",
+		};
+
+		// Act
+		writer.WriteMethodScope(method);
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"global::System.Collections.Generic.Dictionary<string, Widget?>[]? Load(\n"
+					+ "\tglobal::System.Collections.Generic.List<Widget?>? items) => items.ToArray();\n"
+			);
+	}
+
+	[Test]
+	public async Task WriteMethod_GivenNullableParameterOption_WritesNullableTypeOnce()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+		var method = new MethodDeclarationOptions("Use", Type("void"))
+		{
+			Parameters =
+			[
+				new ParameterDeclarationOptions("value", Type("Widget").Nullable())
+				{
+					IsNullable = true,
+					DefaultValue = "null",
+				},
+			],
+			ExpressionBody = "Consume(value)",
+		};
+
+		// Act
+		writer.WriteMethodScope(method);
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("void Use(Widget? value = null) => Consume(value);\n");
+	}
+
+	[Test]
+	public async Task WriteProperty_GivenAutoAccessorsAndInitializer_WritesProperty()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+		var declaration = new PropertyDeclarationOptions("Name", Type("string"))
+		{
+			Accessibility = TypeDeclarationAccessibility.Public,
+			HasSetter = true,
+			IsInitOnly = true,
+			Initializer = "string.Empty",
+		};
+
+		// Act
+		writer.WriteProperty(declaration);
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("public string Name { get; init; } = string.Empty;\n");
+	}
+
+	[Test]
+	public async Task WriteProperty_GivenAccessorBodies_WritesScopedAccessors()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+		var declaration = new PropertyDeclarationOptions("Value", Type("int"))
+		{
+			Accessibility = TypeDeclarationAccessibility.Public,
+			HasSetter = true,
+			SetterAccessibility = TypeDeclarationAccessibility.Private,
+		};
+
+		// Act
+		writer.WriteProperty(
+			declaration,
+			getter => getter.WriteLine("return _value;"),
+			setter => setter.WriteLine("_value = value;")
+		);
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"public int Value\n"
+					+ "{\n"
+					+ "\tget\n\t{\n\t\treturn _value;\n\t}\n"
+					+ "\tprivate set\n\t{\n\t\t_value = value;\n\t}\n"
+					+ "}\n"
+			);
+	}
+
+	[Test]
+	public async Task WriteProperty_GivenExpressionBody_WritesExpressionProperty()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+		var declaration = new PropertyDeclarationOptions("Count", Type("int"))
+		{
+			Accessibility = TypeDeclarationAccessibility.Public,
+			ExpressionBody = "_items.Count",
+		};
+
+		// Act
+		writer.WriteProperty(declaration);
+
+		// Assert
+		await Assert.That(writer.ToString()).IsEqualTo("public int Count => _items.Count;\n");
+	}
+
+	[Test]
+	public async Task WriteField_GivenReadonlyStaticField_WritesField()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+		var declaration = new FieldDeclarationOptions("Empty", Type("Example"))
+		{
+			Accessibility = TypeDeclarationAccessibility.Public,
+			IsStatic = true,
+			IsReadOnly = true,
+			Initializer = "new()",
+		};
+
+		// Act
+		writer.WriteField(declaration);
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("public static readonly Example Empty = new();\n");
+	}
+
+	[Test]
+	public async Task StructuredMembers_GivenConsecutiveFields_DoesNotAddBlankLine()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+
+		// Act
+		writer
+			.WriteField(new FieldDeclarationOptions("_first", Type("int")))
+			.WriteField(new FieldDeclarationOptions("_second", Type("int")));
+
+		// Assert
+		await Assert.That(writer.ToString()).IsEqualTo("int _first;\nint _second;\n");
+	}
+
+	[Test]
+	public async Task StructuredMembers_GivenDifferentMemberKinds_AddsBlankLine()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+
+		// Act
+		writer.WriteField(new FieldDeclarationOptions("_value", Type("int")));
+		writer.WriteProperty(
+			new PropertyDeclarationOptions("Value", Type("int"))
+			{
+				Accessibility = TypeDeclarationAccessibility.Public,
+			}
+		);
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("int _value;\n\npublic int Value { get; }\n");
+	}
+
+	[Test]
+	public async Task StructuredMembers_GivenScopedMethods_AddsBlankLineAfterScopeCloses()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+		var first = new MethodDeclarationOptions("First", Type("void"));
+		var second = new MethodDeclarationOptions("Second", Type("void"));
+
+		// Act
+		using (writer.WriteMethodScope(first))
+		{
+			writer.WriteLine("Execute();");
+		}
+		using (writer.WriteMethodScope(second))
+		{
+			writer.WriteLine("Execute();");
+		}
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"void First()\n{\n\tExecute();\n}\n" + "\n" + "void Second()\n{\n\tExecute();\n}\n"
+			);
+	}
+
+	[Test]
+	public async Task StructuredMembers_GivenDocumentationTrivia_InsertsSeparatorBeforeTrivia()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+
+		// Act
+		writer.WriteField(new FieldDeclarationOptions("_value", Type("int")));
+		writer.WriteXmlSummary("Gets the value.");
+		writer.WriteProperty(new PropertyDeclarationOptions("Value", Type("int")));
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"int _value;\n"
+					+ "\n"
+					+ "/// <summary>\n"
+					+ "/// Gets the value.\n"
+					+ "/// </summary>\n"
+					+ "int Value { get; }\n"
+			);
+	}
+
+	[Test]
+	public async Task StructuredMembers_GivenExistingBlankLine_DoesNotAddAnother()
+	{
+		// Arrange
+		var writer = new CodeWriter();
+
+		// Act
+		writer.WriteField(new FieldDeclarationOptions("_value", Type("int"))).NewLine();
+		writer.WriteProperty(new PropertyDeclarationOptions("Value", Type("int")));
+
+		// Assert
+		await Assert.That(writer.ToString()).IsEqualTo("int _value;\n\nint Value { get; }\n");
+	}
+
+	[Test]
 	public async Task Block_WithBodyAndCustomSeparators_WritesDelimitedBody()
 	{
 		// Arrange
 		var writer = new CodeWriter();
 
 		// Act
-		writer.Block(
+		writer.WriteDelimitedBlock(
 			"Create",
+			"(",
+			");",
 			body =>
 			{
 				body.Quote("value").WriteLine(",");
 				body.WriteLine("EmptyPath");
-			},
-			separator: "(",
-			closingSeparator: ");"
+			}
 		);
 
 		// Assert
@@ -413,7 +1189,7 @@ public class CodeWriterTests
 		var writer = new CodeWriter();
 
 		// Act
-		writer.Block("Create", "(", ");", body => body.Quote("value").WriteLine());
+		writer.WriteDelimitedBlock("Create", "(", ");", body => body.Quote("value").WriteLine());
 
 		// Assert
 		await Assert.That(writer.ToString()).IsEqualTo("Create\n(\n\t\"value\"\n);\n");
@@ -424,7 +1200,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = new CodeWriter(throwOnUnclosedScopes: true);
-		var scope = writer.Block("public sealed class Example");
+		var scope = writer.OpenBlockScope("public sealed class Example");
 
 		// Act
 		string Action() => writer.ToString();
@@ -452,7 +1228,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = new CodeWriter();
-		var scope = writer.Block("public sealed class Example");
+		var scope = writer.OpenBlockScope("public sealed class Example");
 
 		// Act
 		var source = writer.ToString();
@@ -469,7 +1245,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = new CodeWriter(throwOnUnclosedScopes: true);
-		var scope = writer.Indented();
+		var scope = writer.IndentedScope();
 
 		// Act
 		string Action() => writer.ToString();
@@ -503,6 +1279,93 @@ public class CodeWriterTests
 		await Assert.That(result).Contains("// <auto-generated />");
 		await Assert.That(result).Contains("TestGenerator");
 		await Assert.That(result).Contains("version 1.0");
+		await Assert.That(result).Contains("// Generated at ");
+	}
+
+	[Test]
+	public async Task GeneratorIdentity_GivenNoHeaderArguments_UsesDefaultsAndDecoratesDeclarations()
+	{
+		var writer = new CodeWriter(
+			throwOnUnclosedScopes: false,
+			generatorName: "HostKitGenerator",
+			generatorVersion: "2.3.4"
+		);
+
+		writer.WriteAutoGeneratedHeader();
+		writer.WriteClass(
+			new TypeDeclarationOptions("GeneratedType"),
+			body =>
+				body.WriteProperty(
+					new PropertyDeclarationOptions("Value", new TypeReferenceOptions("string"))
+				)
+		);
+
+		var result = writer.ToString();
+		await Assert.That(result).Contains("HostKitGenerator (version 2.3.4)");
+		await Assert.That(result).Contains("// Generated at ");
+		await Assert.That(result).Contains("[global::Microsoft.CodeAnalysis.EmbeddedAttribute]");
+		await Assert
+			.That(result)
+			.Contains("[global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute]");
+		await Assert
+			.That(result)
+			.Contains("[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]");
+		await Assert
+			.That(result)
+			.Contains(
+				"[global::System.CodeDom.Compiler.GeneratedCode(\"HostKitGenerator\", \"2.3.4\")]"
+			);
+	}
+
+	[Test]
+	public async Task WriteConstructor_WithMultilineParameters_WritesInitializerOnNewLine()
+	{
+		var writer = new CodeWriter();
+		var declaration = new ConstructorDeclarationOptions("Repository")
+		{
+			Accessibility = TypeDeclarationAccessibility.Public,
+			WriteParametersOnSeparateLines = true,
+			Parameters = [new("connectionString", Type("string")), new("logger", Type("ILogger"))],
+			Initializer = "this(connectionString, logger, true)",
+		};
+
+		writer.WriteConstructor(declaration, static _ => { });
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"public Repository(\n"
+					+ "\tstring connectionString,\n"
+					+ "\tILogger logger\n"
+					+ ")\n"
+					+ "\t: this(connectionString, logger, true)\n"
+					+ "{\n"
+					+ "}\n"
+			);
+	}
+
+	[Test]
+	public async Task GeneratorIdentity_GivenConstField_DoesNotWriteInvalidCoverageAttribute()
+	{
+		var writer = new CodeWriter(
+			throwOnUnclosedScopes: false,
+			generatorName: "HostKitGenerator",
+			generatorVersion: "2.3.4"
+		);
+
+		writer.WriteField(
+			new FieldDeclarationOptions("SectionName", new TypeReferenceOptions("string"))
+			{
+				Accessibility = TypeDeclarationAccessibility.Public,
+				IsConst = true,
+				Initializer = "\"TestingHostKit\"",
+			}
+		);
+
+		var result = writer.ToString();
+		await Assert.That(result).DoesNotContain("ExcludeFromCodeCoverageAttribute");
+		await Assert.That(result).Contains("CompilerGeneratedAttribute");
+		await Assert.That(result).Contains("GeneratedCode(");
 	}
 
 	[Test]

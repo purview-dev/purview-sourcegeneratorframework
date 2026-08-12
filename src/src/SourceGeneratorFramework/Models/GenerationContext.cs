@@ -20,10 +20,19 @@ public record class GenerationContext
 	/// <param name="validateCodeWriterScopes">
 	/// Whether code writers created by this context validate that all disposable scopes are closed.
 	/// </param>
-	public GenerationContext(Compilation compilation, bool validateCodeWriterScopes = false)
+	/// <param name="generatorName">The optional source generator name propagated to code writers.</param>
+	/// <param name="generatorVersion">The optional source generator version propagated to code writers.</param>
+	public GenerationContext(
+		Compilation compilation,
+		bool validateCodeWriterScopes = false,
+		string? generatorName = null,
+		string? generatorVersion = null
+	)
 	{
 		Compilation = compilation ?? throw new ArgumentNullException(nameof(compilation));
 		ValidateCodeWriterScopes = validateCodeWriterScopes;
+		GeneratorName = generatorName;
+		GeneratorVersion = generatorVersion;
 		CodeWriter = CreateCodeWriter();
 	}
 
@@ -33,6 +42,12 @@ public record class GenerationContext
 	/// <summary>Gets whether created code writers validate undisposed scopes.</summary>
 	public bool ValidateCodeWriterScopes { get; private set; }
 
+	/// <summary>Gets the source generator name propagated to created code writers.</summary>
+	public string? GeneratorName { get; }
+
+	/// <summary>Gets the source generator version propagated to created code writers.</summary>
+	public string? GeneratorVersion { get; }
+
 	/// <summary>Gets the default code writer owned by this context.</summary>
 	public CodeWriter CodeWriter { get; private set; }
 
@@ -41,7 +56,12 @@ public record class GenerationContext
 	/// and sets the <see cref="CodeWriter"/> property to the new instance.
 	/// </summary>
 	/// <returns>A new independently owned code writer, the same instance assigned to the <see cref="CodeWriter"/> property.</returns>
-	public CodeWriter CreateCodeWriter() => CodeWriter = new(ValidateCodeWriterScopes);
+	public CodeWriter CreateCodeWriter() =>
+		CodeWriter = new(
+			ValidateCodeWriterScopes,
+			generatorName: GeneratorName,
+			generatorVersion: GeneratorVersion
+		);
 
 	/// <summary>
 	/// Applies CodeWriter scope validation discovered by the incremental pipeline.

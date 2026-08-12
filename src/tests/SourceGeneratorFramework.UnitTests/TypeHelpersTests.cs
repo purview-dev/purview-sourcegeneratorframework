@@ -27,9 +27,63 @@ public class TypeHelpersTests
 		return model.GetDeclaredSymbol(typeDeclaration)!;
 	}
 
+	static async Task<Models.TargetSymbolDescriptor> GetTypeDescriptorAsync(
+		string source,
+		string typeName
+	)
+	{
+		var syntaxTree = CSharpSyntaxTree.ParseText(source);
+		var compilation = CSharpCompilation.Create(
+			"TestAssembly",
+			[syntaxTree],
+			[MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+			new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+		);
+		var root = await syntaxTree.GetRootAsync();
+		var declaration = root.DescendantNodes()
+			.OfType<TypeDeclarationSyntax>()
+			.Single(type => type.Identifier.ValueText == typeName);
+		var symbol = compilation.GetSemanticModel(syntaxTree).GetDeclaredSymbol(declaration)!;
+		return new(symbol, declaration);
+	}
+
 	[Test]
 	public async Task IsAttribute_TypeNameEndsWithAttribute_ReturnsTrue() =>
 		await Assert.That(TypeHelpers.IsAttribute("MyAttribute")).IsTrue();
+
+	[Test]
+	public async Task IsDerivedFromExpectedBase_GenericArgumentImplementsExpectedContract_ReturnsTrue()
+	{
+		// Arrange
+		const string source =
+			"namespace Testing { interface IResource { } class DefaultAspireResource : IResource { } class ResourceKitBase<T> where T : IResource { } class HostKit : ResourceKitBase<DefaultAspireResource> { } }";
+		var descriptor = await GetTypeDescriptorAsync(source, "HostKit");
+		var expectedBase = new Models.TypeValueObject("ResourceKitBase", "Testing").MakeGeneric(
+			new Models.TypeValueObject("IResource", "Testing")
+		);
+
+		// Act
+		var result = TypeHelpers.IsDerivedFromExpectedBase(descriptor, expectedBase);
+
+		// Assert
+		await Assert.That(result).IsTrue();
+	}
+
+	[Test]
+	public async Task IsDerivedFromExpectedBase_NameOnlyGenericBase_ReturnsTrueForConstructedBase()
+	{
+		// Arrange
+		const string source =
+			"namespace Testing { interface IResource { } class DefaultAspireResource : IResource { } class ResourceKitBase<T> where T : IResource { } class HostKit : ResourceKitBase<DefaultAspireResource> { } }";
+		var descriptor = await GetTypeDescriptorAsync(source, "HostKit");
+		var expectedBase = new Models.TypeValueObject("ResourceKitBase", "Testing");
+
+		// Act
+		var result = TypeHelpers.IsDerivedFromExpectedBase(descriptor, expectedBase);
+
+		// Assert
+		await Assert.That(result).IsTrue();
+	}
 
 	[Test]
 	public async Task IsAttribute_TypeNameWithoutSuffix_ReturnsFalse() =>
@@ -272,6 +326,40 @@ public class TypeHelpersTests
 	}
 
 	[Test]
+	[Arguments(Accessibility.Public, TypeDeclarationAccessibility.Public)]
+	[Arguments(Accessibility.Internal, TypeDeclarationAccessibility.Internal)]
+	[Arguments(Accessibility.Protected, TypeDeclarationAccessibility.Protected)]
+	[Arguments(Accessibility.Private, TypeDeclarationAccessibility.Private)]
+	[Arguments(Accessibility.ProtectedOrInternal, TypeDeclarationAccessibility.ProtectedInternal)]
+	[Arguments(Accessibility.ProtectedAndInternal, TypeDeclarationAccessibility.PrivateProtected)]
+	public async Task AccessibilityConversions_GivenMappedValues_RoundTrips(
+		Accessibility roslynAccessibility,
+		TypeDeclarationAccessibility declarationAccessibility
+	)
+	{
+		// Arrange / Act / Assert
+		await Assert
+			.That(roslynAccessibility.ToTypeDeclarationAccessibility())
+			.IsEqualTo(declarationAccessibility);
+		await Assert
+			.That(declarationAccessibility.ToRoslynAccessibility())
+			.IsEqualTo(roslynAccessibility);
+	}
+
+	[Test]
+	public async Task AccessibilityConversions_GivenUnmappedValues_ReturnsSafeFallbacks()
+	{
+		// Arrange / Act / Assert
+		await Assert.That(Accessibility.NotApplicable.ToTypeDeclarationAccessibility()).IsNull();
+		await Assert
+			.That(TypeDeclarationAccessibility.File.ToRoslynAccessibility())
+			.IsEqualTo(Accessibility.NotApplicable);
+		await Assert
+			.That(((TypeDeclarationAccessibility)int.MaxValue).ToRoslynAccessibility())
+			.IsEqualTo(Accessibility.NotApplicable);
+	}
+
+	[Test]
 	public async Task CreatePartialTypeDeclarationOptions_GivenStaticGenericClass_RecreatesContainer()
 	{
 		// Arrange
@@ -286,7 +374,7 @@ public class TypeHelpersTests
 		// Act
 		var declaration = TypeHelpers.CreatePartialTypeDeclarationOptions(symbol);
 		var writer = new CodeWriter();
-		using (writer.WriteType(declaration))
+		using (writer.WriteTypeScope(declaration))
 		{
 			// Intentionally empty.
 		}
@@ -347,7 +435,7 @@ public class TypeHelpersTests
 			includeOptionalParts: false
 		);
 		var writer = new CodeWriter();
-		using (writer.WriteType(declaration))
+		using (writer.WriteTypeScope(declaration))
 		{
 			// Intentionally empty.
 		}

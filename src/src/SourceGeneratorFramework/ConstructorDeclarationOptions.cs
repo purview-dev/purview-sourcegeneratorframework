@@ -5,7 +5,7 @@ namespace Purview.SourceGeneratorFramework;
 /// <summary>
 /// Describes an ordinary instance or static constructor declaration.
 /// </summary>
-public sealed record ConstructorDeclarationOptions
+public readonly record struct ConstructorDeclarationOptions
 {
 	/// <summary>
 	/// Initializes a constructor declaration description.
@@ -36,7 +36,10 @@ public sealed record ConstructorDeclarationOptions
 
 	/// <summary>Gets the constructor parameters.</summary>
 	/// <remarks>Each entry is emitted verbatim as a complete parameter declaration.</remarks>
-	public ImmutableArray<string> Parameters { get; init; } = [];
+	public ImmutableArray<ParameterDeclarationOptions> Parameters { get; init; }
+
+	/// <summary>Gets attributes applied to the constructor.</summary>
+	public ImmutableArray<AttributeDeclarationOptions> Attributes { get; init; }
 
 	/// <summary>
 	/// Gets whether the parameters are written on separate lines, with each parameter indented.

@@ -50,11 +50,11 @@ partial class TypeValueObjectTests
 			if (namespaceInfo.IsFileScoped)
 				writer.WriteFileScopedNamespace(namespaceInfo.Namespace);
 			else
-				blockNamespace = writer.WriteBlockNamespace(namespaceInfo.Namespace);
+				blockNamespace = writer.WriteBlockNamespaceScope(namespaceInfo.Namespace);
 		}
 
 		using (
-			writer.WriteType(
+			writer.WriteTypeScope(
 				new TypeDeclarationOptions(typeName)
 				{
 					Accessibility = accessibility,

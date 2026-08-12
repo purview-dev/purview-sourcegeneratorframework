@@ -171,6 +171,7 @@ public static class IncrementalPipeline
 		if (factory is null)
 			throw new ArgumentNullException(nameof(factory));
 
+		// Wrap the factory to include the CodeWriter scope-validation build property.
 		return GenerationContextValueProvider(
 			context,
 			(compilation, _, cancellationToken) => factory(compilation, cancellationToken),
@@ -192,6 +193,7 @@ public static class IncrementalPipeline
 		if (factory is null)
 			throw new ArgumentNullException(nameof(factory));
 
+		// Wrap the factory to include the CodeWriter scope-validation build property.
 		return context
 			.CompilationProvider.Combine(CodeWriterScopeValidationValueProvider(context))
 			.Select(

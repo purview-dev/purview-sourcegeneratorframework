@@ -43,7 +43,6 @@
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageIcon>purview-logo.jpg</PackageIcon>
-		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageRequireLicenseAcceptance>False</PackageRequireLicenseAcceptance>
 	</PropertyGroup>
 

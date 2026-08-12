@@ -19,6 +19,15 @@ public enum TypeDeclarationKind
 
 	/// <summary>A record struct declaration.</summary>
 	RecordStruct,
+
+	/// <summary>An interface declaration.</summary>
+	Interface,
+
+	/// <summary>An enum declaration.</summary>
+	Enum,
+
+	/// <summary>A delegate declaration.</summary>
+	Delegate,
 }
 
 /// <summary>
@@ -77,6 +86,35 @@ public static class TypeDeclarationAccessibilityExtensions
 			Accessibility.Public => TypeDeclarationAccessibility.Public,
 			_ => null,
 		};
+
+	/// <summary>
+	/// Converts a declaration accessibility value to the corresponding Roslyn
+	/// <see cref="Accessibility"/> value.
+	/// </summary>
+	/// <param name="accessibility">The declaration accessibility value.</param>
+	/// <returns>
+	/// The corresponding Roslyn accessibility, or <see cref="Accessibility.NotApplicable"/> for
+	/// <see cref="TypeDeclarationAccessibility.File"/> or an unknown future value.
+	/// </returns>
+	/// <remarks>
+	/// Roslyn represents file-local accessibility separately from <see cref="Accessibility"/>, so
+	/// <see cref="TypeDeclarationAccessibility.File"/> has no direct mapping. This method never
+	/// throws for an accessibility value.
+	/// </remarks>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0072:Add missing cases")]
+	public static Accessibility ToRoslynAccessibility(
+		this TypeDeclarationAccessibility accessibility
+	) =>
+		accessibility switch
+		{
+			TypeDeclarationAccessibility.Private => Accessibility.Private,
+			TypeDeclarationAccessibility.PrivateProtected => Accessibility.ProtectedAndInternal,
+			TypeDeclarationAccessibility.Protected => Accessibility.Protected,
+			TypeDeclarationAccessibility.Internal => Accessibility.Internal,
+			TypeDeclarationAccessibility.ProtectedInternal => Accessibility.ProtectedOrInternal,
+			TypeDeclarationAccessibility.Public => Accessibility.Public,
+			_ => Accessibility.NotApplicable,
+		};
 }
 
 /// <summary>
@@ -115,7 +153,7 @@ public sealed record GenericTypeParameterOptions
 }
 
 /// <summary>
-/// Describes a generated class, struct, record class, or record struct declaration.
+/// Describes a generated class, struct, record, interface, enum, or delegate declaration.
 /// </summary>
 public sealed record TypeDeclarationOptions
 {
@@ -167,6 +205,14 @@ public sealed record TypeDeclarationOptions
 	public bool IsSealed { get; init; } = true;
 
 	/// <summary>
+	/// Gets whether the <c>abstract</c> modifier is emitted for a class or record class.
+	/// </summary>
+	/// <remarks>
+	/// Abstract declarations take precedence over the default <see cref="IsSealed"/> value.
+	/// </remarks>
+	public bool IsAbstract { get; init; }
+
+	/// <summary>
 	/// Gets whether the <c>static</c> modifier is emitted for a class declaration.
 	/// </summary>
 	/// <remarks>
@@ -185,12 +231,21 @@ public sealed record TypeDeclarationOptions
 	/// Gets the optional base class or base record type.
 	/// </summary>
 	/// <remarks>Struct and record struct declarations cannot specify a base type.</remarks>
-	public string? BaseType { get; init; }
+	public TypeReferenceOptions? BaseType { get; init; }
+
+	/// <summary>Gets the optional enum underlying integral type.</summary>
+	public TypeReferenceOptions? EnumUnderlyingType { get; init; }
+
+	/// <summary>Gets the delegate return type.</summary>
+	public TypeReferenceOptions? DelegateReturnType { get; init; }
+
+	/// <summary>Gets the complete delegate parameter declarations.</summary>
+	public ImmutableArray<ParameterDeclarationOptions> DelegateParameters { get; init; } = [];
 
 	/// <summary>
-	/// Gets the interfaces implemented by the generated type.
+	/// Gets the interfaces implemented by the generated type, or inherited by an interface.
 	/// </summary>
-	public ImmutableArray<string> Interfaces { get; init; } = [];
+	public ImmutableArray<TypeReferenceOptions> Interfaces { get; init; } = [];
 
 	/// <summary>
 	/// Gets the generic type parameters and their constraints.
@@ -201,7 +256,8 @@ public sealed record TypeDeclarationOptions
 	/// Gets the primary-constructor parameters written after the type name and generic parameters.
 	/// </summary>
 	/// <remarks>Each entry is emitted verbatim as a complete parameter declaration.</remarks>
-	public ImmutableArray<string> PrimaryConstructorParameters { get; init; } = [];
+	public ImmutableArray<ParameterDeclarationOptions> PrimaryConstructorParameters { get; init; } =
+	[];
 
 	/// <summary>
 	/// If <see  langword="true" />, the primary-constructor parameters are emitted on separate lines with one parameter per line.
@@ -211,7 +267,5 @@ public sealed record TypeDeclarationOptions
 	/// <summary>
 	/// Gets the attributes applied to the generated type.
 	/// </summary>
-	public ImmutableArray<string> TypeAttributes { get; init; } = [];
-
-	public static implicit operator TypeDeclarationOptions(string value) => new(value);
+	public ImmutableArray<AttributeDeclarationOptions> Attributes { get; init; } = [];
 }

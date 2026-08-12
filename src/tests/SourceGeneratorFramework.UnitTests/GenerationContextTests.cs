@@ -71,6 +71,21 @@ public class GenerationContextTests
 	}
 
 	[Test]
+	public async Task CreateCodeWriter_GivenGeneratorIdentity_PropagatesIdentity()
+	{
+		var context = new GenerationContext(
+			CreateCompilation(),
+			generatorName: "HostKitGenerator",
+			generatorVersion: "2.3.4"
+		);
+
+		var writer = context.CreateCodeWriter();
+
+		await Assert.That(writer.GeneratorName).IsEqualTo("HostKitGenerator");
+		await Assert.That(writer.GeneratorVersion).IsEqualTo("2.3.4");
+	}
+
+	[Test]
 	public async Task ConfigureCodeWriterScopeValidation_GivenFactoryDefault_UpdatesOwnedWriter()
 	{
 		// Arrange

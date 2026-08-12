@@ -91,7 +91,7 @@ public sealed class TypeInfoGenerator : IIncrementalGenerator
 		}
 		else
 		{
-			using (writer.WriteBlockNamespace(target.Namespace))
+			using (writer.WriteBlockNamespaceScope(target.Namespace))
 				WriteTypeInfoClass(writer, target);
 		}
 
@@ -100,9 +100,26 @@ public sealed class TypeInfoGenerator : IIncrementalGenerator
 
 	static void WriteTypeInfoClass(CodeWriter writer, TypeInfoTarget target)
 	{
-		using (writer.WriteClass($"public static partial class {target.Name}"))
+		using (
+			writer.WriteClassScope(
+				new TypeDeclarationOptions(target.Name)
+				{
+					Accessibility = TypeDeclarationAccessibility.Public,
+					IsStatic = true,
+				}
+			)
+		)
 		{
-			using (writer.WriteClass("public static class TypeInfo"))
+			using (
+				writer.WriteClassScope(
+					new TypeDeclarationOptions("TypeInfo")
+					{
+						Accessibility = TypeDeclarationAccessibility.Public,
+						IsStatic = true,
+						IsPartial = false,
+					}
+				)
+			)
 			{
 				writer.WriteLine($"public const string Name = \"{target.Name}\";");
 				writer.WriteLine($"public const string FullName = \"{target.FullName}\";");

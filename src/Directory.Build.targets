@@ -10,14 +10,5 @@
 		<PackageRequireLicenseAcceptance>False</PackageRequireLicenseAcceptance>
 	</PropertyGroup>
 
-	<ItemGroup Label="NuGet package assets" Condition="'$(IsPackable)' == 'true'">
-		<None
-			Include="$(MSBuildThisFileDirectory)../assets/images/purview-logo.jpg"
-			Pack="true"
-			PackagePath="/"
-			Visible="false"
-		/>
-	</ItemGroup>
-
 	<Import Sdk="Purview.DotNetProjectSdk" Project="Sdk.targets" />
 </Project>
