@@ -332,6 +332,9 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstrac
 	{
 		var variableName = ToCamelCase(property.PropertyName);
 		var typeName = GetNonNullableTypeName(property.FullyQualifiedTypeName);
+		var localTypeName = property.IsNonNullableReferenceType
+			? typeName + "?"
+			: property.FullyQualifiedTypeName;
 
 		if (property.IsNestedModel)
 		{
@@ -373,6 +376,7 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstrac
 			sources,
 			variableName,
 			typeName,
+			localTypeName,
 			property.HasDefaultValue,
 			property.DefaultValueExpression
 		);
@@ -411,11 +415,12 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstrac
 		ImmutableArray<PropertySource> sources,
 		string variableName,
 		string typeName,
+		string localTypeName,
 		bool hasDefaultValue,
 		string defaultValueExpression
 	)
 	{
-		writer.WriteLine($"{typeName} {variableName};");
+		writer.WriteLine($"{localTypeName} {variableName};");
 
 		void WriteFallback(int index)
 		{

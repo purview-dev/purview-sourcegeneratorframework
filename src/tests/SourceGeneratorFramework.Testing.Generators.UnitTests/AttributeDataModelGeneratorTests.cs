@@ -756,6 +756,50 @@ public class AttributeDataModelGeneratorTests
 			);
 	}
 
+	[Test]
+	public async Task Generate_NullableReferenceTypeWithMultipleSources_DoesNotEmitCS8600(
+		CancellationToken cancellationToken
+	)
+	{
+		var source = """
+			using Purview.SourceGeneratorFramework.Testing.Generators;
+
+			namespace Test
+			{
+				[GenerateAttributeDataModel("Test.HostKitAttribute")]
+				public readonly partial record struct HostKitAttributeData(
+					[AttributeNamedProperty]
+					[AttributeCtorProperty("name")]
+						string? Name,
+					string? ExtensionMethodName,
+					[AttributeNamedProperty]
+					[AttributeCtorProperty("generateOptions", DefaultValue = true)]
+						bool GenerateOptions
+				);
+
+				public class HostKitAttribute : System.Attribute
+				{
+					public HostKitAttribute() { }
+					public HostKitAttribute(string name, bool generateOptions = true) { }
+					public HostKitAttribute(bool generateOptions) { }
+				}
+			}
+			""";
+
+		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
+		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+
+		var generated = await GetGeneratedStringAsync(
+			result,
+			"HostKitAttributeData.AttributeDataModel.g.cs",
+			cancellationToken
+		);
+
+		await Assert.That(generated).IsNotNull();
+		await Assert.That(generated).Contains("string? name;");
+		await Assert.That(generated).DoesNotContain("string name;");
+	}
+
 	static async Task<string?> GetGeneratedStringAsync(
 		DriverRunResult result,
 		string fileName,
