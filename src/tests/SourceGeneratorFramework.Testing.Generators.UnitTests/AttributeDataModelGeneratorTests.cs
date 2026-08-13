@@ -434,6 +434,41 @@ public class AttributeDataModelGeneratorTests
 			);
 	}
 
+	[Test]
+	public async Task Generate_NonNullableReferenceType_GeneratesDefaultSuppress(
+		CancellationToken cancellationToken
+	)
+	{
+		var source = """
+			using Purview.SourceGeneratorFramework.Testing.Generators;
+			using System.ComponentModel.DataAnnotations;
+
+			namespace Test
+			{
+				[GenerateAttributeDataModel(typeof(RequiredAttribute))]
+				public readonly partial record struct RequiredAttributeData(
+					string ErrorMessage
+				);
+			}
+			""";
+
+		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
+		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+
+		var generated = await GetGeneratedStringAsync(
+			result,
+			"RequiredAttributeData.AttributeDataModel.g.cs",
+			cancellationToken
+		);
+
+		await Assert.That(generated).IsNotNull();
+		await Assert
+			.That(generated)
+			.Contains(
+				"public static readonly RequiredAttributeData Empty = new(false, default(string)!)"
+			);
+	}
+
 	static async Task<string?> GetGeneratedStringAsync(
 		DriverRunResult result,
 		string fileName,

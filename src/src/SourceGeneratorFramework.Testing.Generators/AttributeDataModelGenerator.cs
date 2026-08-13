@@ -166,7 +166,11 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstrac
 		var values = new List<string> { "false" };
 		foreach (var property in target.Properties)
 		{
-			values.Add($"default({property.FullyQualifiedTypeName})");
+			values.Add(
+				property.IsNonNullableReferenceType
+					? $"default({property.FullyQualifiedTypeName})!"
+					: $"default({property.FullyQualifiedTypeName})"
+			);
 		}
 
 		writer.WriteLine(
