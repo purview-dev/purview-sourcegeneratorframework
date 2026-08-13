@@ -302,7 +302,7 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstrac
 				if (target.MatchByInheritance)
 				{
 					w.WriteLine(
-						"if (attributeData.AttributeClass is null || !global::Purview.SourceGeneratorFramework.Helpers.TypeHelpers.InheritsFrom(attributeData.AttributeClass, TargetAttribute))"
+						"if (attributeData.AttributeClass is null || (!TargetAttribute.Equals(attributeData.AttributeClass) && !global::Purview.SourceGeneratorFramework.Helpers.TypeHelpers.InheritsFrom(attributeData.AttributeClass, TargetAttribute)))"
 					);
 				}
 				else
@@ -477,6 +477,10 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstrac
 				$"var {variableName} = attributeData.GetConstructorArgument<{typeName}>({source.ConstructorIndex}, {defaultValueExpression});",
 			AttributePropertySource.ConstructorName =>
 				$"var {variableName} = attributeData.GetConstructorArgument<{typeName}>(\"{source.MappedName}\", {defaultValueExpression});",
+			AttributePropertySource.TypeArgument when source.MappedName is not null =>
+				$"var {variableName} = attributeData.GetGenericTypeArgument<{typeName}>(\"{source.MappedName}\", {defaultValueExpression});",
+			AttributePropertySource.TypeArgument =>
+				$"var {variableName} = attributeData.GetGenericTypeArgument<{typeName}>({source.ConstructorIndex}, {defaultValueExpression});",
 			_ => throw new InvalidOperationException(
 				$"Unsupported property source: {source.Source}"
 			),
@@ -499,6 +503,10 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstrac
 				$"attributeData.TryGetConstructorArgument<{typeName}>({source.ConstructorIndex}, {outVariable})",
 			AttributePropertySource.ConstructorName =>
 				$"attributeData.TryGetConstructorArgument<{typeName}>(\"{source.MappedName}\", {outVariable})",
+			AttributePropertySource.TypeArgument when source.MappedName is not null =>
+				$"attributeData.TryGetGenericTypeArgument<{typeName}>(\"{source.MappedName}\", {outVariable})",
+			AttributePropertySource.TypeArgument =>
+				$"attributeData.TryGetGenericTypeArgument<{typeName}>({source.ConstructorIndex}, {outVariable})",
 			_ => throw new InvalidOperationException(
 				$"Unsupported property source: {source.Source}"
 			),

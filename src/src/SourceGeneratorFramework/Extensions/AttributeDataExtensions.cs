@@ -111,6 +111,18 @@ public static partial class AttributeDataExtensions
 		}
 
 		/// <summary>
+		/// Gets the value of a constructor argument at the specified index, returning the default if out of range.
+		/// </summary>
+		public T? GetConstructorArgument<T>(string name, T? defaultValue = default)
+		{
+			if (attribute == null)
+				throw new ArgumentNullException(nameof(attribute));
+
+			// All valid...
+			return TryGetConstructorArgument(attribute, name, out T? value) ? value : defaultValue;
+		}
+
+		/// <summary>
 		/// Tries to get the value of a constructor argument at the specified index.
 		/// </summary>
 		public bool TryGetConstructorArgument<T>(int index, out T? value)
@@ -127,5 +139,85 @@ public static partial class AttributeDataExtensions
 			value = As<T>(attribute.ConstructorArguments[index]);
 			return true;
 		}
+
+		/// <summary>
+		/// Gets the value of a generic type argument on the attribute class, returning the default if not found.
+		/// </summary>
+		public T? GetGenericTypeArgument<T>(int index, T? defaultValue = default)
+		{
+			if (attribute == null)
+				throw new ArgumentNullException(nameof(attribute));
+
+			return TryGetGenericTypeArgument(attribute, index, out T? value) ? value : defaultValue;
+		}
+
+		/// <summary>
+		/// Gets the value of a generic type argument on the attribute class by type parameter name, returning the default if not found.
+		/// </summary>
+		public T? GetGenericTypeArgument<T>(string name, T? defaultValue = default)
+		{
+			if (attribute == null)
+				throw new ArgumentNullException(nameof(attribute));
+
+			return TryGetGenericTypeArgument(attribute, name, out T? value) ? value : defaultValue;
+		}
+
+		/// <summary>
+		/// Tries to get the value of a generic type argument on the attribute class.
+		/// </summary>
+		public bool TryGetGenericTypeArgument<T>(int index, out T? value)
+		{
+			if (attribute == null)
+				throw new ArgumentNullException(nameof(attribute));
+
+			if (
+				attribute.AttributeClass is not INamedTypeSymbol attrClass
+				|| index < 0
+				|| index >= attrClass.TypeArguments.Length
+			)
+			{
+				value = default;
+				return false;
+			}
+
+			value = ConvertTypeSymbol<T>(attrClass.TypeArguments[index]);
+			return value is not null;
+		}
+
+		/// <summary>
+		/// Tries to get the value of a generic type argument on the attribute class by type parameter name.
+		/// </summary>
+		public bool TryGetGenericTypeArgument<T>(string name, out T? value)
+		{
+			value = default;
+			if (attribute == null)
+				throw new ArgumentNullException(nameof(attribute));
+			if (attribute.AttributeClass is not INamedTypeSymbol attrClass)
+				return false;
+
+			var typeParameters = attrClass.ConstructedFrom.TypeParameters;
+			for (var i = 0; i < typeParameters.Length; i++)
+			{
+				if (string.Equals(typeParameters[i].Name, name, StringComparison.Ordinal))
+					return TryGetGenericTypeArgument(attribute, i, out value);
+			}
+
+			return false;
+		}
+	}
+
+	static T? ConvertTypeSymbol<T>(ITypeSymbol? typeSymbol)
+	{
+		var targetType = typeof(T);
+		if (
+			targetType == typeof(ITypeSymbol)
+			|| targetType == typeof(ISymbol)
+			|| targetType == typeof(INamedTypeSymbol)
+		)
+		{
+			return typeSymbol is T typedValue ? typedValue : default;
+		}
+
+		return default;
 	}
 }

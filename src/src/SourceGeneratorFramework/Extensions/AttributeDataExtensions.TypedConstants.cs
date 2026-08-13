@@ -20,7 +20,11 @@ partial class AttributeDataExtensions
 			if (targetType == typeof(TypedConstant))
 				return (T?)(object)constant;
 
-			if (targetType == typeof(ITypeSymbol) || targetType == typeof(ISymbol))
+			if (
+				targetType == typeof(ITypeSymbol)
+				|| targetType == typeof(ISymbol)
+				|| targetType == typeof(INamedTypeSymbol)
+			)
 			{
 				return constant.Kind == TypedConstantKind.Type && constant.Value is T typedValue
 					? typedValue

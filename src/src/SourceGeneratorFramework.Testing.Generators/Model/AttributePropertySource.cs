@@ -6,4 +6,5 @@ enum AttributePropertySource
 	ConstructorIndex,
 	ConstructorName,
 	NestedModel,
+	TypeArgument,
 }

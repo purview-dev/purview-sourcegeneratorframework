@@ -68,4 +68,13 @@ static class AttributeDataModelDiagnosticDescriptors
 		DiagnosticSeverity.Error,
 		true
 	);
+
+	public static readonly DiagnosticDescriptor TypeArgumentPropertyTypeInvalid = new(
+		"ADM0008",
+		"Type argument property type must be a symbol type",
+		"Type argument property '{0}' type '{1}' must be ITypeSymbol or INamedTypeSymbol",
+		Category,
+		DiagnosticSeverity.Error,
+		true
+	);
 }

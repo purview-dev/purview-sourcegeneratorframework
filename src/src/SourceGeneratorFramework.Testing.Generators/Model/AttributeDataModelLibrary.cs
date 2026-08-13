@@ -185,6 +185,18 @@ static class AttributeDataModelLibrary
 				);
 			}
 
+			if (info.IsTypeArgument && !IsTypeSymbolType(propertyType))
+			{
+				diagnostics.Add(
+					DiagnosticInfo.Create(
+						AttributeDataModelDiagnosticDescriptors.TypeArgumentPropertyTypeInvalid,
+						parameter.Locations.FirstOrDefault(static loc => loc.IsInSource),
+						propertyName,
+						TypeHelpers.ToFullyQualifiedDisplayString(propertyType)
+					)
+				);
+			}
+
 			var sources = info.Sources;
 			if (sources.IsEmpty)
 			{
@@ -233,9 +245,9 @@ static class AttributeDataModelLibrary
 	{
 		var sources = ImmutableArray.CreateBuilder<PropertySource>();
 		var isExcluded = false;
-		var isNestedModel = false;
-		object? defaultValue = null;
-		var hasDefaultValue = false;
+		var isTypeArgument = false;
+		object? defaultValue;
+		bool hasDefaultValue;
 
 		var excludeAttribute = GetAttribute(
 			parameter,
@@ -247,32 +259,34 @@ static class AttributeDataModelLibrary
 			logger?.Debug($"Parameter '{propertyName}' is excluded from the attribute model.");
 		}
 
-		var nestedModelAttribute = GetAttribute(
+		var nestedModelInfo = ReadNestedModelAttributeInfo(
 			parameter,
-			TypeLibrary.AttributeNestedModelPropertyAttribute
+			propertyName,
+			isExcluded,
+			logger
 		);
-		if (nestedModelAttribute is not null)
+		var isNestedModel = nestedModelInfo.IsNestedModel;
+		if (nestedModelInfo.IsNestedModel)
 		{
-			if (isExcluded)
-			{
-				logger?.Debug(
-					$"Parameter '{propertyName}' has both [AttributeExclude] and [AttributeNestedModelProperty]; excluding takes precedence."
-				);
-			}
-			else
-			{
-				isNestedModel = true;
-				defaultValue = GetNamedArgument(
-					nestedModelAttribute,
-					"DefaultValue",
-					(object?)null
-				);
-				hasDefaultValue = defaultValue is not null;
-				sources.Add(new PropertySource(AttributePropertySource.NestedModel, null, -1));
-			}
+			defaultValue = nestedModelInfo.DefaultValue;
+			hasDefaultValue = nestedModelInfo.HasDefaultValue;
+			sources.AddRange(nestedModelInfo.Sources);
+		}
+		else
+		{
+			var typeArgumentInfo = ReadTypeArgumentAttributeInfo(
+				parameter,
+				propertyName,
+				isExcluded,
+				logger
+			);
+			isTypeArgument = typeArgumentInfo.IsTypeArgument;
+			defaultValue = typeArgumentInfo.DefaultValue;
+			hasDefaultValue = typeArgumentInfo.HasDefaultValue;
+			sources.AddRange(typeArgumentInfo.Sources);
 		}
 
-		var hasExclusive = isExcluded || isNestedModel;
+		var hasExclusive = isExcluded || isNestedModel || isTypeArgument;
 
 		var ctorAttribute = GetAttribute(parameter, TypeLibrary.AttributeCtorPropertyAttribute);
 		if (ctorAttribute is not null && !hasExclusive)
@@ -346,6 +360,7 @@ static class AttributeDataModelLibrary
 		return new ParameterAttributeInfo(
 			isExcluded,
 			isNestedModel,
+			isTypeArgument,
 			sources.ToImmutable(),
 			defaultValue,
 			hasDefaultValue
@@ -355,10 +370,103 @@ static class AttributeDataModelLibrary
 	sealed record ParameterAttributeInfo(
 		bool IsExcluded,
 		bool IsNestedModel,
+		bool IsTypeArgument,
 		ImmutableArray<PropertySource> Sources,
 		object? DefaultValue,
 		bool HasDefaultValue
 	);
+
+	static (
+		bool IsNestedModel,
+		ImmutableArray<PropertySource> Sources,
+		object? DefaultValue,
+		bool HasDefaultValue
+	) ReadNestedModelAttributeInfo(
+		IParameterSymbol parameter,
+		string propertyName,
+		bool isExcluded,
+		GenerationLogger? logger
+	)
+	{
+		var nestedModelAttribute = GetAttribute(
+			parameter,
+			TypeLibrary.AttributeNestedModelPropertyAttribute
+		);
+		if (nestedModelAttribute is null)
+			return (false, ImmutableArray<PropertySource>.Empty, null, false);
+
+		if (isExcluded)
+		{
+			logger?.Debug(
+				$"Parameter '{propertyName}' has both [AttributeExclude] and [AttributeNestedModelProperty]; excluding takes precedence."
+			);
+			return (false, ImmutableArray<PropertySource>.Empty, null, false);
+		}
+
+		var defaultValue = GetNamedArgument(nestedModelAttribute, "DefaultValue", (object?)null);
+		var sources = ImmutableArray.CreateBuilder<PropertySource>();
+		sources.Add(new PropertySource(AttributePropertySource.NestedModel, null, -1));
+		logger?.Debug($"Parameter '{propertyName}' is a nested model.");
+
+		return (true, sources.ToImmutable(), defaultValue, defaultValue is not null);
+	}
+
+	static (
+		bool IsTypeArgument,
+		ImmutableArray<PropertySource> Sources,
+		object? DefaultValue,
+		bool HasDefaultValue
+	) ReadTypeArgumentAttributeInfo(
+		IParameterSymbol parameter,
+		string propertyName,
+		bool isExcluded,
+		GenerationLogger? logger
+	)
+	{
+		var typeArgumentAttribute = GetAttribute(
+			parameter,
+			TypeLibrary.AttributeGenericTypeArgumentPropertyAttribute
+		);
+		if (typeArgumentAttribute is null)
+			return (false, ImmutableArray<PropertySource>.Empty, null, false);
+
+		if (isExcluded)
+		{
+			logger?.Debug(
+				$"Parameter '{propertyName}' has both [AttributeExclude] and [AttributeGenericTypeArgumentProperty]; excluding takes precedence."
+			);
+			return (false, ImmutableArray<PropertySource>.Empty, null, false);
+		}
+
+		var defaultValue = GetNamedArgument(typeArgumentAttribute, "DefaultValue", (object?)null);
+		var hasDefaultValue = defaultValue is not null;
+
+		var sources = ImmutableArray.CreateBuilder<PropertySource>();
+		var typeArgName = GetNamedArgument(typeArgumentAttribute, "Name", (string?)null);
+		var typeArgIndex = GetNamedArgument(typeArgumentAttribute, "Index", -1);
+		if (typeArgName is not null)
+		{
+			sources.Add(new PropertySource(AttributePropertySource.TypeArgument, typeArgName, -1));
+			logger?.Debug(
+				$"Parameter '{propertyName}' maps to generic type argument '{typeArgName}'."
+			);
+		}
+		else
+		{
+			sources.Add(
+				new PropertySource(
+					AttributePropertySource.TypeArgument,
+					null,
+					typeArgIndex >= 0 ? typeArgIndex : 0
+				)
+			);
+			logger?.Debug(
+				$"Parameter '{propertyName}' maps to generic type argument index {typeArgIndex}."
+			);
+		}
+
+		return (true, sources.ToImmutable(), defaultValue, hasDefaultValue);
+	}
 
 	static string? GetCtorPropertyName(AttributeData attributeData)
 	{
@@ -676,7 +784,7 @@ static class AttributeDataModelLibrary
 	)
 	{
 		if (IsSystemType(typeSymbol))
-			return ("global::Microsoft.CodeAnalysis.ITypeSymbol?", false);
+			return ("global::Microsoft.CodeAnalysis.INamedTypeSymbol?", false);
 
 		string typeName;
 		if (TypeHelpers.TryGetKeyword(typeSymbol.SpecialType, out var keyword))
@@ -727,6 +835,19 @@ static class AttributeDataModelLibrary
 			: namedType.ContainingNamespace.ToDisplayString();
 
 		return namespaceName == "System" && namedType.Name == "Type";
+	}
+
+	static bool IsTypeSymbolType(ITypeSymbol typeSymbol)
+	{
+		if (typeSymbol is not INamedTypeSymbol namedType)
+			return false;
+
+		var namespaceName = namedType.ContainingNamespace.IsGlobalNamespace
+			? null
+			: namedType.ContainingNamespace.ToDisplayString();
+
+		return namespaceName == "Microsoft.CodeAnalysis"
+			&& namedType.Name is "ITypeSymbol" or "INamedTypeSymbol" or "ISymbol";
 	}
 
 	static bool IsSupportedType(ITypeSymbol typeSymbol)

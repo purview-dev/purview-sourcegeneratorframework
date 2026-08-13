@@ -46,4 +46,9 @@ static class TypeLibrary
 		nameof(AttributeExcludePropertyAttribute),
 		GeneratorsNamespace
 	);
+
+	public static readonly TypeValueObject AttributeGenericTypeArgumentPropertyAttribute = new(
+		nameof(AttributeGenericTypeArgumentPropertyAttribute),
+		GeneratorsNamespace
+	);
 }

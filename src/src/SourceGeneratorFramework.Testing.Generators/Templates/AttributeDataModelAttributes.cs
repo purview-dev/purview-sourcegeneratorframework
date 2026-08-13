@@ -96,3 +96,30 @@ sealed class AttributeNestedModelPropertyAttribute : global::System.Attribute
 sealed class AttributeExcludePropertyAttribute : global::System.Attribute
 {
 }
+
+/// <summary>Marks a record parameter as a generic type argument of the attribute class.</summary>
+[global::System.AttributeUsage(global::System.AttributeTargets.Parameter, AllowMultiple = false, Inherited = false)]
+[global::Microsoft.CodeAnalysis.Embedded]
+sealed class AttributeGenericTypeArgumentPropertyAttribute : global::System.Attribute
+{
+	/// <summary>Initializes a new instance marking the first type argument.</summary>
+	public AttributeGenericTypeArgumentPropertyAttribute() { }
+
+	/// <summary>Initializes a new instance marking the type argument at the specified index.</summary>
+	public AttributeGenericTypeArgumentPropertyAttribute(int index)
+	{
+		Index = index;
+	}
+
+	/// <summary>Initializes a new instance marking the type argument with the specified type parameter name.</summary>
+	public AttributeGenericTypeArgumentPropertyAttribute(string name)
+	{
+		Name = name;
+	}
+
+	/// <summary>Gets or sets the type parameter name.</summary>
+	public string? Name { get; set; }
+
+	/// <summary>Gets or sets the type argument index.</summary>
+	public int Index { get; set; } = -1;
+}
