@@ -78,6 +78,10 @@
 		/>
 		<!-- Helpers -->
 		<Compile
+			Include="..\SourceGeneratorFramework\Helpers\KnownLangTypes.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Helpers\KnownLangTypes.cs"
+		/>
+		<Compile
 			Include="..\SourceGeneratorFramework\Helpers\TypeHelpers.cs"
 			Link="Extensions\Purview\SourceGeneratorFramework\Helpers\TypeHelpers.cs"
 		/>

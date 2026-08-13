@@ -148,6 +148,7 @@ public static partial class AttributeDataExtensions
 			if (attribute == null)
 				throw new ArgumentNullException(nameof(attribute));
 
+			// All valid...
 			return TryGetGenericTypeArgument(attribute, index, out T? value) ? value : defaultValue;
 		}
 
@@ -159,6 +160,7 @@ public static partial class AttributeDataExtensions
 			if (attribute == null)
 				throw new ArgumentNullException(nameof(attribute));
 
+			// All valid...
 			return TryGetGenericTypeArgument(attribute, name, out T? value) ? value : defaultValue;
 		}
 
@@ -218,6 +220,7 @@ public static partial class AttributeDataExtensions
 			return typeSymbol is T typedValue ? typedValue : default;
 		}
 
+		// If the target type is not a symbol type, we cannot convert it, so we return default.
 		return default;
 	}
 }

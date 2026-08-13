@@ -15,99 +15,19 @@ public static class TypeHelpers
 	/// </summary>
 	public const string AttributeSuffix = nameof(Attribute);
 
-	static readonly (string Keyword, SpecialType SpecialType)[] Map =
-	[
-		("bool", SpecialType.System_Boolean),
-		("byte", SpecialType.System_Byte),
-		("sbyte", SpecialType.System_SByte),
-		("char", SpecialType.System_Char),
-		("decimal", SpecialType.System_Decimal),
-		("double", SpecialType.System_Double),
-		("float", SpecialType.System_Single),
-		("int", SpecialType.System_Int32),
-		("uint", SpecialType.System_UInt32),
-		("long", SpecialType.System_Int64),
-		("ulong", SpecialType.System_UInt64),
-		("short", SpecialType.System_Int16),
-		("ushort", SpecialType.System_UInt16),
-		("string", SpecialType.System_String),
-		("object", SpecialType.System_Object),
-		("void", SpecialType.System_Void),
-		("nint", SpecialType.System_IntPtr),
-		("nuint", SpecialType.System_UIntPtr),
-	];
-
-	static readonly (Type Type, SpecialType SpecialType)[] TypeMap =
-	[
-		(typeof(bool), SpecialType.System_Boolean),
-		(typeof(byte), SpecialType.System_Byte),
-		(typeof(sbyte), SpecialType.System_SByte),
-		(typeof(char), SpecialType.System_Char),
-		(typeof(decimal), SpecialType.System_Decimal),
-		(typeof(double), SpecialType.System_Double),
-		(typeof(float), SpecialType.System_Single),
-		(typeof(int), SpecialType.System_Int32),
-		(typeof(uint), SpecialType.System_UInt32),
-		(typeof(long), SpecialType.System_Int64),
-		(typeof(ulong), SpecialType.System_UInt64),
-		(typeof(short), SpecialType.System_Int16),
-		(typeof(ushort), SpecialType.System_UInt16),
-		(typeof(string), SpecialType.System_String),
-		(typeof(object), SpecialType.System_Object),
-		(typeof(void), SpecialType.System_Void),
-		(typeof(nint), SpecialType.System_IntPtr),
-		(typeof(nuint), SpecialType.System_UIntPtr),
-	];
-
-	static readonly ImmutableDictionary<string, SpecialType> KeywordToSpecialType =
-		Map.ToImmutableDictionary(m => m.Keyword, m => m.SpecialType, StringComparer.Ordinal);
-
-	static readonly ImmutableDictionary<SpecialType, string> SpecialTypeToKeyword =
-		Map.ToImmutableDictionary(m => m.SpecialType, m => m.Keyword);
-
-	static readonly ImmutableDictionary<Type, SpecialType> SpecialTypeToType =
-		TypeMap.ToImmutableDictionary(m => m.Type, m => m.SpecialType);
-
-	/// <summary>
-	/// Tries to map a C# keyword to its corresponding <see cref="SpecialType"/>.
-	/// </summary>
-	public static bool TryGetSpecialType(string keyword, out SpecialType specialType) =>
-		KeywordToSpecialType.TryGetValue(keyword, out specialType);
-
-	/// <summary>
-	/// Tries to map a <see cref="Type"/> to its corresponding <see cref="SpecialType"/>.
-	/// </summary>
-	public static bool TryGetSpecialType(Type type, out SpecialType specialType) =>
-		SpecialTypeToType.TryGetValue(type, out specialType);
-
-	/// <summary>
-	/// Tries to map a <see cref="Type"/> to its corresponding C# keyword.
-	/// </summary>
-	public static bool TryGetKeyword(Type type, out string? keyword)
-	{
-		keyword = null;
-		return SpecialTypeToType.TryGetValue(type, out var specialType)
-			&& SpecialTypeToKeyword.TryGetValue(specialType, out keyword);
-	}
-
-	/// <summary>
-	/// Tries to map a <see cref="SpecialType"/> to its corresponding C# keyword.
-	/// </summary>
-	public static bool TryGetKeyword(SpecialType specialType, out string? keyword) =>
-		SpecialTypeToKeyword.TryGetValue(specialType, out keyword);
-
 	/// <summary>
 	/// Determines whether the specified type is a C# keyword type.
 	/// </summary>
 	public static bool IsKeywordType(ITypeSymbol type) =>
 		type == null
 			? throw new ArgumentNullException(nameof(type))
-			: SpecialTypeToKeyword.ContainsKey(type.SpecialType);
+			: KnownLangTypes.Get(type.SpecialType) != TypeMapping.Empty;
 
 	/// <summary>
 	/// Determines whether the specified keyword is a recognized C# keyword type.
 	/// </summary>
-	public static bool IsKeywordType(string keyword) => KeywordToSpecialType.ContainsKey(keyword);
+	public static bool IsKeywordType(string keyword) =>
+		KnownLangTypes.Get(keyword) != TypeMapping.Empty;
 
 	/// <summary>
 	/// Determines whether the supplied type name ends with the 'Attribute' suffix.
@@ -182,7 +102,7 @@ public static class TypeHelpers
 			if (
 				string.Equals(
 					GetUnqualifiedTypeName(baseType.Type),
-					expectedBase.SymbolFullName,
+					expectedBase.MetadataFullName,
 					StringComparison.Ordinal
 				)
 			)
@@ -229,7 +149,7 @@ public static class TypeHelpers
 			var actualArgument = actualBase.TypeArguments[index];
 			if (
 				!expectedArgument.Equals(actualArgument)
-				&& !MatchesFullyQualifiedName(actualArgument, expectedArgument.SymbolFullName)
+				&& !MatchesFullyQualifiedName(actualArgument, expectedArgument.MetadataFullName)
 				&& !Implements(actualArgument, expectedArgument)
 				&& !InheritsFrom(actualArgument, expectedArgument)
 			)
@@ -351,6 +271,80 @@ public static class TypeHelpers
 	/// <summary>
 	/// Determines whether the symbol has an attribute with the specified metadata name.
 	/// </summary>
+	public static ImmutableArray<AttributeData> GetAttributes(
+		ISymbol symbol,
+		TypeValueObject attributeType
+	) => GetAttributes(symbol, attributeType.MetadataFullName);
+
+	/// <summary>
+	/// Determines whether the symbol has an attribute with the specified metadata name.
+	/// </summary>
+	public static ImmutableArray<AttributeData> GetAttributes(
+		ISymbol symbol,
+		string fullyQualifiedName
+	)
+	{
+		if (symbol == null)
+			throw new ArgumentNullException(nameof(symbol));
+		if (string.IsNullOrWhiteSpace(fullyQualifiedName))
+		{
+			throw new ArgumentException(
+				"Fully qualified name cannot be null or whitespace.",
+				nameof(fullyQualifiedName)
+			);
+		}
+
+		// All valid...
+		return
+		[
+			.. symbol
+				.GetAttributes()
+				.Where(attr =>
+					attr.AttributeClass is not null
+					&& MatchesFullyQualifiedName(attr.AttributeClass, fullyQualifiedName)
+				),
+		];
+	}
+
+	/// <summary>
+	/// Determines whether the symbol has an attribute with the specified metadata name.
+	/// </summary>
+	public static AttributeData? GetAttribute(ISymbol symbol, TypeValueObject attributeType) =>
+		GetAttribute(symbol, attributeType.MetadataFullName);
+
+	/// <summary>
+	/// Determines whether the symbol has an attribute with the specified metadata name.
+	/// </summary>
+	public static AttributeData? GetAttribute(ISymbol symbol, string fullyQualifiedName)
+	{
+		if (symbol == null)
+			throw new ArgumentNullException(nameof(symbol));
+		if (string.IsNullOrWhiteSpace(fullyQualifiedName))
+		{
+			throw new ArgumentException(
+				"Fully qualified name cannot be null or whitespace.",
+				nameof(fullyQualifiedName)
+			);
+		}
+
+		// All valid...
+		return symbol
+			.GetAttributes()
+			.FirstOrDefault(attr =>
+				attr.AttributeClass is not null
+				&& MatchesFullyQualifiedName(attr.AttributeClass, fullyQualifiedName)
+			);
+	}
+
+	/// <summary>
+	/// Determines whether the symbol has the specified attribute.
+	/// </summary>
+	public static bool HasAttribute(ISymbol symbol, TypeValueObject attributeType) =>
+		HasAttribute(symbol, attributeType.MetadataFullName);
+
+	/// <summary>
+	/// Determines whether the symbol has an attribute with the specified metadata name.
+	/// </summary>
 	public static bool HasAttribute(ISymbol symbol, string fullyQualifiedName)
 	{
 		if (symbol == null)
@@ -371,12 +365,6 @@ public static class TypeHelpers
 				&& MatchesFullyQualifiedName(attr.AttributeClass, fullyQualifiedName)
 			);
 	}
-
-	/// <summary>
-	/// Determines whether the symbol has the specified attribute.
-	/// </summary>
-	public static bool HasAttribute(ISymbol symbol, TypeValueObject attributeType) =>
-		HasAttribute(symbol, attributeType.SymbolFullName);
 
 	/// <summary>
 	/// Determines whether the type inherits from the specified base type.
@@ -402,7 +390,7 @@ public static class TypeHelpers
 	/// Determines whether the type inherits from the specified base type.
 	/// </summary>
 	public static bool InheritsFrom(ITypeSymbol typeSymbol, TypeValueObject baseType) =>
-		InheritsFrom(typeSymbol, baseType.SymbolFullName);
+		InheritsFrom(typeSymbol, baseType.MetadataFullName);
 
 	/// <summary>
 	/// Determines whether the type implements the specified interface.
@@ -416,7 +404,7 @@ public static class TypeHelpers
 	/// Determines whether the type implements the specified interface.
 	/// </summary>
 	public static bool Implements(ITypeSymbol typeSymbol, TypeValueObject interfaceType) =>
-		Implements(typeSymbol, interfaceType.SymbolFullName);
+		Implements(typeSymbol, interfaceType.MetadataFullName);
 
 	/// <summary>
 	/// Returns the fully qualified display string for a type symbol, optionally including nullable annotations.

@@ -114,23 +114,6 @@ public class TypeHelpersTests
 	}
 
 	[Test]
-	public async Task TryGetSpecialType_KnownKeyword_ReturnsTrue()
-	{
-		var result = TypeHelpers.TryGetSpecialType("int", out var specialType);
-
-		await Assert.That(result).IsTrue();
-		await Assert.That(specialType).IsEqualTo(SpecialType.System_Int32);
-	}
-
-	[Test]
-	public async Task TryGetSpecialType_UnknownKeyword_ReturnsFalse()
-	{
-		var result = TypeHelpers.TryGetSpecialType("unknown", out _);
-
-		await Assert.That(result).IsFalse();
-	}
-
-	[Test]
 	public async Task IsPartial_PartialClass_ReturnsTrue()
 	{
 		var source = "public partial class MyClass { }";

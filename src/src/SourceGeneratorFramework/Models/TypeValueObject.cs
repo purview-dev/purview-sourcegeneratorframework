@@ -18,10 +18,13 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 		if (type == null)
 			throw new ArgumentNullException(nameof(type));
 
-		if (TypeHelpers.TryGetKeyword(type, out var keyword))
+		var knownType = KnownLangTypes.Get(type);
+		if (knownType != TypeMapping.Empty)
 		{
-			TypeName = keyword!;
-			Namespace = null;
+			TypeName = knownType.Type.Name;
+			Namespace = knownType.Type.Namespace;
+			Keyword = knownType.Keyword;
+			SpecialType = knownType.SpecialType;
 		}
 		else
 		{
@@ -45,6 +48,14 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="TypeValueObject"/> struct.
+	/// <para>
+	/// <b>Note:</b> This constructor does not validate the provided type name or namespace. It is the caller's responsibility to ensure that the values are valid and represent a real type.
+	/// If this is a known C# keyword type, consider using the <see cref="TypeValueObject(SpecialType)"/>, <see cref="TypeValueObject(ITypeSymbol)"/>, or <see cref="TypeValueObject(Type)"/> constructors instead.
+	/// </para>
+	/// <para>
+	///	Also beware that this constructor does not handle generic types. If you need to represent a generic type, use the <see cref="TypeValueObject(ITypeSymbol)"/> or <see cref="TypeValueObject(Type)"/> constructors,
+	///	or the <see cref="MakeGeneric(TypeValueObject[])"/> method after construction.
+	/// </para>
 	/// </summary>
 	public TypeValueObject(string typeName, string? @namespace)
 	{
@@ -62,10 +73,13 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 		if (typeSymbol == null)
 			throw new ArgumentNullException(nameof(typeSymbol));
 
-		if (TypeHelpers.TryGetKeyword(typeSymbol.SpecialType, out var keyword))
+		var knownType = KnownLangTypes.Get(typeSymbol.SpecialType);
+		if (knownType != TypeMapping.Empty)
 		{
-			TypeName = keyword!;
-			Namespace = null;
+			TypeName = knownType.Type.Name;
+			Namespace = knownType.Type.Namespace;
+			Keyword = knownType.Keyword;
+			SpecialType = knownType.SpecialType;
 		}
 		else
 		{
@@ -101,9 +115,9 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 	/// Initializes a new instance of the <see cref="TypeValueObject"/> struct from a recognized C# keyword special type.
 	/// </summary>
 	public TypeValueObject(SpecialType specialType)
-		: this(specialType.ToString(), null)
 	{
-		if (!TypeHelpers.TryGetKeyword(specialType, out var keyword))
+		var knownType = KnownLangTypes.Get(specialType);
+		if (knownType == TypeMapping.Empty)
 		{
 			throw new ArgumentException(
 				$"The provided special type '{specialType}' is not a recognized C# keyword type.",
@@ -111,8 +125,21 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 			);
 		}
 
-		TypeName = keyword!;
+		TypeName = knownType.Type.Name;
+		Namespace = knownType.Type.Namespace;
+		Keyword = knownType.Keyword;
+		SpecialType = knownType.SpecialType;
 	}
+
+	/// <summary>
+	/// Gets the recognized C# keyword special type, or <see cref="SpecialType.None"/> if the type is not a recognized keyword type.
+	/// </summary>
+	public SpecialType SpecialType { get; init; } = SpecialType.None;
+
+	/// <summary>
+	/// Gets the C# keyword for the type, or <see langword="null"/> if the type does not have a keyword representation.
+	/// </summary>
+	public string? Keyword { get; init; }
 
 	/// <summary>
 	/// Gets the type name without its namespace.
@@ -155,17 +182,15 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 		IsGlobalNamespace ? MetadataName : $"{Namespace}.{MetadataName}";
 
 	/// <summary>
-	/// Gets the full symbol name, including namespace when present.
-	/// </summary>
-	public string SymbolFullName => MetadataFullName;
-
-	/// <summary>
 	/// Gets the fully-qualified global name for use in generated code, rendered as an attribute when applicable.
 	/// </summary>
 	public string RenderFullName
 	{
 		get
 		{
+			if (SpecialType != SpecialType.None)
+				return Keyword!;
+
 			var result = IsGlobalNamespace
 				? RenderTypeName
 				: $"global::{Namespace}.{RenderTypeName}";
@@ -182,6 +207,9 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 	{
 		get
 		{
+			if (SpecialType != SpecialType.None)
+				return Keyword!;
+
 			var typeName = TypeHelpers.IsAttribute(TypeName)
 				? TypeHelpers.GetTypeName(TypeName)
 				: TypeName;
@@ -221,7 +249,11 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 			? null
 			: other.ContainingNamespace.ToDisplayString();
 
-		if (TypeName != other.Name || Namespace != otherNamespace)
+		if (
+			TypeName != other.Name
+			|| Namespace != otherNamespace
+			|| SpecialType != other.SpecialType
+		)
 			return false;
 
 		if (other is not INamedTypeSymbol namedType)
@@ -254,6 +286,8 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 		if (
 			TypeName != other.TypeName
 			|| Namespace != other.Namespace
+			|| SpecialType != other.SpecialType
+			|| Keyword != other.Keyword
 			|| GenericArity != other.GenericArity
 			|| typeArgumentCount != otherTypeArgumentCount
 		)
@@ -277,6 +311,8 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 		{
 			var hashCode = TypeName?.GetHashCode() ?? 0;
 			hashCode = (hashCode * 397) ^ (Namespace?.GetHashCode() ?? 0);
+			hashCode = (hashCode * 397) ^ SpecialType.GetHashCode();
+			hashCode = (hashCode * 397) ^ (Keyword?.GetHashCode() ?? 0);
 			hashCode = (hashCode * 397) ^ GenericArity;
 
 			if (!TypeArguments.IsDefaultOrEmpty)
@@ -331,6 +367,13 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 			);
 		}
 
+		if (SpecialType != SpecialType.None)
+		{
+			throw new InvalidOperationException(
+				$"Cannot create a generic type from the special type '{SpecialType}'."
+			);
+		}
+
 		// If the type has no generic arity, we can treat the provided type arguments as concrete types.
 		return this with
 		{
@@ -358,6 +401,13 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 				$"Type '{MetadataFullName}' requires {GenericArity} type arguments, but {typeArguments.Length} were supplied.",
 				nameof(typeArguments)
 			);
+
+		if (SpecialType != SpecialType.None)
+		{
+			throw new InvalidOperationException(
+				$"Cannot create a generic type from the special type '{SpecialType}'."
+			);
+		}
 
 		// If the type has no generic arity, we can treat the provided type arguments as concrete types.
 		return new($"{TypeName}{{{string.Join(", ", typeArguments)}}}", Namespace);

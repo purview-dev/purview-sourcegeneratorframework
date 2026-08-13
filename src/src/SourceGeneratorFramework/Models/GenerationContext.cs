@@ -89,5 +89,5 @@ public record class GenerationContext
 	/// Resolves a type from a <see cref="TypeValueObject"/>.
 	/// </summary>
 	public INamedTypeSymbol? GetTypeByMetadataName(TypeValueObject type) =>
-		GetTypeByMetadataName(type.SymbolFullName);
+		GetTypeByMetadataName(type.MetadataFullName);
 }

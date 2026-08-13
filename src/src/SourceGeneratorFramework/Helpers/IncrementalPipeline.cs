@@ -264,7 +264,7 @@ public static class IncrementalPipeline
 
 		return context
 			.SyntaxProvider.ForAttributeWithMetadataName(
-				attributeType.SymbolFullName,
+				attributeType.MetadataFullName,
 				predicate,
 				transform
 			)

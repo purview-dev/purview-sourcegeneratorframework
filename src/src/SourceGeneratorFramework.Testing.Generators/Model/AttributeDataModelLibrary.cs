@@ -8,6 +8,8 @@ namespace Purview.SourceGeneratorFramework.Testing.Generators.Model;
 
 static class AttributeDataModelLibrary
 {
+	static readonly TypeValueObject SystemType = new(typeof(Type));
+
 	public static IncrementalValuesProvider<GeneratorResult<AttributeDataModelTarget>> GetTargets(
 		IncrementalGeneratorInitializationContext context,
 		GenerationLogger? logger
@@ -19,10 +21,9 @@ static class AttributeDataModelLibrary
 			(ctx, ct) =>
 			{
 				var symbol = ctx.SemanticModel.GetDeclaredSymbol(ctx.TargetNode, ct);
-				if (symbol is not INamedTypeSymbol { TypeKind: TypeKind.Struct } structSymbol)
-					return GeneratorResult<AttributeDataModelTarget>.Empty;
-
-				return BuildTarget(structSymbol, logger, ct);
+				return symbol is not INamedTypeSymbol { TypeKind: TypeKind.Struct } structSymbol
+					? GeneratorResult<AttributeDataModelTarget>.Empty
+					: BuildTarget(structSymbol, logger, ct);
 			}
 		);
 	}
@@ -111,7 +112,7 @@ static class AttributeDataModelLibrary
 					logger,
 					cancellationToken
 				)
-				: ImmutableArray<AttributeDataModelProperty>.Empty;
+				: [];
 
 		var mergedProperties = MergeProperties(explicitProperties, discoveredProperties);
 
@@ -128,10 +129,9 @@ static class AttributeDataModelLibrary
 			Diagnostics: new EquatableArray<DiagnosticInfo>(diagnostics.ToImmutable())
 		);
 
-		if (diagnostics.Count > 0)
-			return GeneratorResult<AttributeDataModelTarget>.Fail([.. diagnostics]);
-
-		return GeneratorResult<AttributeDataModelTarget>.Ok(target);
+		return diagnostics.Count > 0
+			? GeneratorResult<AttributeDataModelTarget>.Fail([.. diagnostics])
+			: GeneratorResult<AttributeDataModelTarget>.Ok(target);
 	}
 
 	static ImmutableArray<AttributeDataModelProperty> ReadExplicitProperties(
@@ -200,9 +200,7 @@ static class AttributeDataModelLibrary
 			var sources = info.Sources;
 			if (sources.IsEmpty)
 			{
-				sources = ImmutableArray.Create(
-					new PropertySource(AttributePropertySource.NamedArgument, propertyName, -1)
-				);
+				sources = [new(AttributePropertySource.NamedArgument, propertyName, -1)];
 				logger?.Debug(
 					$"Parameter '{propertyName}' has no source attribute; defaulting to named argument."
 				);
@@ -274,16 +272,13 @@ static class AttributeDataModelLibrary
 		}
 		else
 		{
-			var typeArgumentInfo = ReadTypeArgumentAttributeInfo(
-				parameter,
-				propertyName,
-				isExcluded,
-				logger
-			);
-			isTypeArgument = typeArgumentInfo.IsTypeArgument;
-			defaultValue = typeArgumentInfo.DefaultValue;
-			hasDefaultValue = typeArgumentInfo.HasDefaultValue;
-			sources.AddRange(typeArgumentInfo.Sources);
+			var (IsTypeArgument, Sources, DefaultValue, HasDefaultValue) =
+				ReadTypeArgumentAttributeInfo(parameter, propertyName, isExcluded, logger);
+
+			isTypeArgument = IsTypeArgument;
+			defaultValue = DefaultValue;
+			hasDefaultValue = HasDefaultValue;
+			sources.AddRange(Sources);
 		}
 
 		var hasExclusive = isExcluded || isNestedModel || isTypeArgument;
@@ -393,14 +388,14 @@ static class AttributeDataModelLibrary
 			TypeLibrary.AttributeNestedModelPropertyAttribute
 		);
 		if (nestedModelAttribute is null)
-			return (false, ImmutableArray<PropertySource>.Empty, null, false);
+			return (false, [], null, false);
 
 		if (isExcluded)
 		{
 			logger?.Debug(
 				$"Parameter '{propertyName}' has both [AttributeExclude] and [AttributeNestedModelProperty]; excluding takes precedence."
 			);
-			return (false, ImmutableArray<PropertySource>.Empty, null, false);
+			return (false, [], null, false);
 		}
 
 		var defaultValue = GetNamedArgument(nestedModelAttribute, "DefaultValue", (object?)null);
@@ -428,14 +423,14 @@ static class AttributeDataModelLibrary
 			TypeLibrary.AttributeGenericTypeArgumentPropertyAttribute
 		);
 		if (typeArgumentAttribute is null)
-			return (false, ImmutableArray<PropertySource>.Empty, null, false);
+			return (false, [], null, false);
 
 		if (isExcluded)
 		{
 			logger?.Debug(
 				$"Parameter '{propertyName}' has both [AttributeExclude] and [AttributeGenericTypeArgumentProperty]; excluding takes precedence."
 			);
-			return (false, ImmutableArray<PropertySource>.Empty, null, false);
+			return (false, [], null, false);
 		}
 
 		var defaultValue = GetNamedArgument(typeArgumentAttribute, "DefaultValue", (object?)null);
@@ -470,24 +465,20 @@ static class AttributeDataModelLibrary
 
 	static string? GetCtorPropertyName(AttributeData attributeData)
 	{
-		if (
+		return
 			attributeData.ConstructorArguments.Length > 0
 			&& attributeData.ConstructorArguments[0].Value is string name
-		)
-			return name;
-
-		return GetNamedArgument(attributeData, "Name", (string?)null);
+			? name
+			: GetNamedArgument(attributeData, "Name", (string?)null);
 	}
 
 	static int GetCtorPropertyIndex(AttributeData attributeData)
 	{
-		if (
+		return
 			attributeData.ConstructorArguments.Length > 0
 			&& attributeData.ConstructorArguments[0].Value is int index
-		)
-			return index;
-
-		return GetNamedArgument(attributeData, "Index", -1);
+			? index
+			: GetNamedArgument(attributeData, "Index", -1);
 	}
 
 	static ImmutableArray<AttributeDataModelProperty> DiscoverProperties(
@@ -500,7 +491,7 @@ static class AttributeDataModelLibrary
 	)
 	{
 		if (targetAttributeType is not INamedTypeSymbol namedType)
-			return ImmutableArray<AttributeDataModelProperty>.Empty;
+			return [];
 
 		var discovered = ImmutableArray.CreateBuilder<AttributeDataModelProperty>();
 		var discoveredNames = new HashSet<string>(StringComparer.Ordinal);
@@ -557,13 +548,14 @@ static class AttributeDataModelLibrary
 					new AttributeDataModelProperty(
 						PropertyName: propertyName,
 						FullyQualifiedTypeName: modelTypeName,
-						Sources: ImmutableArray.Create(
+						Sources:
+						[
 							new PropertySource(
 								AttributePropertySource.ConstructorName,
 								parameter.Name,
 								i
-							)
-						),
+							),
+						],
 						DefaultValueExpression: defaultValueExpression,
 						HasDefaultValue: parameter.HasExplicitDefaultValue,
 						IsExplicit: false,
@@ -627,9 +619,14 @@ static class AttributeDataModelLibrary
 				new AttributeDataModelProperty(
 					PropertyName: propertyName,
 					FullyQualifiedTypeName: modelTypeName,
-					Sources: ImmutableArray.Create(
-						new PropertySource(AttributePropertySource.NamedArgument, property.Name, -1)
-					),
+					Sources:
+					[
+						new PropertySource(
+							AttributePropertySource.NamedArgument,
+							property.Name,
+							-1
+						),
+					],
 					DefaultValueExpression: defaultValueExpression,
 					HasDefaultValue: false,
 					IsExplicit: false,
@@ -700,17 +697,14 @@ static class AttributeDataModelLibrary
 		ImmutableArray<DiagnosticInfo>.Builder diagnostics
 	)
 	{
-		if (parameter.HasExplicitDefaultValue)
-		{
-			return GetDefaultValueExpression(
+		return parameter.HasExplicitDefaultValue
+			? GetDefaultValueExpression(
 				parameter.ExplicitDefaultValue,
 				modelTypeName,
 				parameter.Type,
 				diagnostics
-			);
-		}
-
-		return $"default({modelTypeName})";
+			)
+			: $"default({modelTypeName})";
 	}
 
 	static bool TryFormatValue(object? value, ITypeSymbol typeSymbol, out string expression)
@@ -786,15 +780,10 @@ static class AttributeDataModelLibrary
 		if (IsSystemType(typeSymbol))
 			return ("global::Microsoft.CodeAnalysis.INamedTypeSymbol?", false);
 
-		string typeName;
-		if (TypeHelpers.TryGetKeyword(typeSymbol.SpecialType, out var keyword))
-		{
-			typeName = keyword!;
-		}
-		else
-		{
-			typeName = TypeHelpers.ToFullyQualifiedDisplayString(typeSymbol);
-		}
+		var knownType = KnownLangTypes.Get(typeSymbol.SpecialType);
+		var typeName = knownType.IsEmpty
+			? TypeHelpers.ToFullyQualifiedDisplayString(typeSymbol)
+			: knownType.Keyword;
 
 		var isNonNullableReferenceType = false;
 
@@ -825,17 +814,7 @@ static class AttributeDataModelLibrary
 		return (typeName, isNonNullableReferenceType);
 	}
 
-	static bool IsSystemType(ITypeSymbol typeSymbol)
-	{
-		if (typeSymbol is not INamedTypeSymbol namedType)
-			return false;
-
-		var namespaceName = namedType.ContainingNamespace.IsGlobalNamespace
-			? null
-			: namedType.ContainingNamespace.ToDisplayString();
-
-		return namespaceName == "System" && namedType.Name == "Type";
-	}
+	static bool IsSystemType(ITypeSymbol typeSymbol) => SystemType.Equals(typeSymbol);
 
 	static bool IsTypeSymbolType(ITypeSymbol typeSymbol)
 	{
@@ -860,10 +839,9 @@ static class AttributeDataModelLibrary
 
 	static bool IsGeneratedAttributeModel(ITypeSymbol typeSymbol)
 	{
-		if (typeSymbol is not INamedTypeSymbol namedType || namedType.TypeKind != TypeKind.Struct)
-			return false;
-
-		return GetAttribute(namedType, TypeLibrary.GenerateAttributeDataModelAttribute) is not null;
+		return typeSymbol is not INamedTypeSymbol namedType || namedType.TypeKind != TypeKind.Struct
+			? false
+			: GetAttribute(namedType, TypeLibrary.GenerateAttributeDataModelAttribute) is not null;
 	}
 
 	static AttributeData? GetAttribute(ISymbol symbol, TypeValueObject attributeType)
@@ -876,6 +854,7 @@ static class AttributeDataModelLibrary
 			)
 				return attribute;
 		}
+
 		return null;
 	}
 

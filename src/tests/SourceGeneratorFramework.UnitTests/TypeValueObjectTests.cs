@@ -29,7 +29,7 @@ public partial class TypeValueObjectTests
 	{
 		var type = new TypeValueObject("MyType", "MyNamespace");
 
-		await Assert.That(type.SymbolFullName).IsEqualTo("MyNamespace.MyType");
+		await Assert.That(type.MetadataFullName).IsEqualTo("MyNamespace.MyType");
 		await Assert.That(type.RenderFullName).IsEqualTo("global::MyNamespace.MyType");
 	}
 
@@ -38,7 +38,7 @@ public partial class TypeValueObjectTests
 	{
 		var type = new TypeValueObject("MyType", null);
 
-		await Assert.That(type.SymbolFullName).IsEqualTo("MyType");
+		await Assert.That(type.MetadataFullName).IsEqualTo("MyType");
 		await Assert.That(type.RenderFullName).IsEqualTo("MyType");
 	}
 
@@ -159,5 +159,61 @@ public partial class TypeValueObjectTests
 		await Assert.That(sut.Namespace).IsEqualTo(testData.NamespaceInfo.Namespace);
 		await Assert.That(sut.IsGlobalNamespace).IsEqualTo(!testData.NamespaceInfo.HasNamespace);
 		await Assert.That(sut.TypeName).IsEqualTo(testData.TypeName);
+		await Assert.That(sut.Keyword).IsNull();
+		await Assert.That(sut.SpecialType).IsEqualTo(SpecialType.None);
+	}
+
+	[Test]
+	public async Task Constructor_GivenKnownLangTypeSpecialType_PopulatesCorrectly()
+	{
+		// Arrange/ Act
+		TypeValueObject sut = new(SpecialType.System_String);
+
+		// Assert
+		await Assert.That(sut.Keyword).IsEqualTo("string");
+		await Assert.That(sut.SpecialType).IsEqualTo(SpecialType.System_String);
+		await Assert.That(sut.TypeName).IsEqualTo("String");
+		await Assert.That(sut.Namespace).IsEqualTo("System");
+		await Assert.That(sut.IsGlobalNamespace).IsFalse();
+		await Assert.That(sut.RenderFullName).IsEqualTo("string");
+		await Assert.That(sut.RenderTypeName).IsEqualTo("string");
+		await Assert.That(sut.MetadataFullName).IsEqualTo("System.String");
+	}
+
+	[Test]
+	public async Task Constructor_GivenKnownLangTypeSystemType_PopulatesCorrectly()
+	{
+		// Arrange/ Act
+		TypeValueObject sut = new(typeof(string));
+
+		// Assert
+		await Assert.That(sut.Keyword).IsEqualTo("string");
+		await Assert.That(sut.SpecialType).IsEqualTo(SpecialType.System_String);
+		await Assert.That(sut.TypeName).IsEqualTo("String");
+		await Assert.That(sut.Namespace).IsEqualTo("System");
+		await Assert.That(sut.IsGlobalNamespace).IsFalse();
+		await Assert.That(sut.RenderFullName).IsEqualTo("string");
+		await Assert.That(sut.RenderTypeName).IsEqualTo("string");
+		await Assert.That(sut.MetadataFullName).IsEqualTo("System.String");
+	}
+
+	[Test]
+	public async Task Constructor_GivenKnownLangTypeITypeSymbol_PopulatesCorrectly()
+	{
+		// Arrange/ Act
+		var symbol = ITypeSymbol.Mock();
+		symbol.SpecialType.Returns(SpecialType.System_String);
+
+		TypeValueObject sut = new(symbol);
+
+		// Assert
+		await Assert.That(sut.Keyword).IsEqualTo("string");
+		await Assert.That(sut.SpecialType).IsEqualTo(SpecialType.System_String);
+		await Assert.That(sut.TypeName).IsEqualTo("String");
+		await Assert.That(sut.Namespace).IsEqualTo("System");
+		await Assert.That(sut.IsGlobalNamespace).IsFalse();
+		await Assert.That(sut.RenderFullName).IsEqualTo("string");
+		await Assert.That(sut.RenderTypeName).IsEqualTo("string");
+		await Assert.That(sut.MetadataFullName).IsEqualTo("System.String");
 	}
 }

@@ -28,9 +28,7 @@ public class AttributeDataExtensionsTests
 			[
 				MetadataReference.CreateFromFile(typeof(CodeWriter).Assembly.Location),
 				MetadataReference.CreateFromFile(typeof(Testing.ITestOutput).Assembly.Location),
-				MetadataReference.CreateFromFile(
-					typeof(Microsoft.CodeAnalysis.Compilation).Assembly.Location
-				),
+				MetadataReference.CreateFromFile(typeof(Compilation).Assembly.Location),
 				MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
 				MetadataReference.CreateFromFile(typeof(ImmutableArray<>).Assembly.Location),
 			],

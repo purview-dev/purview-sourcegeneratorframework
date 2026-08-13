@@ -630,7 +630,7 @@ public class AttributeDataModelGeneratorTests
 			new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
 		);
 
-		var runtimeCompilationDiagnostics = runtimeCompilation.GetDiagnostics();
+		var runtimeCompilationDiagnostics = runtimeCompilation.GetDiagnostics(cancellationToken);
 		var runtimeErrors = runtimeCompilationDiagnostics
 			.Where(d => d.Severity == DiagnosticSeverity.Error)
 			.ToList();

@@ -467,6 +467,7 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstrac
 		return methodCall + ";";
 	}
 
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0072:Add missing cases")]
 	static string GetSingleSourceExtractionWithDefaultExpression(
 		PropertySource source,
 		string variableName,
@@ -492,6 +493,7 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstrac
 		};
 	}
 
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0072:Add missing cases")]
 	static string GetTryGetMethodCall(
 		PropertySource source,
 		string variableName,
@@ -526,7 +528,6 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstrac
 	static string ToCamelCase(string value) =>
 		string.IsNullOrEmpty(value) ? value : char.ToLowerInvariant(value[0]) + value.Substring(1);
 
-	void Abstractions.ILogSupport.SetLogOutput(
-		global::System.Action<string, Abstractions.OutputType> action
-	) => _logger = new Abstractions.GenerationLogger(action);
+	void Abstractions.ILogSupport.SetLogOutput(Action<string, Abstractions.OutputType> action) =>
+		_logger = new Abstractions.GenerationLogger(action);
 }
