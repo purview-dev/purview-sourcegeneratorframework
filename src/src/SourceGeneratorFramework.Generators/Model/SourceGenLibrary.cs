@@ -1,20 +1,20 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Purview.SourceGeneratorFramework.Testing.Abstractions;
+using Purview.SourceGeneratorFramework.Logging;
 
-namespace Purview.SourceGeneratorFramework.Testing.Generators.Model;
+namespace Purview.SourceGeneratorFramework.Generators.Model;
 
 static class SourceGenLibrary
 {
-	public static IncrementalValueProvider<GenerationModel> GetGeneratorValueProviders(
+	public static IncrementalValueProvider<LogGenerationModel> GetGeneratorValueProviders(
 		IncrementalGeneratorInitializationContext context,
 		GenerationLogger? logger
 	)
 	{
 		var isDisabled = IncrementalPipeline.IsDisabledValueProvider(
 			context,
-			PropertyLibrary.DisableSourceGenerator
+			PropertyLibrary.DisableLoggingSourceGenerator
 		);
 		var generationContext = IncrementalPipeline.DefaultGenerationContextValueProvider(
 			context,
@@ -29,7 +29,7 @@ static class SourceGenLibrary
 			.CombineWith(
 				generationContext,
 				static (disabled, generationContext, _) =>
-					new GenerationModel(disabled, generationContext),
+					new LogGenerationModel(disabled, generationContext),
 				"CreateGenerationModel"
 			)
 			.CollectWith(

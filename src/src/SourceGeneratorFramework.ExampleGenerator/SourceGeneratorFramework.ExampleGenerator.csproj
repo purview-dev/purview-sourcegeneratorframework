@@ -10,7 +10,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\SourceGeneratorFramework\SourceGeneratorFramework.csproj" />
+		<ProjectReference
+			Include="..\SourceGeneratorFramework\SourceGeneratorFramework.csproj"
+			OutputItemType="Analyzer"
+			PrivateAssets="all"
+		/>
 	</ItemGroup>
 
 	<ItemGroup>

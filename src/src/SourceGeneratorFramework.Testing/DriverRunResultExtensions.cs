@@ -1,5 +1,5 @@
 using Microsoft.CodeAnalysis;
-using Purview.SourceGeneratorFramework.Testing.Abstractions;
+using Purview.SourceGeneratorFramework.Logging;
 
 namespace Purview.SourceGeneratorFramework.Testing;
 

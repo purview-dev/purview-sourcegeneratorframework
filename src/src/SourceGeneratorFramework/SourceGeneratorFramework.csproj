@@ -9,7 +9,7 @@
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<SGFrameworkSourceGeneratorProjectName>SourceGeneratorFramework.Testing.Generators</SGFrameworkSourceGeneratorProjectName>
+		<SGFrameworkSourceGeneratorProjectName>SourceGeneratorFramework.Generators</SGFrameworkSourceGeneratorProjectName>
 		<SGFrameworkSourceGeneratorProject>$(MSBuildThisFileDirectory)..\$(SGFrameworkSourceGeneratorProjectName)\$(SGFrameworkSourceGeneratorProjectName).csproj</SGFrameworkSourceGeneratorProject>
 		<SGFrameworkSourceGeneratorTargetFramework>netstandard2.0</SGFrameworkSourceGeneratorTargetFramework>
 		<SGFrameworkSourceGeneratorAssembly>$(MSBuildThisFileDirectory)..\$(SGFrameworkSourceGeneratorProjectName)\bin\$(Configuration)\$(SGFrameworkSourceGeneratorTargetFramework)\Purview.$(SGFrameworkSourceGeneratorProjectName).dll</SGFrameworkSourceGeneratorAssembly>
@@ -17,12 +17,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference
-			Include="$(SGFrameworkSourceGeneratorProject)"
-			PrivateAssets="all"
-			ReferenceOutputAssembly="false"
-			OutputItemType="Analyzer"
-		/>
+		<ProjectReference Include="$(SGFrameworkSourceGeneratorProject)">
+			<PrivateAssets>all</PrivateAssets>
+			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+			<OutputItemType>Analyzer</OutputItemType>
+		</ProjectReference>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -57,9 +56,5 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
 		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Folder Include="Testing\Generators\" />
 	</ItemGroup>
 </Project>

@@ -1,12 +1,13 @@
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
+using Purview.SourceGeneratorFramework.Logging;
 
-namespace Purview.SourceGeneratorFramework.Testing.Generators;
+namespace Purview.SourceGeneratorFramework.Generators;
 
 [Generator]
-public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstractions.ILogSupport
+public sealed class AttributeDataModelGenerator : IIncrementalGenerator, ILogSupport
 {
-	Abstractions.GenerationLogger? _logger;
+	GenerationLogger? _logger;
 
 	public void Initialize(IncrementalGeneratorInitializationContext context)
 	{
@@ -22,15 +23,24 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstrac
 
 		context.RegisterSourceOutput(
 			targets,
-			static (spc, result) =>
+			(spc, result) =>
 			{
-				if (result.HasDiagnostics)
-					spc.ReportDiagnostics(result.Diagnostics);
-
-				if (result.IsFatal || result.IsEmpty)
+				if (result.IsDisabled)
+				{
+					_logger?.Info("AttributeDataModelGenerator is disabled.");
 					return;
+				}
 
-				GenerateAttributeDataModel(spc, result.Value!);
+				foreach (var target in result.AttributeDataTargets)
+				{
+					if (target.HasDiagnostics)
+						spc.ReportDiagnostics(target.Diagnostics);
+
+					if (target.IsFatal || target.IsEmpty)
+						continue;
+
+					GenerateAttributeDataModel(spc, target.Value!);
+				}
 			}
 		);
 	}
@@ -66,7 +76,7 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstrac
 
 	static void WriteStruct(CodeWriter writer, AttributeDataModelTarget target)
 	{
-		var options = new TypeDeclarationOptions(target.StructName)
+		TypeDeclarationOptions options = new(target.StructName)
 		{
 			Accessibility = target.Accessibility,
 			IsReadOnly = true,
@@ -76,10 +86,7 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstrac
 		using (writer.WriteRecordStructScope(options))
 		{
 			writer.WriteProperty(
-				new PropertyDeclarationOptions("Exists", "bool")
-				{
-					Accessibility = TypeDeclarationAccessibility.Public,
-				}
+				new("Exists", "bool") { Accessibility = TypeDeclarationAccessibility.Public }
 			);
 			foreach (var property in target.Properties)
 			{
@@ -87,10 +94,7 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstrac
 					continue;
 
 				writer.WriteProperty(
-					new PropertyDeclarationOptions(
-						property.PropertyName,
-						property.FullyQualifiedTypeName
-					)
+					new(property.PropertyName, property.FullyQualifiedTypeName)
 					{
 						Accessibility = TypeDeclarationAccessibility.Public,
 						HasSetter = true,
@@ -110,19 +114,14 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstrac
 	static void WriteConstructor(CodeWriter writer, AttributeDataModelTarget target)
 	{
 		var parameters = ImmutableArray.CreateBuilder<ParameterDeclarationOptions>();
-		parameters.Add(new ParameterDeclarationOptions("Exists", "bool"));
+		parameters.Add(new("Exists", "bool"));
 		foreach (var property in target.Properties)
 		{
-			parameters.Add(
-				new ParameterDeclarationOptions(
-					property.PropertyName,
-					property.FullyQualifiedTypeName
-				)
-			);
+			parameters.Add(new(property.PropertyName, property.FullyQualifiedTypeName));
 		}
 
 		writer.WriteConstructor(
-			new ConstructorDeclarationOptions(target.StructName)
+			new(target.StructName)
 			{
 				Accessibility = TypeDeclarationAccessibility.Public,
 				Parameters = [.. parameters],
@@ -156,8 +155,14 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstrac
 			? "null"
 			: $"\"{target.TargetAttribute.Namespace}\"";
 
-		writer.WriteLine(
-			$"static readonly global::Purview.SourceGeneratorFramework.Models.TypeValueObject TargetAttribute = new(\"{target.TargetAttribute.TypeName}\", {namespaceValue});"
+		writer.WriteField(
+			new("TargetAttribute", TypeLibrary.TypeValueObject)
+			{
+				Accessibility = TypeDeclarationAccessibility.Public,
+				IsStatic = true,
+				IsReadOnly = true,
+				Initializer = $"new(\"{target.TargetAttribute.TypeName}\", {namespaceValue})",
+			}
 		);
 	}
 
@@ -166,15 +171,21 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstrac
 		var values = new List<string> { "false" };
 		foreach (var property in target.Properties)
 		{
-			values.Add(
-				property.IsNonNullableReferenceType
-					? $"default({property.FullyQualifiedTypeName})!"
-					: $"default({property.FullyQualifiedTypeName})"
-			);
+			var value = $"default({property.FullyQualifiedTypeName})";
+			if (property.IsNonNullableReferenceType)
+				value += "!";
+
+			values.Add(value);
 		}
 
-		writer.WriteLine(
-			$"public static readonly {target.StructName} Empty = new({string.Join(", ", values)});"
+		writer.WriteField(
+			new FieldDeclarationOptions("Empty", target.StructName)
+			{
+				Accessibility = TypeDeclarationAccessibility.Public,
+				IsStatic = true,
+				IsReadOnly = true,
+				Initializer = $"new({string.Join(", ", values)})",
+			}
 		);
 	}
 
@@ -183,18 +194,15 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstrac
 		AttributeDataModelTarget target
 	)
 	{
-		var methodOptions = new MethodDeclarationOptions(
-			"FromAttributeData",
-			new TypeReferenceOptions(target.StructName)
-		)
+		MethodDeclarationOptions methodOptions = new("FromAttributeData", new(target.StructName))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			IsStatic = true,
 			Parameters =
 			[
-				new ParameterDeclarationOptions(
+				new(
 					"attributes",
-					new TypeReferenceOptions(
+					new(
 						"global::System.Collections.Immutable.ImmutableArray<global::Microsoft.CodeAnalysis.AttributeData>"
 					)
 				),
@@ -227,23 +235,20 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstrac
 	{
 		var methodOptions = new MethodDeclarationOptions(
 			"FromAttributeData",
-			new TypeReferenceOptions(target.StructName)
+			new(target.StructName)
 		)
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			IsStatic = true,
 			Parameters =
 			[
-				new ParameterDeclarationOptions(
+				new(
 					"attributes",
-					new TypeReferenceOptions(
+					new(
 						"global::System.Collections.Immutable.ImmutableArray<global::Microsoft.CodeAnalysis.AttributeData>"
 					)
 				),
-				new ParameterDeclarationOptions(
-					"attribute",
-					new TypeReferenceOptions("global::Microsoft.CodeAnalysis.AttributeData?")
-				)
+				new("attribute", new("global::Microsoft.CodeAnalysis.AttributeData?"))
 				{
 					Modifier = ParameterModifier.Out,
 				},
@@ -281,17 +286,14 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstrac
 	{
 		var methodOptions = new MethodDeclarationOptions(
 			"FromAttributeData",
-			new TypeReferenceOptions(target.StructName)
+			new(target.StructName)
 		)
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			IsStatic = true,
 			Parameters =
 			[
-				new ParameterDeclarationOptions(
-					"attributeData",
-					new TypeReferenceOptions("global::Microsoft.CodeAnalysis.AttributeData")
-				),
+				new("attributeData", new("global::Microsoft.CodeAnalysis.AttributeData")),
 			],
 		};
 
@@ -341,6 +343,12 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstrac
 			writer.WriteLine(
 				$"var {variableName} = {property.NestedModelTypeName}.FromAttributeData(attributeData);"
 			);
+			return;
+		}
+
+		if (property.IsEnum)
+		{
+			WriteEnumPropertyExtraction(writer, property, variableName);
 			return;
 		}
 
@@ -456,6 +464,97 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstrac
 		WriteFallback(0);
 	}
 
+	static void WriteEnumPropertyExtraction(
+		CodeWriter writer,
+		AttributeDataModelProperty property,
+		string variableName
+	)
+	{
+		var sources = property.Sources;
+		var defaultValueExpression = property.HasDefaultValue
+			? property.DefaultValueExpression
+			: "null";
+
+		if (sources.Length == 1)
+		{
+			var expression = GetEnumSingleSourceExtractionExpression(
+				sources[0],
+				defaultValueExpression
+			);
+			writer.WriteLine($"var {variableName} = {expression};");
+			return;
+		}
+
+		WriteEnumMultiSourceExtraction(writer, sources, variableName, defaultValueExpression);
+	}
+
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0072:Add missing cases")]
+	static string GetEnumSingleSourceExtractionExpression(
+		PropertySource source,
+		string defaultValueExpression
+	)
+	{
+		return source.Source switch
+		{
+			AttributePropertySource.NamedArgument =>
+				$"attributeData.GetEnumNamedArgument(\"{source.MappedName}\", {defaultValueExpression})",
+			AttributePropertySource.ConstructorIndex =>
+				$"attributeData.GetEnumConstructorArgument({source.ConstructorIndex}, {defaultValueExpression})",
+			AttributePropertySource.ConstructorName =>
+				$"attributeData.GetEnumConstructorArgument(\"{source.MappedName}\", {defaultValueExpression})",
+			_ => throw new InvalidOperationException(
+				$"Unsupported enum property source: {source.Source}"
+			),
+		};
+	}
+
+	static void WriteEnumMultiSourceExtraction(
+		CodeWriter writer,
+		ImmutableArray<PropertySource> sources,
+		string variableName,
+		string defaultValueExpression
+	)
+	{
+		var typeName = "global::Microsoft.CodeAnalysis.TypedConstant";
+		var tempName = $"__{variableName}Tc";
+
+		writer.WriteLine($"{typeName}? {tempName} = default;");
+
+		void WriteFallback(int index)
+		{
+			if (index >= sources.Length)
+			{
+				writer.WriteLine($"{tempName} = default;");
+				return;
+			}
+
+			var source = sources[index];
+			var isLast = index == sources.Length - 1;
+			var methodCall = GetTryGetMethodCall(
+				source,
+				tempName,
+				typeName,
+				declareVariable: false
+			);
+
+			if (isLast)
+			{
+				writer.WriteLine(methodCall + ";");
+			}
+			else
+			{
+				writer.WriteLine($"if (!{methodCall})");
+				writer.WriteBlock(null, body => WriteFallback(index + 1));
+			}
+		}
+
+		WriteFallback(0);
+
+		writer.WriteLine(
+			$"var {variableName} = {tempName}.ToEnumString({defaultValueExpression});"
+		);
+	}
+
 	static string GetSingleSourceExtractionExpression(
 		PropertySource source,
 		string variableName,
@@ -528,6 +627,5 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, Abstrac
 	static string ToCamelCase(string value) =>
 		string.IsNullOrEmpty(value) ? value : char.ToLowerInvariant(value[0]) + value.Substring(1);
 
-	void Abstractions.ILogSupport.SetLogOutput(Action<string, Abstractions.OutputType> action) =>
-		_logger = new Abstractions.GenerationLogger(action);
+	void ILogSupport.SetLogOutput(Action<string, OutputType> action) => _logger = new(action);
 }

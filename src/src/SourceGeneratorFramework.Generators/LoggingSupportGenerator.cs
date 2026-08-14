@@ -1,7 +1,7 @@
 using Microsoft.CodeAnalysis;
-using Purview.SourceGeneratorFramework.Testing.Abstractions;
+using Purview.SourceGeneratorFramework.Logging;
 
-namespace Purview.SourceGeneratorFramework.Testing.Generators;
+namespace Purview.SourceGeneratorFramework.Generators;
 
 [Generator]
 public sealed partial class LoggingSupportGenerator : IIncrementalGenerator, ILogSupport

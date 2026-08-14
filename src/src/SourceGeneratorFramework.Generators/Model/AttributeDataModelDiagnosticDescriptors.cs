@@ -1,6 +1,6 @@
 using Microsoft.CodeAnalysis;
 
-namespace Purview.SourceGeneratorFramework.Testing.Generators.Model;
+namespace Purview.SourceGeneratorFramework.Generators.Model;
 
 static class AttributeDataModelDiagnosticDescriptors
 {
@@ -73,6 +73,15 @@ static class AttributeDataModelDiagnosticDescriptors
 		"ADM0008",
 		"Type argument property type must be a symbol type",
 		"Type argument property '{0}' type '{1}' must be ITypeSymbol or INamedTypeSymbol",
+		Category,
+		DiagnosticSeverity.Error,
+		true
+	);
+
+	public static readonly DiagnosticDescriptor IsEnumRequiresStringType = new(
+		"ADM0009",
+		"IsEnum property must be a string type",
+		"Property '{0}' is marked with IsEnum but its type '{1}' is not a string; IsEnum requires a string or string? property type",
 		Category,
 		DiagnosticSeverity.Error,
 		true

@@ -2,22 +2,30 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Text;
 using Microsoft.CodeAnalysis;
-using Purview.SourceGeneratorFramework.Testing.Abstractions;
+using Purview.SourceGeneratorFramework.Logging;
 
-namespace Purview.SourceGeneratorFramework.Testing.Generators.Model;
+namespace Purview.SourceGeneratorFramework.Generators.Model;
 
 static class AttributeDataModelLibrary
 {
 	static readonly TypeValueObject SystemType = new(typeof(Type));
 
-	public static IncrementalValuesProvider<GeneratorResult<AttributeDataModelTarget>> GetTargets(
+	public static IncrementalValueProvider<AttributeDataGenerationModel> GetTargets(
 		IncrementalGeneratorInitializationContext context,
 		GenerationLogger? logger
 	)
 	{
-		return IncrementalPipeline.ForAttributeWithMetadataName(
+		var isDisabled = IncrementalPipeline.IsDisabledValueProvider(
 			context,
-			TypeLibrary.GenerateAttributeDataModelAttribute,
+			PropertyLibrary.DisableAttributeDataSourceGenerator
+		);
+		var generationContext = IncrementalPipeline.DefaultGenerationContextValueProvider(
+			context,
+			logger
+		);
+		var attributeTargets = IncrementalPipeline.ForAttributeWithMetadataName(
+			context,
+			TypeLibrary.GenerateAttribute,
 			(ctx, ct) =>
 			{
 				var symbol = ctx.SemanticModel.GetDeclaredSymbol(ctx.TargetNode, ct);
@@ -26,6 +34,23 @@ static class AttributeDataModelLibrary
 					: BuildTarget(structSymbol, logger, ct);
 			}
 		);
+
+		return isDisabled
+			.CombineWith(
+				generationContext,
+				static (disabled, generationContext, _) =>
+					new AttributeDataGenerationModel(disabled, generationContext),
+				"CreateGenerationModel"
+			)
+			.CollectWith(
+				attributeTargets,
+				(inputs, attributeTargets, _) =>
+				{
+					inputs.AttributeDataTargets = attributeTargets;
+					return inputs;
+				},
+				"GetAttributeDataTargets"
+			);
 	}
 
 	static GeneratorResult<AttributeDataModelTarget> BuildTarget(
@@ -35,10 +60,7 @@ static class AttributeDataModelLibrary
 	)
 	{
 		var diagnostics = ImmutableArray.CreateBuilder<DiagnosticInfo>();
-		var generateAttribute = GetAttribute(
-			structSymbol,
-			TypeLibrary.GenerateAttributeDataModelAttribute
-		);
+		var generateAttribute = GetAttribute(structSymbol, TypeLibrary.GenerateAttribute);
 		if (generateAttribute is null)
 			return GeneratorResult<AttributeDataModelTarget>.Empty;
 
@@ -197,6 +219,18 @@ static class AttributeDataModelLibrary
 				);
 			}
 
+			if (info.IsEnum && propertyType.SpecialType != SpecialType.System_String)
+			{
+				diagnostics.Add(
+					DiagnosticInfo.Create(
+						AttributeDataModelDiagnosticDescriptors.IsEnumRequiresStringType,
+						parameter.Locations.FirstOrDefault(static loc => loc.IsInSource),
+						propertyName,
+						TypeHelpers.ToFullyQualifiedDisplayString(propertyType)
+					)
+				);
+			}
+
 			var sources = info.Sources;
 			if (sources.IsEmpty)
 			{
@@ -227,6 +261,7 @@ static class AttributeDataModelLibrary
 					IsExplicit: true,
 					IsNonNullableReferenceType: isNonNullableReferenceType,
 					IsNestedModel: info.IsNestedModel,
+					IsEnum: info.IsEnum,
 					NestedModelTypeName: info.IsNestedModel ? modelTypeName : null
 				)
 			);
@@ -247,10 +282,7 @@ static class AttributeDataModelLibrary
 		object? defaultValue;
 		bool hasDefaultValue;
 
-		var excludeAttribute = GetAttribute(
-			parameter,
-			TypeLibrary.AttributeExcludePropertyAttribute
-		);
+		var excludeAttribute = GetAttribute(parameter, TypeLibrary.ExcludeAttribute);
 		if (excludeAttribute is not null)
 		{
 			isExcluded = true;
@@ -283,12 +315,14 @@ static class AttributeDataModelLibrary
 
 		var hasExclusive = isExcluded || isNestedModel || isTypeArgument;
 
-		var ctorAttribute = GetAttribute(parameter, TypeLibrary.AttributeCtorPropertyAttribute);
+		var ctorAttribute = GetAttribute(parameter, TypeLibrary.ArgumentAttribute);
+		var isEnum = false;
 		if (ctorAttribute is not null && !hasExclusive)
 		{
 			var ctorName = GetCtorPropertyName(ctorAttribute);
 			var ctorIndex = GetCtorPropertyIndex(ctorAttribute);
 			var ctorDefaultValue = GetNamedArgument(ctorAttribute, "DefaultValue", (object?)null);
+			isEnum = GetNamedArgument(ctorAttribute, "IsEnum", false);
 
 			if (ctorName is not null)
 			{
@@ -318,15 +352,16 @@ static class AttributeDataModelLibrary
 		else if (ctorAttribute is not null)
 		{
 			logger?.Debug(
-				$"Parameter '{propertyName}' has conflicting attributes; [AttributeCtorProperty] is ignored."
+				$"Parameter '{propertyName}' has conflicting attributes; [{TypeLibrary.ArgumentAttribute.RenderTypeName}] is ignored."
 			);
 		}
 
-		var namedAttribute = GetAttribute(parameter, TypeLibrary.AttributeNamedPropertyAttribute);
+		var namedAttribute = GetAttribute(parameter, TypeLibrary.PropertyAttribute);
 		if (namedAttribute is not null && !hasExclusive)
 		{
 			var namedName = GetNamedArgument(namedAttribute, "Name", (string?)null);
 			var namedDefaultValue = GetNamedArgument(namedAttribute, "DefaultValue", (object?)null);
+			isEnum = isEnum || GetNamedArgument(namedAttribute, "IsEnum", false);
 
 			sources.Add(
 				new PropertySource(
@@ -348,7 +383,7 @@ static class AttributeDataModelLibrary
 		else if (namedAttribute is not null)
 		{
 			logger?.Debug(
-				$"Parameter '{propertyName}' has conflicting attributes; [AttributeNamedProperty] is ignored."
+				$"Parameter '{propertyName}' has conflicting attributes; [{TypeLibrary.PropertyAttribute.RenderTypeName}] is ignored."
 			);
 		}
 
@@ -358,7 +393,8 @@ static class AttributeDataModelLibrary
 			isTypeArgument,
 			sources.ToImmutable(),
 			defaultValue,
-			hasDefaultValue
+			hasDefaultValue,
+			isEnum
 		);
 	}
 
@@ -368,7 +404,8 @@ static class AttributeDataModelLibrary
 		bool IsTypeArgument,
 		ImmutableArray<PropertySource> Sources,
 		object? DefaultValue,
-		bool HasDefaultValue
+		bool HasDefaultValue,
+		bool IsEnum
 	);
 
 	static (
@@ -383,17 +420,14 @@ static class AttributeDataModelLibrary
 		GenerationLogger? logger
 	)
 	{
-		var nestedModelAttribute = GetAttribute(
-			parameter,
-			TypeLibrary.AttributeNestedModelPropertyAttribute
-		);
+		var nestedModelAttribute = GetAttribute(parameter, TypeLibrary.NestedModelAttribute);
 		if (nestedModelAttribute is null)
 			return (false, [], null, false);
 
 		if (isExcluded)
 		{
 			logger?.Debug(
-				$"Parameter '{propertyName}' has both [AttributeExclude] and [AttributeNestedModelProperty]; excluding takes precedence."
+				$"Parameter '{propertyName}' has both [{TypeLibrary.ExcludeAttribute.RenderTypeName}] and [{TypeLibrary.NestedModelAttribute.RenderTypeName}]; excluding takes precedence."
 			);
 			return (false, [], null, false);
 		}
@@ -420,7 +454,7 @@ static class AttributeDataModelLibrary
 	{
 		var typeArgumentAttribute = GetAttribute(
 			parameter,
-			TypeLibrary.AttributeGenericTypeArgumentPropertyAttribute
+			TypeLibrary.GenericTypeArgumentAttribute
 		);
 		if (typeArgumentAttribute is null)
 			return (false, [], null, false);
@@ -428,7 +462,7 @@ static class AttributeDataModelLibrary
 		if (isExcluded)
 		{
 			logger?.Debug(
-				$"Parameter '{propertyName}' has both [AttributeExclude] and [AttributeGenericTypeArgumentProperty]; excluding takes precedence."
+				$"Parameter '{propertyName}' has both [{TypeLibrary.ExcludeAttribute.RenderTypeName}] and [{TypeLibrary.GenericTypeArgumentAttribute.RenderTypeName}]; excluding takes precedence."
 			);
 			return (false, [], null, false);
 		}
@@ -561,6 +595,7 @@ static class AttributeDataModelLibrary
 						IsExplicit: false,
 						IsNonNullableReferenceType: isNonNullableReferenceType,
 						IsNestedModel: false,
+						IsEnum: false,
 						NestedModelTypeName: null
 					)
 				);
@@ -632,6 +667,7 @@ static class AttributeDataModelLibrary
 					IsExplicit: false,
 					IsNonNullableReferenceType: isNonNullableReferenceType,
 					IsNestedModel: false,
+					IsEnum: false,
 					NestedModelTypeName: null
 				)
 			);
@@ -841,7 +877,7 @@ static class AttributeDataModelLibrary
 	{
 		return typeSymbol is not INamedTypeSymbol namedType || namedType.TypeKind != TypeKind.Struct
 			? false
-			: GetAttribute(namedType, TypeLibrary.GenerateAttributeDataModelAttribute) is not null;
+			: GetAttribute(namedType, TypeLibrary.GenerateAttribute) is not null;
 	}
 
 	static AttributeData? GetAttribute(ISymbol symbol, TypeValueObject attributeType)

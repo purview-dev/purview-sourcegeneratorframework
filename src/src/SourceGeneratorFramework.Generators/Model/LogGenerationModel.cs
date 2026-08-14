@@ -1,8 +1,8 @@
 using System.Collections.Immutable;
 
-namespace Purview.SourceGeneratorFramework.Testing.Generators.Model;
+namespace Purview.SourceGeneratorFramework.Generators.Model;
 
-sealed record GenerationModel(bool IsDisabled, GenerationContext GenerationContext)
+sealed record LogGenerationModel(bool IsDisabled, GenerationContext GenerationContext)
 {
 	public ImmutableArray<GeneratorResult<TypeValueObject>> SourceGenerators { get; set; } = [];
 

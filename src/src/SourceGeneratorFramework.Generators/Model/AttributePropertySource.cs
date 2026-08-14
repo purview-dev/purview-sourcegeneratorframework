@@ -1,4 +1,4 @@
-namespace Purview.SourceGeneratorFramework.Testing.Generators.Model;
+namespace Purview.SourceGeneratorFramework.Generators.Model;
 
 enum AttributePropertySource
 {

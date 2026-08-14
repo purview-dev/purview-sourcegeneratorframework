@@ -1,4 +1,4 @@
-namespace Purview.SourceGeneratorFramework.Testing.Abstractions;
+namespace Purview.SourceGeneratorFramework.Logging;
 
 /// <summary>
 /// Allows a source generator to report log information, usually as part of a test run.

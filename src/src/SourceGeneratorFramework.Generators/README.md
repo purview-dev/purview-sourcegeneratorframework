@@ -1,4 +1,4 @@
-# SourceGeneratorFramework.Testing.Generators
+# Purview.SourceGeneratorFramework.Generators
 
 Internal Roslyn source generator used by `Purview.SourceGeneratorFramework`. It generates framework code that is bundled into the main framework package at pack time.
 
@@ -32,7 +32,7 @@ The `Empty` sentinel always uses `default(T)` for every property, including an `
 
 ```csharp
 using Microsoft.CodeAnalysis;
-using Purview.SourceGeneratorFramework.Testing.Generators;
+using Purview.SourceGeneratorFramework.Generators;
 using System.ComponentModel.DataAnnotations;
 
 namespace MySourceGenerator.Models;

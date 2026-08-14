@@ -9,7 +9,7 @@
 		<File Path="Directory.Build.targets" />
 	</Folder>
 	<Folder Name="/src/">
-		<Project Path="src/SourceGeneratorFramework.Testing.Generators/SourceGeneratorFramework.Testing.Generators.csproj" />
+		<Project Path="src/SourceGeneratorFramework.Generators/SourceGeneratorFramework.Generators.csproj" />
 		<Project Path="src/SourceGeneratorFramework.Testing.TUnit/SourceGeneratorFramework.Testing.TUnit.csproj" />
 		<Project Path="src/SourceGeneratorFramework.Testing/SourceGeneratorFramework.Testing.csproj" />
 		<Project Path="src/SourceGeneratorFramework/SourceGeneratorFramework.csproj" />
@@ -19,7 +19,7 @@
 	</Folder>
 	<Folder Name="/tests/">
 		<Project Path="tests/SourceGeneratorFramework.UnitTests/SourceGeneratorFramework.UnitTests.csproj" />
-		<Project Path="tests/SourceGeneratorFramework.Testing.Generators.UnitTests/SourceGeneratorFramework.Testing.Generators.UnitTests.csproj" />
+		<Project Path="tests/SourceGeneratorFramework.Generators.UnitTests/SourceGeneratorFramework.Generators.UnitTests.csproj" />
 	</Folder>
 	<Folder Name="/tests/examples/">
 		<Project Path="tests/SourceGeneratorFramework.ExampleGenerator.UnitTests/SourceGeneratorFramework.ExampleGenerator.UnitTests.csproj" />

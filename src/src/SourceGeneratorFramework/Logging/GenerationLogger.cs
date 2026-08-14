@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Purview.SourceGeneratorFramework.Testing.Abstractions;
+namespace Purview.SourceGeneratorFramework.Logging;
 
 /// <summary>
 /// Helper used by source generators to emit structured log output.

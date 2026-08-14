@@ -9,3 +9,4 @@
 | ADM0006 | AttributeDataModelGenerator | Error | Non-nullable reference type property requires a default value |
 | ADM0007 | AttributeDataModelGenerator | Error | Auto-discovery requires a target attribute type |
 | ADM0008 | AttributeDataModelGenerator | Error | Type argument property type must be a symbol type |
+| ADM0009 | AttributeDataModelGenerator | Error | IsEnum property must be a string type |

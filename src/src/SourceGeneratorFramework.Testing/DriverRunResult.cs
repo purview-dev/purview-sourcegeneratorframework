@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Reflection;
 using Microsoft.CodeAnalysis;
-using Purview.SourceGeneratorFramework.Testing.Abstractions;
+using Purview.SourceGeneratorFramework.Logging;
 using Purview.SourceGeneratorFramework.Testing.Models;
 
 namespace Purview.SourceGeneratorFramework.Testing;

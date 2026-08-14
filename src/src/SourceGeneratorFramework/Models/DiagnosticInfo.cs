@@ -13,7 +13,7 @@ public sealed record DiagnosticInfo(
 	TextSpan TextSpan,
 	LinePositionSpan LinePositionSpan,
 	ImmutableArray<LinePositionSpan> AdditionalLinePositions,
-	EquatableArray<string> MessageArgs
+	ImmutableArray<object> MessageArgs
 )
 {
 	/// <summary>
@@ -25,12 +25,7 @@ public sealed record DiagnosticInfo(
 			? Location.None
 			: Location.Create(FilePath, TextSpan, LinePositionSpan);
 
-		var args = MessageArgs;
-		var objArgs = new object?[args.Count];
-		for (var i = 0; i < args.Count; i++)
-			objArgs[i] = args[i];
-
-		return Diagnostic.Create(Descriptor, location, objArgs);
+		return Diagnostic.Create(Descriptor, location, MessageArgs.ToArray());
 	}
 
 	/// <summary>
@@ -42,7 +37,7 @@ public sealed record DiagnosticInfo(
 	/// <exception cref="ArgumentNullException"></exception>
 	public static DiagnosticInfo Create(
 		DiagnosticDescriptor descriptor,
-		params string[] messageArgs
+		params object[] messageArgs
 	) => Create(descriptor, location: null, additionalLocations: null, messageArgs: messageArgs);
 
 	/// <summary>
@@ -56,7 +51,7 @@ public sealed record DiagnosticInfo(
 	public static DiagnosticInfo Create(
 		DiagnosticDescriptor descriptor,
 		TargetSymbolDescriptor target,
-		params string[] messageArgs
+		params object[] messageArgs
 	)
 	{
 		if (target is null)
@@ -76,16 +71,9 @@ public sealed record DiagnosticInfo(
 			];
 		}
 		else
-		{
 			additionalLocations = [.. target.Symbol.Locations.Where(static loc => loc.IsInSource)];
-		}
 
-		return Create(
-			descriptor,
-			location,
-			additionalLocations: [.. additionalLocations],
-			messageArgs
-		);
+		return Create(descriptor, location, additionalLocations: additionalLocations, messageArgs);
 	}
 
 	/// <summary>
@@ -98,7 +86,7 @@ public sealed record DiagnosticInfo(
 	public static DiagnosticInfo Create(
 		DiagnosticDescriptor descriptor,
 		Location? location,
-		params string[] messageArgs
+		params object[] messageArgs
 	) => Create(descriptor, location, additionalLocations: null, messageArgs);
 
 	/// <summary>
@@ -113,9 +101,18 @@ public sealed record DiagnosticInfo(
 		DiagnosticDescriptor descriptor,
 		Location? location,
 		ImmutableArray<Location>? additionalLocations = null,
-		params string[] messageArgs
+		params object[] messageArgs
 	)
 	{
+		ImmutableArray<LinePositionSpan> lineSpaces = [];
+		if (additionalLocations is not null)
+		{
+			lineSpaces =
+			[
+				.. additionalLocations.Value.Select(static loc => loc.GetLineSpan().Span),
+			];
+		}
+
 		if (location is null)
 		{
 			return new DiagnosticInfo(
@@ -123,10 +120,8 @@ public sealed record DiagnosticInfo(
 				FilePath: string.Empty,
 				TextSpan: default,
 				LinePositionSpan: default,
-				AdditionalLinePositions: additionalLocations is null
-					? []
-					: [.. additionalLocations.Value.Select(static loc => loc.GetLineSpan().Span)],
-				MessageArgs: EquatableArray<string>.Create(messageArgs)
+				AdditionalLinePositions: lineSpaces,
+				MessageArgs: ImmutableArray.Create(messageArgs)
 			);
 		}
 
@@ -136,10 +131,33 @@ public sealed record DiagnosticInfo(
 			FilePath: lineSpan.Path,
 			TextSpan: location.SourceSpan,
 			LinePositionSpan: lineSpan.Span,
-			AdditionalLinePositions: additionalLocations is null
-				? []
-				: [.. additionalLocations.Value.Select(static loc => loc.GetLineSpan().Span)],
-			MessageArgs: EquatableArray<string>.Create(messageArgs)
+			AdditionalLinePositions: lineSpaces,
+			MessageArgs: ImmutableArray.Create(messageArgs)
 		);
+	}
+
+	/// <summary>
+	/// Creates a <see cref="DiagnosticInfo"/> from a descriptor and a target symbol descriptor.
+	/// </summary>
+	/// <param name="descriptor">The diagnostic descriptor.</param>
+	/// <param name="symbol">The symbol.</param>
+	/// <param name="messageArgs">The message arguments.</param>
+	/// <returns>A <see cref="DiagnosticInfo"/> instance.</returns>
+	/// <exception cref="ArgumentNullException"></exception>
+	public static DiagnosticInfo Create(
+		DiagnosticDescriptor descriptor,
+		ISymbol symbol,
+		params object[] messageArgs
+	)
+	{
+		if (symbol is null)
+			throw new ArgumentNullException(nameof(symbol));
+
+		var location = symbol.Locations.FirstOrDefault(m => m.IsInSource);
+		ImmutableArray<Location>? additionalLocations = null;
+		if (location is not null)
+			additionalLocations = [.. symbol.Locations.Skip(1).Where(static loc => loc.IsInSource)];
+
+		return Create(descriptor, location, additionalLocations: additionalLocations, messageArgs);
 	}
 }

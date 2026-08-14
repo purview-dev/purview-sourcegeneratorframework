@@ -1,4 +1,4 @@
-namespace Purview.SourceGeneratorFramework.Testing.Abstractions;
+namespace Purview.SourceGeneratorFramework.Logging;
 
 /// <summary>
 /// Defines the severity of a log message emitted by a source generator.

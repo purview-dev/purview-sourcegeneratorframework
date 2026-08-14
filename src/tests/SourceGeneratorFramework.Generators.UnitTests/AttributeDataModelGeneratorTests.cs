@@ -2,8 +2,9 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Purview.SourceGeneratorFramework.Testing;
 
-namespace Purview.SourceGeneratorFramework.Testing.Generators;
+namespace Purview.SourceGeneratorFramework.Generators;
 
 public class AttributeDataModelGeneratorTests
 {
@@ -14,22 +15,22 @@ public class AttributeDataModelGeneratorTests
 	{
 		var source = """
 			using Microsoft.CodeAnalysis;
-			using Purview.SourceGeneratorFramework.Testing.Generators;
+			using Purview.SourceGeneratorFramework.Generators;
 			using System.ComponentModel.DataAnnotations;
 
 			namespace Test
 			{
-				[GenerateAttributeDataModel(typeof(ValidationAttribute), MatchByInheritance = true)]
+				[Generate(typeof(ValidationAttribute), MatchByInheritance = true)]
 				public readonly partial record struct ValidationAttributeData(
 					string? ErrorMessage,
 					string? ErrorMessageResourceName,
 					ITypeSymbol? ErrorMessageResourceType
 				);
 
-				[GenerateAttributeDataModel(typeof(RequiredAttribute))]
+				[Generate(typeof(RequiredAttribute))]
 				public readonly partial record struct RequiredAttributeData(
 					bool AllowEmptyStrings,
-					[AttributeNestedModelProperty] ValidationAttributeData ValidationAttribute
+					[NestedModel] ValidationAttributeData ValidationAttribute
 				);
 			}
 			""";
@@ -73,15 +74,15 @@ public class AttributeDataModelGeneratorTests
 	public async Task Generate_LengthAttributeData_CtorIndex(CancellationToken cancellationToken)
 	{
 		var source = """
-			using Purview.SourceGeneratorFramework.Testing.Generators;
+			using Purview.SourceGeneratorFramework.Generators;
 			using System.ComponentModel.DataAnnotations;
 
 			namespace Test
 			{
-				[GenerateAttributeDataModel(typeof(LengthAttribute))]
+				[Generate(typeof(LengthAttribute))]
 				public readonly partial record struct LengthAttributeData(
-					[AttributeCtorProperty(0)] int MinimumLength,
-					[AttributeCtorProperty(1)] int MaximumLength
+					[Argument(0)] int MinimumLength,
+					[Argument(1)] int MaximumLength
 				);
 			}
 			""";
@@ -119,21 +120,21 @@ public class AttributeDataModelGeneratorTests
 	{
 		var source = """
 			using Microsoft.CodeAnalysis;
-			using Purview.SourceGeneratorFramework.Testing.Generators;
+			using Purview.SourceGeneratorFramework.Generators;
 			using System.ComponentModel.DataAnnotations;
 
 			namespace Test
 			{
-				[GenerateAttributeDataModel(typeof(ValidationAttribute), MatchByInheritance = true)]
+				[Generate(typeof(ValidationAttribute), MatchByInheritance = true)]
 				public readonly partial record struct ValidationAttributeData(
 					string? ErrorMessage
 				);
 
-				[GenerateAttributeDataModel(typeof(StringLengthAttribute))]
+				[Generate(typeof(StringLengthAttribute))]
 				public readonly partial record struct StringLengthAttributeData(
-					[AttributeCtorProperty("maximumLength", DefaultValue = int.MaxValue)] int MaximumLength,
+					[Argument("maximumLength", DefaultValue = int.MaxValue)] int MaximumLength,
 					int MinimumLength,
-					[AttributeNestedModelProperty] ValidationAttributeData ValidationAttribute
+					[NestedModel] ValidationAttributeData ValidationAttribute
 				);
 			}
 			""";
@@ -173,15 +174,15 @@ public class AttributeDataModelGeneratorTests
 	)
 	{
 		var source = """
-			using Purview.SourceGeneratorFramework.Testing.Generators;
+			using Purview.SourceGeneratorFramework.Generators;
 
 			namespace Test
 			{
-				[GenerateAttributeDataModel("Test.HostKitAttribute")]
+				[Generate("Test.HostKitAttribute")]
 				public readonly partial record struct HostKitAttributeData(
-					[AttributeCtorProperty("name")] string? Name,
+					[Argument("name")] string? Name,
 					string? ExtensionMethodName,
-					[AttributeCtorProperty("generateOptions")] [AttributeNamedProperty(DefaultValue = true)] bool GenerateOptions
+					[Argument("generateOptions")] [Property(DefaultValue = true)] bool GenerateOptions
 				);
 
 				public class HostKitAttribute : System.Attribute
@@ -230,12 +231,12 @@ public class AttributeDataModelGeneratorTests
 	)
 	{
 		var source = """
-			using Purview.SourceGeneratorFramework.Testing.Generators;
+			using Purview.SourceGeneratorFramework.Generators;
 			using System.ComponentModel.DataAnnotations;
 
 			namespace Test
 			{
-				[GenerateAttributeDataModel(typeof(RequiredAttribute), AutoDiscover = true)]
+				[Generate(typeof(RequiredAttribute), AutoDiscover = true)]
 				public readonly partial record struct RequiredAttributeData;
 			}
 			""";
@@ -270,15 +271,15 @@ public class AttributeDataModelGeneratorTests
 	public async Task Generate_Exclude_SkipsProperty(CancellationToken cancellationToken)
 	{
 		var source = """
-			using Purview.SourceGeneratorFramework.Testing.Generators;
+			using Purview.SourceGeneratorFramework.Generators;
 			using System.ComponentModel.DataAnnotations;
 
 			namespace Test
 			{
-				[GenerateAttributeDataModel(typeof(RequiredAttribute))]
+				[Generate(typeof(RequiredAttribute))]
 				public readonly partial record struct RequiredAttributeData(
 					bool AllowEmptyStrings,
-					[AttributeExcludeProperty] int Ignored
+					[Exclude] int Ignored
 				);
 			}
 			""";
@@ -308,14 +309,14 @@ public class AttributeDataModelGeneratorTests
 	)
 	{
 		var source = """
-			using Purview.SourceGeneratorFramework.Testing.Generators;
+			using Purview.SourceGeneratorFramework.Generators;
 			using System.ComponentModel.DataAnnotations;
 
 			namespace Test
 			{
-				[GenerateAttributeDataModel(typeof(RequiredAttribute))]
+				[Generate(typeof(RequiredAttribute))]
 				public readonly partial record struct RequiredAttributeData(
-					[AttributeNestedModelProperty] NotAModel NotAModel
+					[NestedModel] NotAModel NotAModel
 				);
 
 				public readonly partial record struct NotAModel;
@@ -334,12 +335,12 @@ public class AttributeDataModelGeneratorTests
 	)
 	{
 		var source = """
-			using Purview.SourceGeneratorFramework.Testing.Generators;
+			using Purview.SourceGeneratorFramework.Generators;
 			using System.ComponentModel.DataAnnotations;
 
 			namespace Test
 			{
-				[GenerateAttributeDataModel("System.ComponentModel.DataAnnotations.RequiredAttribute")]
+				[Generate("System.ComponentModel.DataAnnotations.RequiredAttribute")]
 				public readonly partial record struct RequiredAttributeData(
 					bool AllowEmptyStrings
 				);
@@ -376,12 +377,12 @@ public class AttributeDataModelGeneratorTests
 	)
 	{
 		var source = """
-			using Purview.SourceGeneratorFramework.Testing.Generators;
+			using Purview.SourceGeneratorFramework.Generators;
 			using System.ComponentModel.DataAnnotations;
 
 			namespace Test
 			{
-				[GenerateAttributeDataModel("System.ComponentModel.DataAnnotations.RequiredAttribute", AutoDiscover = true)]
+				[Generate("System.ComponentModel.DataAnnotations.RequiredAttribute", AutoDiscover = true)]
 				public readonly partial record struct RequiredAttributeData;
 			}
 			""";
@@ -400,13 +401,13 @@ public class AttributeDataModelGeneratorTests
 		var source = """
 			using System.Collections.Immutable;
 			using Microsoft.CodeAnalysis;
-			using Purview.SourceGeneratorFramework.Testing.Generators;
+			using Purview.SourceGeneratorFramework.Generators;
 
 			namespace Test
 			{
-				[GenerateAttributeDataModel("TestAttribute")]
+				[Generate("TestAttribute")]
 				public readonly partial record struct TestAttributeData(
-					[AttributeCtorProperty(0)] ImmutableArray<TypedConstant> Values
+					[Argument(0)] ImmutableArray<TypedConstant> Values
 				);
 
 				public class TestAttribute : System.Attribute
@@ -445,12 +446,12 @@ public class AttributeDataModelGeneratorTests
 	)
 	{
 		var source = """
-			using Purview.SourceGeneratorFramework.Testing.Generators;
+			using Purview.SourceGeneratorFramework.Generators;
 			using System.ComponentModel.DataAnnotations;
 
 			namespace Test
 			{
-				[GenerateAttributeDataModel(typeof(RequiredAttribute))]
+				[Generate(typeof(RequiredAttribute))]
 				public readonly partial record struct RequiredAttributeData(
 					string ErrorMessage
 				);
@@ -482,7 +483,7 @@ public class AttributeDataModelGeneratorTests
 	{
 		var source = """
 			using Microsoft.CodeAnalysis;
-			using Purview.SourceGeneratorFramework.Testing.Generators;
+			using Purview.SourceGeneratorFramework.Generators;
 
 			namespace Aspire.Hosting.ApplicationModel
 			{
@@ -510,11 +511,11 @@ public class AttributeDataModelGeneratorTests
 					public ResourceDefinitionAttribute(string name) : base(name) { }
 				}
 
-				[GenerateAttributeDataModel(typeof(ResourceDefinitionAttribute), MatchByInheritance = true)]
+				[Generate(typeof(ResourceDefinitionAttribute), MatchByInheritance = true)]
 				public readonly partial record struct ResourceDefinitionAttributeData(
-					[AttributeCtorProperty("name")] string? Name,
-					[AttributeCtorProperty("propertyName")] string? PropertyName,
-					[AttributeGenericTypeArgumentProperty] INamedTypeSymbol? AspireResourceType
+					[Argument("name")] string? Name,
+					[Argument("propertyName")] string? PropertyName,
+					[GenericTypeArgument] INamedTypeSymbol? AspireResourceType
 				);
 
 				[ResourceDefinition("myResource", "MyResource")]
@@ -616,7 +617,7 @@ public class AttributeDataModelGeneratorTests
 		var references = trustedAssemblies
 			.Where(path =>
 				!path.EndsWith(
-					"Purview.SourceGeneratorFramework.Testing.Generators.dll",
+					"Purview.SourceGeneratorFramework.Generators.dll",
 					StringComparison.OrdinalIgnoreCase
 				)
 			)
@@ -711,13 +712,13 @@ public class AttributeDataModelGeneratorTests
 	{
 		var source = """
 			using Microsoft.CodeAnalysis;
-			using Purview.SourceGeneratorFramework.Testing.Generators;
+			using Purview.SourceGeneratorFramework.Generators;
 
 			namespace Test
 			{
-			[GenerateAttributeDataModel(typeof(TestingAttribute))]
+			[Generate(typeof(TestingAttribute))]
 			public readonly partial record struct TestingAttributeData(
-				[AttributeCtorProperty("typeThing")] [AttributeNamedProperty] INamedTypeSymbol? TypeThing
+				[Argument("typeThing")] [Property] INamedTypeSymbol? TypeThing
 			);
 
 				public class TestingAttribute : System.Attribute
@@ -762,18 +763,18 @@ public class AttributeDataModelGeneratorTests
 	)
 	{
 		var source = """
-			using Purview.SourceGeneratorFramework.Testing.Generators;
+			using Purview.SourceGeneratorFramework.Generators;
 
 			namespace Test
 			{
-				[GenerateAttributeDataModel("Test.HostKitAttribute")]
+				[Generate("Test.HostKitAttribute")]
 				public readonly partial record struct HostKitAttributeData(
-					[AttributeNamedProperty]
-					[AttributeCtorProperty("name")]
+					[Property]
+					[Argument("name")]
 						string? Name,
 					string? ExtensionMethodName,
-					[AttributeNamedProperty]
-					[AttributeCtorProperty("generateOptions", DefaultValue = true)]
+					[Property]
+					[Argument("generateOptions", DefaultValue = true)]
 						bool GenerateOptions
 				);
 
@@ -798,6 +799,90 @@ public class AttributeDataModelGeneratorTests
 		await Assert.That(generated).IsNotNull();
 		await Assert.That(generated).Contains("string? name;");
 		await Assert.That(generated).DoesNotContain("string name;");
+	}
+
+	[Test]
+	public async Task Generate_IsEnumNamedArgument_WithDefaultValue(
+		CancellationToken cancellationToken
+	)
+	{
+		var source = """
+			using Purview.SourceGeneratorFramework.Generators;
+
+			namespace Test
+			{
+				public enum MyEnum { A, B }
+
+				[Generate(typeof(MyAttribute))]
+				public readonly partial record struct MyAttributeData(
+					[Property(IsEnum = true, DefaultValue = "Test.MyEnum.B")]
+						string? Value
+				);
+
+				public class MyAttribute : System.Attribute
+				{
+					public MyEnum Value { get; set; }
+				}
+			}
+			""";
+
+		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
+		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+
+		var generated = await GetGeneratedStringAsync(
+			result,
+			"MyAttributeData.AttributeDataModel.g.cs",
+			cancellationToken
+		);
+
+		await Assert.That(generated).IsNotNull();
+		await Assert.That(generated).Contains("string? Value");
+		await Assert
+			.That(generated)
+			.Contains("attributeData.GetEnumNamedArgument(\"Value\", \"Test.MyEnum.B\")");
+	}
+
+	[Test]
+	public async Task Generate_IsEnumMultipleSources_WithDefaultValue(
+		CancellationToken cancellationToken
+	)
+	{
+		var source = """
+			using Purview.SourceGeneratorFramework.Generators;
+
+			namespace Test
+			{
+				public enum MyEnum { A, B }
+
+				[Generate(typeof(MyAttribute))]
+				public readonly partial record struct MyAttributeData(
+					[Property(IsEnum = true)]
+					[Argument("value", IsEnum = true, DefaultValue = "Test.MyEnum.B")]
+						string? Value
+				);
+
+				public class MyAttribute : System.Attribute
+				{
+					public MyAttribute(MyEnum value) { }
+					public MyEnum Value { get; set; }
+				}
+			}
+			""";
+
+		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
+		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+
+		var generated = await GetGeneratedStringAsync(
+			result,
+			"MyAttributeData.AttributeDataModel.g.cs",
+			cancellationToken
+		);
+
+		await Assert.That(generated).IsNotNull();
+		await Assert.That(generated).Contains("string? Value");
+		await Assert
+			.That(generated)
+			.Contains("var value = __valueTc.ToEnumString(\"Test.MyEnum.B\");");
 	}
 
 	static async Task<string?> GetGeneratedStringAsync(

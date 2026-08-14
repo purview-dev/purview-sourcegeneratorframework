@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
 
-namespace Purview.SourceGeneratorFramework.Testing.Generators.Model;
+namespace Purview.SourceGeneratorFramework.Generators.Model;
 
 sealed record PropertySource(
 	AttributePropertySource Source,
@@ -17,6 +17,7 @@ sealed record AttributeDataModelProperty(
 	bool IsExplicit,
 	bool IsNonNullableReferenceType,
 	bool IsNestedModel,
+	bool IsEnum,
 	string? NestedModelTypeName = null
 )
 {

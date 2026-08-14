@@ -93,18 +93,18 @@
 			Include="..\SourceGeneratorFramework\Helpers\IncrementalPipeline.cs"
 			Link="Extensions\Purview\SourceGeneratorFramework\Helpers\IncrementalPipeline.cs"
 		/>
-		<!-- Testing/Abstractions -->
+		<!-- Logging -->
 		<Compile
-			Include="..\SourceGeneratorFramework\Testing\Abstractions\GenerationLogger.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Testing\Abstractions\GenerationLogger.cs"
+			Include="..\SourceGeneratorFramework\Logging\GenerationLogger.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Logging\GenerationLogger.cs"
 		/>
 		<Compile
-			Include="..\SourceGeneratorFramework\Testing\Abstractions\ILogSupport.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Testing\Abstractions\ILogSupport.cs"
+			Include="..\SourceGeneratorFramework\Logging\ILogSupport.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Logging\ILogSupport.cs"
 		/>
 		<Compile
-			Include="..\SourceGeneratorFramework\Testing\Abstractions\OutputType.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Testing\Abstractions\OutputType.cs"
+			Include="..\SourceGeneratorFramework\Logging\OutputType.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Logging\OutputType.cs"
 		/>
 		<!-- Extensions/ Polyfills -->
 		<Compile
