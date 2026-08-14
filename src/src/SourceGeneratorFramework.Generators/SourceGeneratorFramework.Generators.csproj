@@ -50,6 +50,10 @@
 			Include="..\SourceGeneratorFramework\TypeReferenceOptions.cs"
 			Link="Extensions\Purview\SourceGeneratorFramework\TypeReferenceOptions.cs"
 		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\TypeLibrary.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\TypeLibrary.cs"
+		/>
 
 		<!-- Models -->
 		<Compile
@@ -92,6 +96,10 @@
 		<Compile
 			Include="..\SourceGeneratorFramework\Helpers\IncrementalPipeline.cs"
 			Link="Extensions\Purview\SourceGeneratorFramework\Helpers\IncrementalPipeline.cs"
+		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\Helpers\IncrementalGeneratorInitializationContextExtensions.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Helpers\IncrementalGeneratorInitializationContextExtensions.cs"
 		/>
 		<!-- Logging -->
 		<Compile

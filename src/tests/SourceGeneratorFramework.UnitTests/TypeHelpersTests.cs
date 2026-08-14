@@ -47,6 +47,15 @@ public class TypeHelpersTests
 		return new(symbol, declaration);
 	}
 
+	static string GeneratedAttributes(bool includeCoverageExclusion = true) =>
+		(
+			includeCoverageExclusion
+				? "[global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute]\n"
+				: ""
+		)
+		+ "[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]\n"
+		+ "[global::System.CodeDom.Compiler.GeneratedCode(\"TestGenerator\", \"1.0.0\")]\n";
+
 	[Test]
 	public async Task IsAttribute_TypeNameEndsWithAttribute_ReturnsTrue() =>
 		await Assert.That(TypeHelpers.IsAttribute("MyAttribute")).IsTrue();
@@ -356,7 +365,7 @@ public class TypeHelpersTests
 
 		// Act
 		var declaration = TypeHelpers.CreatePartialTypeDeclarationOptions(symbol);
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		using (writer.WriteTypeScope(declaration))
 		{
 			// Intentionally empty.
@@ -369,7 +378,8 @@ public class TypeHelpersTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				"public static partial class Container<T>\n"
+				GeneratedAttributes()
+					+ "public static partial class Container<T>\n"
 					+ "where T : class, new()\n"
 					+ "{\n"
 					+ "}\n"
@@ -417,7 +427,7 @@ public class TypeHelpersTests
 			symbol,
 			includeOptionalParts: false
 		);
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		using (writer.WriteTypeScope(declaration))
 		{
 			// Intentionally empty.
@@ -427,7 +437,9 @@ public class TypeHelpersTests
 		await Assert.That(declaration.Accessibility).IsNull();
 		await Assert.That(declaration.IsSealed).IsFalse();
 		await Assert.That(declaration.GenericTypes[0].Constraints).IsEmpty();
-		await Assert.That(writer.ToString()).IsEqualTo("partial class Container<T>\n{\n}\n");
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(GeneratedAttributes() + "partial class Container<T>\n{\n}\n");
 	}
 
 	[Test]

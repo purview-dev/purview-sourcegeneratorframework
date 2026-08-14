@@ -49,4 +49,11 @@ public readonly record struct ConstructorDeclarationOptions
 	/// <summary>Gets the optional constructor initializer without the leading colon.</summary>
 	/// <example><c>base(connectionString)</c> or <c>this("Default")</c>.</example>
 	public string? Initializer { get; init; }
+
+	/// <summary>
+	/// Gets whether to emit generated attributes such as <see cref="System.CodeDom.Compiler.GeneratedCodeAttribute"/> and
+	/// <see cref="System.Runtime.CompilerServices.CompilerGeneratedAttribute"/>.
+	/// When <see langword="null"/>, the value is inherited from <see cref="CodeWriter.DefaultIncludeGeneratedAttributes"/>.
+	/// </summary>
+	public bool? IncludeGeneratedAttributes { get; init; }
 }

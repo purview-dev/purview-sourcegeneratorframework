@@ -42,49 +42,47 @@ public sealed class CodeWriter
 	bool _atLineStart = true;
 
 	/// <summary>
-	/// Initializes a new writer with the specified initial buffer capacity.
+	/// Initializes a new writer with required generator identity.
 	/// </summary>
+	/// <param name="generatorName">The source generator name used by headers and attributes.</param>
+	/// <param name="generatorVersion">The source generator version used by headers and attributes.</param>
 	/// <param name="initialCapacity">
 	/// The initial number of characters that the internal buffer can contain without growing.
+	/// </param>
+	/// <param name="throwOnUnclosedScopes">
+	/// Whether materializing the generated source throws while disposable scopes remain open.
+	/// The default is <see langword="true"/>; set to <see langword="false"/> only for best-effort
+	/// diagnostic output when a scope imbalance is expected and must not terminate generation.
 	/// </param>
 	/// <exception cref="ArgumentOutOfRangeException">
 	/// <paramref name="initialCapacity"/> is less than zero.
 	/// </exception>
-	public CodeWriter(int initialCapacity = DefaultCapacity)
-		: this(
-			throwOnUnclosedScopes: false,
-			initialCapacity,
-			generatorName: null,
-			generatorVersion: null
-		)
-	{
-		// Empty
-	}
-
-	/// <summary>
-	/// Initializes a new writer with optional validation for undisposed scopes.
-	/// </summary>
-	/// <param name="throwOnUnclosedScopes">
-	/// Whether materializing the generated source throws while disposable scopes remain open.
-	/// </param>
-	/// <param name="initialCapacity">
-	/// The initial number of characters that the internal buffer can contain without growing.
-	/// </param>
-	/// <param name="generatorName">The optional source generator name used by headers and attributes.</param>
-	/// <param name="generatorVersion">The optional source generator version used by headers and attributes.</param>
+	/// <exception cref="ArgumentException">
+	/// <paramref name="generatorName"/> or <paramref name="generatorVersion"/> is empty or whitespace.
+	/// </exception>
 	public CodeWriter(
-		bool throwOnUnclosedScopes,
+		string generatorName,
+		string generatorVersion,
 		int initialCapacity = DefaultCapacity,
-		string? generatorName = null,
-		string? generatorVersion = null
+		bool throwOnUnclosedScopes = true
 	)
 	{
 		if (initialCapacity < 0)
 			throw new ArgumentOutOfRangeException(nameof(initialCapacity));
 
 		_builder = new StringBuilder(initialCapacity);
-		GeneratorName = NormalizeOptionalIdentity(generatorName, nameof(generatorName));
-		GeneratorVersion = NormalizeOptionalIdentity(generatorVersion, nameof(generatorVersion));
+		GeneratorName =
+			NormalizeOptionalIdentity(generatorName, nameof(generatorName))
+			?? throw new ArgumentException(
+				"Generator name cannot be null or whitespace.",
+				nameof(generatorName)
+			);
+		GeneratorVersion =
+			NormalizeOptionalIdentity(generatorVersion, nameof(generatorVersion))
+			?? throw new ArgumentException(
+				"Generator version cannot be null or whitespace.",
+				nameof(generatorVersion)
+			);
 		ThrowOnUnclosedScopes = throwOnUnclosedScopes;
 		if (throwOnUnclosedScopes)
 			_openScopes = [];
@@ -101,20 +99,30 @@ public sealed class CodeWriter
 	public int OpenScopeCount { get; private set; }
 
 	/// <summary>
-	/// Gets or sets whether <see cref="ToString"/> throws when disposable scopes remain open.
+	/// Gets whether <see cref="ToString"/> throws when disposable scopes remain open.
 	/// </summary>
 	/// <remarks>
-	/// This validation is disabled by default and is intended for generator development and tests.
-	/// Scope tracking remains active when validation is disabled, so this option may be enabled at
-	/// any point before the generated source is materialized.
+	/// This value is set at construction. When validation is enabled, the writer tracks every
+	/// opened scope so that an unclosed scope throws <see cref="CodeWriterScopeValidationException"/>
+	/// with the offending scope's stack trace when the generated source is materialized. When
+	/// disabled, the writer still tracks scopes for <see cref="OpenScopeCount"/> but does not throw,
+	/// allowing best-effort inspection of structurally broken output during debugging.
 	/// </remarks>
 	public bool ThrowOnUnclosedScopes { get; }
 
 	/// <summary>Gets the source generator name used by generated headers and attributes.</summary>
-	public string? GeneratorName { get; }
+	public string GeneratorName { get; }
 
 	/// <summary>Gets the source generator version used by generated headers and attributes.</summary>
-	public string? GeneratorVersion { get; }
+	public string GeneratorVersion { get; }
+
+	/// <summary>
+	/// Gets or sets whether generated attributes are emitted for declarations that do not
+	/// explicitly override <see cref="TypeDeclarationOptions.IncludeGeneratedAttributes"/>,
+	/// <see cref="MethodDeclarationOptions.IncludeGeneratedAttributes"/>, or other declaration
+	/// option equivalents. The default is <see langword="true"/>.
+	/// </summary>
+	public bool DefaultIncludeGeneratedAttributes { get; set; } = true;
 
 	/// <summary>
 	/// Increases the current indentation level.
@@ -507,7 +515,11 @@ public sealed class CodeWriter
 			return default;
 		ValidateMethodDeclaration(declaration);
 		BeginWrittenItem(WrittenItemKind.Method);
-		WriteGeneratedAttributes(includeCoverageExclusion: true);
+		if (declaration.IncludeGeneratedAttributes ?? DefaultIncludeGeneratedAttributes)
+			WriteGeneratedAttributes(
+				includeCoverageExclusion: true,
+				includeEmbeddedAttribute: false
+			);
 		WriteAttributes(declaration.Attributes);
 		WriteAttributes(declaration.ReturnAttributes, defaultTarget: "return");
 		WriteMemberModifiers(
@@ -572,7 +584,11 @@ public sealed class CodeWriter
 			return this;
 		ValidatePropertyDeclaration(declaration);
 		BeginWrittenItem(WrittenItemKind.Property);
-		WriteGeneratedAttributes(includeCoverageExclusion: true);
+		if (declaration.IncludeGeneratedAttributes ?? DefaultIncludeGeneratedAttributes)
+			WriteGeneratedAttributes(
+				includeCoverageExclusion: true,
+				includeEmbeddedAttribute: false
+			);
 		WriteAttributes(declaration.Attributes);
 		WritePropertyHeader(declaration);
 		if (declaration.ExpressionBody is not null)
@@ -618,7 +634,11 @@ public sealed class CodeWriter
 			);
 
 		BeginWrittenItem(WrittenItemKind.Property);
-		WriteGeneratedAttributes(includeCoverageExclusion: true);
+		if (declaration.IncludeGeneratedAttributes ?? DefaultIncludeGeneratedAttributes)
+			WriteGeneratedAttributes(
+				includeCoverageExclusion: true,
+				includeEmbeddedAttribute: false
+			);
 		WriteAttributes(declaration.Attributes);
 		WritePropertyHeader(declaration).NewLine();
 		using (OpenBlockScope())
@@ -643,7 +663,11 @@ public sealed class CodeWriter
 			return this;
 		ValidateFieldDeclaration(declaration);
 		BeginWrittenItem(WrittenItemKind.Field);
-		WriteGeneratedAttributes(includeCoverageExclusion: false);
+		if (declaration.IncludeGeneratedAttributes ?? DefaultIncludeGeneratedAttributes)
+			WriteGeneratedAttributes(
+				includeCoverageExclusion: false,
+				includeEmbeddedAttribute: false
+			);
 		WriteAttributes(declaration.Attributes);
 		if (declaration.Accessibility is { } accessibility)
 			WriteAccessibility(accessibility).Write(' ');
@@ -683,13 +707,38 @@ public sealed class CodeWriter
 	/// <returns>The namespace body scope, or an empty scope when no namespace is supplied.</returns>
 	public BlockScope WriteBlockNamespaceScope(string? namespaceName)
 	{
-		if (namespaceName is null)
+		if (string.IsNullOrWhiteSpace(namespaceName))
 			return default;
 
 		BeginWrittenItem(WrittenItemKind.Namespace);
 		Write("namespace ").WriteLine(namespaceName);
 		return OpenBlockScope(WrittenItemKind.Namespace);
 	}
+
+	/// <summary>
+	/// Writes a block-scoped namespace and invokes a callback for its body.
+	/// </summary>
+	/// <param name="typeValue">The type whose namespace will be used, or a value with no namespace to omit the wrapper.</param>
+	/// <param name="bodyWriter">The action that writes the namespace body.</param>
+	/// <returns>The current writer.</returns>
+	public CodeWriter WriteBlockNamespace(TypeValueObject typeValue, Action<CodeWriter> bodyWriter)
+	{
+		if (bodyWriter is null)
+			throw new ArgumentNullException(nameof(bodyWriter));
+
+		using (WriteBlockNamespaceScope(typeValue))
+			bodyWriter(this);
+
+		return this;
+	}
+
+	/// <summary>
+	/// Writes a block-scoped namespace and returns its body scope.
+	/// </summary>
+	/// <param name="typeValue">The type whose namespace will be used, or a value with no namespace to return an empty scope.</param>
+	/// <returns>The namespace body scope, or an empty scope when no namespace is supplied.</returns>
+	public BlockScope WriteBlockNamespaceScope(TypeValueObject typeValue) =>
+		WriteBlockNamespaceScope(typeValue.Namespace);
 
 	/// <summary>Writes a block-scoped namespace and invokes a callback for its body.</summary>
 	/// <param name="namespaceName">The namespace, or <see langword="null"/> to omit the wrapper.</param>
@@ -711,10 +760,18 @@ public sealed class CodeWriter
 	/// <returns>The current writer.</returns>
 	public CodeWriter WriteFileScopedNamespace(string? namespaceName)
 	{
-		return namespaceName is null
+		return string.IsNullOrWhiteSpace(namespaceName)
 			? this
 			: Write("namespace ").Write(namespaceName).WriteLine(";").NewLine();
 	}
+
+	/// <summary>
+	/// Writes a file-scoped namespace followed by an empty line.
+	/// </summary>
+	/// <param name="typeValue">The type whose namespace will be used, or a value with no namespace to write nothing.</param>
+	/// <returns>The current writer.</returns>
+	public CodeWriter WriteFileScopedNamespace(TypeValueObject typeValue) =>
+		WriteFileScopedNamespace(typeValue.Namespace);
 
 	/// <summary>
 	/// Writes a class declaration from structured options and returns its body scope.
@@ -895,13 +952,18 @@ public sealed class CodeWriter
 		ValidateTypeDeclaration(declaration);
 		BeginWrittenItem(WrittenItemKind.Type);
 
-		WriteGeneratedAttributes(
-			includeCoverageExclusion: declaration.Kind
-				is TypeDeclarationKind.Class
-					or TypeDeclarationKind.Struct
-					or TypeDeclarationKind.RecordClass
-					or TypeDeclarationKind.RecordStruct
-		);
+		if (declaration.IncludeGeneratedAttributes ?? DefaultIncludeGeneratedAttributes)
+		{
+			WriteGeneratedAttributes(
+				includeCoverageExclusion: declaration.Kind
+					is TypeDeclarationKind.Class
+						or TypeDeclarationKind.Struct
+						or TypeDeclarationKind.RecordClass
+						or TypeDeclarationKind.RecordStruct,
+				includeEmbeddedAttribute: declaration.IncludeEmbeddedAttribute
+			);
+		}
+
 		WriteAttributes(declaration.Attributes);
 
 		if (declaration.Accessibility is { } accessibility)
@@ -998,7 +1060,11 @@ public sealed class CodeWriter
 	{
 		ValidateConstructorDeclaration(declaration);
 		BeginWrittenItem(WrittenItemKind.Constructor);
-		WriteGeneratedAttributes(includeCoverageExclusion: true);
+		if (declaration.IncludeGeneratedAttributes ?? DefaultIncludeGeneratedAttributes)
+			WriteGeneratedAttributes(
+				includeCoverageExclusion: true,
+				includeEmbeddedAttribute: false
+			);
 		WriteAttributes(declaration.Attributes);
 
 		if (declaration.IsStatic)
@@ -1044,14 +1110,14 @@ public sealed class CodeWriter
 	/// <summary>
 	/// Writes the standard header for an automatically generated source file.
 	/// </summary>
-	/// <param name="generatorName">The optional generator name.</param>
-	/// <param name="version">The optional generator version.</param>
-	/// <param name="pragmas">Optional warning pragmas to disable.</param>
+	/// <param name="generatorName">The generator name; defaults to <see cref="GeneratorName"/>.</param>
+	/// <param name="version">The generator version; defaults to <see cref="GeneratorVersion"/>.</param>
+	/// <param name="pragmas">The pragmas to include in the header.</param>
 	/// <returns>The current writer.</returns>
 	public CodeWriter WriteAutoGeneratedHeader(
 		string? generatorName = null,
 		string? version = null,
-		string[]? pragmas = null
+		params string[] pragmas
 	)
 	{
 		generatorName ??= GeneratorName;
@@ -1066,24 +1132,17 @@ public sealed class CodeWriter
 			WriteLine(".");
 		}
 
-		Write("// Generated at ")
-			.Write(
-				DateTimeOffset.UtcNow.ToString(
-					"O",
-					System.Globalization.CultureInfo.InvariantCulture
-				)
-			)
-			.WriteLine(".")
-			.WriteLine("// Changes to this file will be lost when the source generator runs again.")
+		WriteLine("// Changes to this file will be lost when the source generator runs again.")
 			.NewLine()
 			.WriteLine("#nullable enable");
 
 		if (pragmas is not null && pragmas.Length > 0)
 		{
 			NewLine();
-
 			foreach (var pragma in pragmas)
+			{
 				Write("#pragma warning disable ").WriteLine(pragma);
+			}
 		}
 
 		return NewLine();
@@ -1105,7 +1164,7 @@ public sealed class CodeWriter
 			);
 		}
 
-		// All generated code attributes should have a version, but if one is not supplied, default to
+		// The GeneratedCodeAttribute constructor requires a non-null version, so we default to "
 		return Write("[global::System.CodeDom.Compiler.GeneratedCode(\"")
 			.Write(generatorName)
 			.Write("\", \"")
@@ -1118,19 +1177,48 @@ public sealed class CodeWriter
 	/// Whether to emit <see cref="ExcludeFromCodeCoverageAttribute"/>.
 	/// This must be enabled only for declaration targets supported by that attribute.
 	/// </param>
-	/// <remarks>No attributes are written when this writer has no configured generator name.</remarks>
-	public CodeWriter WriteGeneratedAttributes(bool includeCoverageExclusion = false)
+	/// <param name="includeEmbeddedAttribute">
+	/// Whether to emit <see cref="Microsoft.CodeAnalysis.EmbeddedAttribute"/>.
+	/// This is intended only for generator-emitted marker attribute types (R11) and must be
+	/// <see langword="false"/> for ordinary generated members.
+	/// </param>
+	/// <param name="includeGeneratedCodeAttribute">Whether to emit <see cref="System.CodeDom.Compiler.GeneratedCodeAttribute"/> and <see cref="System.Runtime.CompilerServices.CompilerGeneratedAttribute"/>.</param>
+	public CodeWriter WriteGeneratedAttributes(
+		bool includeCoverageExclusion = false,
+		bool includeEmbeddedAttribute = false,
+		bool includeGeneratedCodeAttribute = true
+	)
 	{
-		if (GeneratorName is null)
-			return this;
+		if (includeEmbeddedAttribute)
+			WriteLine("[global::Microsoft.CodeAnalysis.EmbeddedAttribute]");
 
-		WriteLine("[global::Microsoft.CodeAnalysis.EmbeddedAttribute]");
 		if (includeCoverageExclusion)
-			WriteLine(
-				"[global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute(Justification = \"This code was generated by a source generator.\")]"
-			);
-		WriteLine("[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]");
-		return WriteGeneratedCodeAttribute(GeneratorName, GeneratorVersion);
+			WriteLine("[global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute]");
+
+		if (includeGeneratedCodeAttribute)
+		{
+			WriteLine("[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]");
+			WriteGeneratedCodeAttribute(GeneratorName, GeneratorVersion);
+		}
+
+		return this;
+	}
+
+	/// <summary>
+	/// Disables the specified warning pragmas and returns a scope that restores them on dispose.
+	/// </summary>
+	/// <param name="pragmas">The warning codes to disable.</param>
+	/// <returns>A scope that writes the corresponding restore pragmas once.</returns>
+	public PragmaScope OpenPragmasScope(params string[] pragmas)
+	{
+		if (pragmas is null || pragmas.Length == 0)
+			return new PragmaScope(this, []);
+
+		NewLine();
+		foreach (var pragma in pragmas)
+			Write("#pragma warning disable ").WriteLine(pragma);
+
+		return new PragmaScope(this, pragmas);
 	}
 
 	/// <summary>
@@ -1247,7 +1335,14 @@ public sealed class CodeWriter
 	public IndentScope IndentedScope()
 	{
 		Indent();
-		return new(this, OpenScope("indentation", header: null, stackFramesToSkip: 2));
+		return new(
+			this,
+			OpenScope(
+				"indentation",
+				header: null,
+				new StackTrace(1, fNeedFileInfo: true).ToString()
+			)
+		);
 	}
 
 	/// <summary>Invokes a callback at one additional indentation level.</summary>
@@ -1283,18 +1378,6 @@ public sealed class CodeWriter
 			throw new ArgumentNullException(nameof(bodyWriter));
 		using (IndentedScope(line))
 			bodyWriter(this);
-		return this;
-	}
-
-	/// <summary>
-	/// Resets the writer to an empty, unindented state.
-	/// </summary>
-	/// <returns>The current writer.</returns>
-	public CodeWriter Begin()
-	{
-		_builder.Clear();
-		_indentLevel = 0;
-		_atLineStart = true;
 		return this;
 	}
 
@@ -1599,27 +1682,20 @@ public sealed class CodeWriter
 		return new BlockScope(
 			this,
 			closingSeparator,
-			OpenScope("block", header, stackFramesToSkip: 3),
+			OpenScope("block", header, new StackTrace(1, fNeedFileInfo: true).ToString()),
 			(int)completedItem,
 			itemIndent
 		);
 	}
 
-	int OpenScope(string kind, string? header, int stackFramesToSkip)
+	int OpenScope(string kind, string? header, string capturedStackTrace)
 	{
 		OpenScopeCount++;
 		if (_openScopes is null)
 			return 0;
 
 		var scopeId = ++_nextScopeId;
-		_openScopes.Add(
-			scopeId,
-			new CodeWriterOpenScope(
-				kind,
-				header,
-				new StackTrace(stackFramesToSkip, fNeedFileInfo: true).ToString()
-			)
-		);
+		_openScopes.Add(scopeId, new CodeWriterOpenScope(kind, header, capturedStackTrace));
 		return scopeId;
 	}
 
@@ -2170,7 +2246,7 @@ public sealed class CodeWriter
 				parameterName
 			);
 
-		// Normalize the value to a consistent form for comparison and hashing.
+		// Normalize the value to a consistent form for comparison and storage.
 		return value;
 	}
 
@@ -2327,6 +2403,43 @@ public sealed class CodeWriter
 			if (!genericTypes[index].Constraints.IsDefaultOrEmpty)
 				return true;
 		return false;
+	}
+
+	/// <summary>
+	/// Restores warning pragmas when disposed.
+	/// </summary>
+	[SuppressMessage(
+		"Performance",
+		"CA1815:Override equals and operator equals on value types",
+		Justification = "This type is a mutable lifetime token and has no meaningful value equality."
+	)]
+	public struct PragmaScope(CodeWriter writer, string[] pragmas) : IDisposable
+	{
+		CodeWriter? _writer = writer;
+		readonly string[] _pragmas = pragmas;
+
+		/// <summary>
+		/// Restores the disabled pragmas once.
+		/// </summary>
+		public void Dispose()
+		{
+			var writer = _writer;
+			if (writer is null)
+				return;
+
+			_writer = null;
+			writer.RestorePragmas(_pragmas);
+		}
+	}
+
+	void RestorePragmas(string[] pragmas)
+	{
+		if (pragmas.Length == 0)
+			return;
+
+		NewLine();
+		foreach (var pragma in pragmas)
+			Write("#pragma warning restore ").WriteLine(pragma);
 	}
 
 	/// <summary>

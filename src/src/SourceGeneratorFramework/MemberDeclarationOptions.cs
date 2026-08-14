@@ -69,6 +69,13 @@ public readonly record struct MethodDeclarationOptions
 
 	/// <summary>Gets an optional expression body without the leading <c>=&gt;</c>.</summary>
 	public string? ExpressionBody { get; init; }
+
+	/// <summary>
+	/// Gets whether to emit generated attributes such as <see cref="System.CodeDom.Compiler.GeneratedCodeAttribute"/> and
+	/// <see cref="System.Runtime.CompilerServices.CompilerGeneratedAttribute"/>.
+	/// When <see langword="null"/>, the value is inherited from <see cref="CodeWriter.DefaultIncludeGeneratedAttributes"/>.
+	/// </summary>
+	public bool? IncludeGeneratedAttributes { get; init; }
 }
 
 /// <summary>Describes a generated property declaration.</summary>
@@ -128,6 +135,13 @@ public readonly record struct PropertyDeclarationOptions
 
 	/// <summary>Gets attributes applied to the property.</summary>
 	public ImmutableArray<AttributeDeclarationOptions> Attributes { get; init; }
+
+	/// <summary>
+	/// Gets whether to emit generated attributes such as <see cref="System.CodeDom.Compiler.GeneratedCodeAttribute"/> and
+	/// <see cref="System.Runtime.CompilerServices.CompilerGeneratedAttribute"/>.
+	/// When <see langword="null"/>, the value is inherited from <see cref="CodeWriter.DefaultIncludeGeneratedAttributes"/>.
+	/// </summary>
+	public bool? IncludeGeneratedAttributes { get; init; }
 }
 
 /// <summary>Describes a generated field declaration.</summary>
@@ -166,4 +180,11 @@ public readonly record struct FieldDeclarationOptions
 
 	/// <summary>Gets attributes applied to the field.</summary>
 	public ImmutableArray<AttributeDeclarationOptions> Attributes { get; init; }
+
+	/// <summary>
+	/// Gets whether to emit generated attributes such as <see cref="System.CodeDom.Compiler.GeneratedCodeAttribute"/> and
+	/// <see cref="System.Runtime.CompilerServices.CompilerGeneratedAttribute"/>.
+	/// When <see langword="null"/>, the value is inherited from <see cref="CodeWriter.DefaultIncludeGeneratedAttributes"/>.
+	/// </summary>
+	public bool? IncludeGeneratedAttributes { get; init; }
 }

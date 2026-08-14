@@ -268,4 +268,18 @@ public sealed record TypeDeclarationOptions
 	/// Gets the attributes applied to the generated type.
 	/// </summary>
 	public ImmutableArray<AttributeDeclarationOptions> Attributes { get; init; } = [];
+
+	/// <summary>
+	/// Gets whether to emit <see cref="EmbeddedAttribute"/> on the type.
+	/// This is intended only for generator-emitted marker attribute types and defaults to
+	/// <see langword="false"/>.
+	/// </summary>
+	public bool IncludeEmbeddedAttribute { get; init; }
+
+	/// <summary>
+	/// Gets whether to process any generated attributes, such as <see cref="System.CodeDom.Compiler.GeneratedCodeAttribute"/> and <see cref="System.Runtime.CompilerServices.CompilerGeneratedAttribute"/>.
+	/// <see cref="IncludeEmbeddedAttribute"/> is ignored if this is <see langword="false"/>.
+	/// When <see langword="null"/>, the value is inherited from <see cref="CodeWriter.DefaultIncludeGeneratedAttributes"/>.
+	/// </summary>
+	public bool? IncludeGeneratedAttributes { get; init; }
 }

@@ -1,46 +1,31 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Purview.SourceGeneratorFramework.Logging;
 
 namespace Purview.SourceGeneratorFramework.Generators.Model;
 
 static class SourceGenLibrary
 {
-	public static IncrementalValueProvider<LogGenerationModel> GetGeneratorValueProviders(
-		IncrementalGeneratorInitializationContext context,
-		GenerationLogger? logger
-	)
+	public static IncrementalValuesProvider<
+		GeneratorResult<TypeValueObject>
+	> GetGeneratorValueProviders(IncrementalGeneratorInitializationContext context)
 	{
-		var isDisabled = IncrementalPipeline.IsDisabledValueProvider(
-			context,
-			PropertyLibrary.DisableLoggingSourceGenerator
-		);
-		var generationContext = IncrementalPipeline.DefaultGenerationContextValueProvider(
-			context,
-			logger
-		);
-		var sourceGenerators = context.SyntaxProvider.CreateSyntaxProvider(
-			predicate: static (node, _) => node is ClassDeclarationSyntax,
-			transform: static (ctx, ct) => GetGeneratorClassInfo(ctx, ct)
-		);
-
-		return isDisabled
-			.CombineWith(
-				generationContext,
-				static (disabled, generationContext, _) =>
-					new LogGenerationModel(disabled, generationContext),
-				"CreateGenerationModel"
+#pragma warning disable format
+		return context
+			.SyntaxProvider.CreateSyntaxProvider(
+				predicate: static (node, _) =>
+					node
+						is ClassDeclarationSyntax
+						{
+							BaseList.Types.Count: > 0,
+							Modifiers: var modifiers,
+						}
+					&& modifiers.Any(SyntaxKind.PublicKeyword),
+				transform: static (ctx, ct) => GetGeneratorClassInfo(ctx, ct)
 			)
-			.CollectWith(
-				sourceGenerators,
-				(inputs, sourceGenerators, _) =>
-				{
-					inputs.SourceGenerators = [.. sourceGenerators.Where(m => m != default)];
-					return inputs;
-				},
-				"GetSourceGenerators"
-			);
+			.Where(static result => !result.IsEmpty)
+			.WithTrackingName("GetSourceGenerators");
+#pragma warning restore format
 	}
 
 	static GeneratorResult<TypeValueObject> GetGeneratorClassInfo(
@@ -58,13 +43,14 @@ static class SourceGenLibrary
 
 		var interfaces = typeSymbol.AllInterfaces;
 		var isGenerator = interfaces.Any(static i =>
-			TypeLibrary.IIncrementalGenerator.Equals(i) || TypeLibrary.ISourceGenerator.Equals(i)
+			GeneratorTypeLibrary.IIncrementalGenerator.Equals(i)
+			|| GeneratorTypeLibrary.ISourceGenerator.Equals(i)
 		);
 
 		if (!isGenerator)
 			return default;
 
-		var hasLogSupport = interfaces.Any(static i => TypeLibrary.ILogSupport.Equals(i));
+		var hasLogSupport = interfaces.Any(static i => GeneratorTypeLibrary.ILogSupport.Equals(i));
 		if (hasLogSupport)
 			return default;
 
@@ -73,14 +59,7 @@ static class SourceGenLibrary
 		{
 			return GeneratorResult<TypeValueObject>.Fail(
 				DiagnosticInfo.Create(
-					new DiagnosticDescriptor(
-						"PSG0001",
-						"Source generator must be partial",
-						"Class '{0}' implements a source generator interface but is not marked partial. Logging support cannot be generated.",
-						"Purview.SourceGenerators.Testing",
-						DiagnosticSeverity.Warning,
-						true
-					),
+					SourceGenDiagnosticDescriptors.SourceGeneratorMustBePartial,
 					classSyntax.Identifier.GetLocation(),
 					classSyntax.Identifier.Text
 				)

@@ -5,6 +5,11 @@ namespace Purview.SourceGeneratorFramework.Models;
 /// <summary>
 /// Provides a base context for source generation, including the compilation, a shared <see cref="CodeWriter"/>, and helper methods to resolve symbols.
 /// </summary>
+/// <remarks>
+/// Equality is based only on the cache-friendly inputs exposed as properties (assembly name, language,
+/// generator identity, and scope validation). The <see cref="Compilation"/> and <see cref="CodeWriter"/>
+/// are intentionally excluded so the context remains stable across incremental pipeline runs.
+/// </remarks>
 public record class GenerationContext
 {
 	/// <summary>
@@ -17,24 +22,32 @@ public record class GenerationContext
 	/// Initializes a generation context.
 	/// </summary>
 	/// <param name="compilation">The compilation being processed.</param>
+	/// <param name="generatorName">The source generator name propagated to code writers.</param>
+	/// <param name="generatorVersion">The source generator version propagated to code writers.</param>
 	/// <param name="validateCodeWriterScopes">
 	/// Whether code writers created by this context validate that all disposable scopes are closed.
 	/// </param>
-	/// <param name="generatorName">The optional source generator name propagated to code writers.</param>
-	/// <param name="generatorVersion">The optional source generator version propagated to code writers.</param>
 	public GenerationContext(
 		Compilation compilation,
-		bool validateCodeWriterScopes = false,
-		string? generatorName = null,
-		string? generatorVersion = null
+		string generatorName,
+		string generatorVersion,
+		bool validateCodeWriterScopes = false
 	)
 	{
 		Compilation = compilation ?? throw new ArgumentNullException(nameof(compilation));
-		ValidateCodeWriterScopes = validateCodeWriterScopes;
+		AssemblyName = compilation.AssemblyName ?? string.Empty;
+		Language = compilation.Language;
 		GeneratorName = generatorName;
 		GeneratorVersion = generatorVersion;
+		ValidateCodeWriterScopes = validateCodeWriterScopes;
 		CodeWriter = CreateCodeWriter();
 	}
+
+	/// <summary>Gets the assembly name of the compilation being processed.</summary>
+	public string AssemblyName { get; }
+
+	/// <summary>Gets the language of the compilation being processed.</summary>
+	public string Language { get; }
 
 	/// <summary>Gets the compilation being processed.</summary>
 	public Compilation Compilation { get; }
@@ -43,13 +56,43 @@ public record class GenerationContext
 	public bool ValidateCodeWriterScopes { get; private set; }
 
 	/// <summary>Gets the source generator name propagated to created code writers.</summary>
-	public string? GeneratorName { get; }
+	public string GeneratorName { get; }
 
-	/// <summary>Gets the source generator version propagated to created code writers.</summary>
-	public string? GeneratorVersion { get; }
+	/// <summary>Gets the source generator version propagated to code writers.</summary>
+	public string GeneratorVersion { get; }
 
 	/// <summary>Gets the default code writer owned by this context.</summary>
 	public CodeWriter CodeWriter { get; private set; }
+
+	/// <inheritdoc />
+	public virtual bool Equals(GenerationContext? other)
+	{
+		if (other is null)
+			return false;
+		if (ReferenceEquals(this, other))
+			return true;
+
+		// Equality is based only on the cache-friendly inputs exposed as properties (assembly name, language,
+		return AssemblyName == other.AssemblyName
+			&& Language == other.Language
+			&& GeneratorName == other.GeneratorName
+			&& GeneratorVersion == other.GeneratorVersion
+			&& ValidateCodeWriterScopes == other.ValidateCodeWriterScopes;
+	}
+
+	/// <inheritdoc />
+	public override int GetHashCode()
+	{
+		unchecked
+		{
+			var hash = StringComparer.Ordinal.GetHashCode(AssemblyName);
+			hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(Language);
+			hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(GeneratorName);
+			hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(GeneratorVersion);
+			hash = (hash * 397) ^ ValidateCodeWriterScopes.GetHashCode();
+			return hash;
+		}
+	}
 
 	/// <summary>
 	/// Creates a code writer configured from this generation context's build properties
@@ -58,9 +101,9 @@ public record class GenerationContext
 	/// <returns>A new independently owned code writer, the same instance assigned to the <see cref="CodeWriter"/> property.</returns>
 	public CodeWriter CreateCodeWriter() =>
 		CodeWriter = new(
-			ValidateCodeWriterScopes,
-			generatorName: GeneratorName,
-			generatorVersion: GeneratorVersion
+			GeneratorName,
+			GeneratorVersion,
+			throwOnUnclosedScopes: ValidateCodeWriterScopes
 		);
 
 	/// <summary>

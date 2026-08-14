@@ -19,9 +19,9 @@ public readonly record struct GeneratorResult<T>
 
 	public bool HasDiagnostics => !Diagnostics.IsEmpty;
 
-	public bool IsFatal => Value is null && HasDiagnostics;
+	public bool IsFatal => !IsSuccess && HasDiagnostics;
 
-	public bool IsEmpty => Value is null && !HasDiagnostics;
+	public bool IsEmpty => !IsSuccess && !HasDiagnostics;
 
 	public static GeneratorResult<T> Ok(T value, params DiagnosticInfo[] diagnostics)
 	{

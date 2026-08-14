@@ -9,6 +9,7 @@
 		<File Path="Directory.Build.targets" />
 	</Folder>
 	<Folder Name="/src/">
+		<Project Path="src/SourceGeneratorFramework.Analyzers/SourceGeneratorFramework.Analyzers.csproj" />
 		<Project Path="src/SourceGeneratorFramework.Generators/SourceGeneratorFramework.Generators.csproj" />
 		<Project Path="src/SourceGeneratorFramework.Testing.TUnit/SourceGeneratorFramework.Testing.TUnit.csproj" />
 		<Project Path="src/SourceGeneratorFramework.Testing/SourceGeneratorFramework.Testing.csproj" />
@@ -18,6 +19,7 @@
 		<Project Path="src/SourceGeneratorFramework.ExampleGenerator/SourceGeneratorFramework.ExampleGenerator.csproj" />
 	</Folder>
 	<Folder Name="/tests/">
+		<Project Path="tests/SourceGeneratorFramework.Analyzers.UnitTests/SourceGeneratorFramework.Analyzers.UnitTests.csproj" />
 		<Project Path="tests/SourceGeneratorFramework.UnitTests/SourceGeneratorFramework.UnitTests.csproj" />
 		<Project Path="tests/SourceGeneratorFramework.Generators.UnitTests/SourceGeneratorFramework.Generators.UnitTests.csproj" />
 	</Folder>

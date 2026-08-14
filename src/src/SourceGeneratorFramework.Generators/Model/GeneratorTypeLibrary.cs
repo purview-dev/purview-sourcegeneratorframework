@@ -2,7 +2,7 @@ using Purview.SourceGeneratorFramework.Logging;
 
 namespace Purview.SourceGeneratorFramework.Generators.Model;
 
-static class TypeLibrary
+static class GeneratorTypeLibrary
 {
 	const string GeneratorsNamespace = "Purview.SourceGeneratorFramework.Generators";
 

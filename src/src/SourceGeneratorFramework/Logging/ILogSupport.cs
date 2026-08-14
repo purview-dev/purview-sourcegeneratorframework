@@ -1,7 +1,7 @@
 namespace Purview.SourceGeneratorFramework.Logging;
 
 /// <summary>
-/// Allows a source generator to report log information, usually as part of a test run.
+/// Allows a source generator to report log information, only useful as part of a test run.
 /// </summary>
 public interface ILogSupport
 {

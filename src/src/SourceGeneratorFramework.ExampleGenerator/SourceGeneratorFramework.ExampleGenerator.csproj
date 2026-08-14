@@ -5,20 +5,39 @@
 		<IsPackable>false</IsPackable>
 		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
 		<IsRoslynComponent>true</IsRoslynComponent>
-		<NoWarn>$(NoWarn);CS1591;RS2008;</NoWarn>
+		<NoWarn>$(NoWarn);CS1591;RS2008;IDE0130;</NoWarn>
 		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
 	</PropertyGroup>
 
 	<ItemGroup>
+		<Compile
+			Include="..\SourceGeneratorFramework\Extensions\System\Runtime\CompilerServices\IsExternalInit.cs"
+			Link="Extensions\System\Runtime\CompilerServices\IsExternalInit.cs"
+		/>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\SourceGeneratorFramework\SourceGeneratorFramework.csproj" />
 		<ProjectReference
-			Include="..\SourceGeneratorFramework\SourceGeneratorFramework.csproj"
+			Include="..\SourceGeneratorFramework.Generators\SourceGeneratorFramework.Generators.csproj"
 			OutputItemType="Analyzer"
 			PrivateAssets="all"
+			ReferenceOutputAssembly="false"
 		/>
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
 		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Using Include="System.Collections.Immutable" />
+		<Using Include="Microsoft.CodeAnalysis" />
+		<Using Include="Purview.SourceGeneratorFramework" />
+		<Using Include="Purview.SourceGeneratorFramework.Generators" />
+		<Using Include="Purview.SourceGeneratorFramework.Helpers" />
+		<Using Include="Purview.SourceGeneratorFramework.Logging" />
+		<Using Include="Purview.SourceGeneratorFramework.Models" />
 	</ItemGroup>
 </Project>

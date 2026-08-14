@@ -1,8 +1,25 @@
+using Purview.SourceGeneratorFramework.Models;
+
 namespace Purview.SourceGeneratorFramework;
 
 public class CodeWriterTests
 {
 	static TypeReferenceOptions Type(string name) => new(name);
+
+	static string GeneratedAttributes(bool includeCoverageExclusion = true) =>
+		(
+			includeCoverageExclusion
+				? "[global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute]\n"
+				: ""
+		)
+		+ "[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]\n"
+		+ "[global::System.CodeDom.Compiler.GeneratedCode(\"TestGenerator\", \"1.0.0\")]\n";
+
+	static string IndentedGeneratedAttributes(bool includeCoverageExclusion = true) =>
+		"\t"
+		+ GeneratedAttributes(includeCoverageExclusion)
+			.Replace("\n", "\n\t", StringComparison.Ordinal)
+			.TrimEnd('\t');
 
 	[Test]
 	public async Task MemberDeclarationOptions_AreValueTypes()
@@ -27,7 +44,7 @@ public class CodeWriterTests
 	public async Task EmptyTypeReference_IsIgnoredByMemberEmitters()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		// Act
 		writer.WriteField(new FieldDeclarationOptions("field", TypeReferenceOptions.Empty));
@@ -45,7 +62,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task WriteLine_AppendsLineWithIndent()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		writer.WriteLine("public class C");
 		using (writer.OpenBlockScope())
@@ -63,7 +80,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task Quote_WrapsValueInDoubleQuotes()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		writer.Quote("value");
 
@@ -73,7 +90,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task ToString_EmptyWriter_ReturnsEmpty()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		await Assert.That(writer.ToString()).IsEmpty();
 	}
@@ -81,7 +98,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task Append_AliasForWrite()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		writer.Append("value");
 
@@ -91,7 +108,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task AppendLine_AliasForWriteLine()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		writer.AppendLine("value");
 
@@ -101,7 +118,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task WriteIf_True_WritesValue()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		writer.WriteIf(true, "value");
 
@@ -111,7 +128,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task WriteIf_False_DoesNotWrite()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		writer.WriteIf(false, "value");
 
@@ -121,7 +138,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task WriteLineIf_True_WritesLine()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		writer.WriteLineIf(true, "value");
 
@@ -131,7 +148,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task WriteLineIf_False_DoesNotWrite()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		writer.WriteLineIf(false, "value");
 
@@ -141,7 +158,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task EnsureNewLine_WhenNotAtLineStart_AppendsNewLine()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		writer.Write("value");
 		writer.EnsureNewLine();
@@ -152,7 +169,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task WriteLines_WritesMultipleLines()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		writer.WriteLines(["line1", "line2"]);
 
@@ -163,7 +180,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task WriteDelimited_WritesItemsWithDelimiter()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		writer.WriteDelimited(["a", "b", "c"], ", ");
 
@@ -173,7 +190,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task Block_WithBody_WritesBodyInsideBlock()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		writer.WriteBlock("public class C", w => w.WriteLine("public int P { get; set; }"));
 
@@ -187,7 +204,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task WriteUsing_WritesUsingDirective()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		writer.WriteUsing("System");
 
@@ -197,7 +214,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task WriteBlockNamespace_WritesNamespaceBlock()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		using (writer.WriteBlockNamespaceScope("Test"))
 		{
@@ -214,7 +231,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task WriteBlockNamespaces_GivenMultipleNamespaces_InsertsBlankLineBetweenThem()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		writer.WriteBlockNamespace("First", body => body.WriteLine("class A { }"));
 		writer.WriteBlockNamespace("Second", body => body.WriteLine("class B { }"));
@@ -230,7 +247,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task WriteBlockNamespaceAndTopLevelType_InsertsBlankLineBetweenDeclarations()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var declaration = new TypeDeclarationOptions("TopLevel");
 
 		writer.WriteBlockNamespace("First", body => body.WriteLine("class Nested { }"));
@@ -241,15 +258,78 @@ public class CodeWriterTests
 			.That(writer.ToString())
 			.IsEqualTo(
 				"namespace First\n{\n\tclass Nested { }\n}\n\n"
+					+ GeneratedAttributes()
 					+ "sealed partial class TopLevel\n{\n}\n\n"
 					+ "namespace Second\n{\n\tclass Other { }\n}\n"
 			);
 	}
 
 	[Test]
+	public async Task WriteBlockNamespace_TypeValueObject_WritesNamespaceBlock()
+	{
+		var writer = CodeWriterFactory.ForTests();
+		var typeValue = new TypeValueObject("C", "Test");
+
+		using (writer.WriteBlockNamespaceScope(typeValue))
+		{
+			writer.WriteLine("public class C { }");
+		}
+
+		var result = writer.ToString();
+
+		await Assert.That(result).Contains("namespace Test");
+		await Assert.That(result).Contains("\tpublic class C { }");
+		await Assert.That(result).Contains("}");
+	}
+
+	[Test]
+	public async Task WriteBlockNamespace_TypeValueObjectWithGlobalNamespace_ReturnsNoOpScope()
+	{
+		var writer = CodeWriterFactory.ForTests();
+		var typeValue = new TypeValueObject("C", null);
+
+		using (var scope = writer.WriteBlockNamespaceScope(typeValue))
+		{
+			await Assert.That(scope).IsEqualTo(default);
+			writer.WriteLine("public class C { }");
+		}
+
+		var result = writer.ToString();
+
+		await Assert.That(result).DoesNotContain("namespace");
+		await Assert.That(result).Contains("public class C { }");
+	}
+
+	[Test]
+	public async Task WriteFileScopedNamespace_TypeValueObject_WritesNamespace()
+	{
+		var writer = CodeWriterFactory.ForTests();
+		var typeValue = new TypeValueObject("C", "Test");
+
+		writer.WriteFileScopedNamespace(typeValue);
+
+		var result = writer.ToString();
+
+		await Assert.That(result).Contains("namespace Test;");
+	}
+
+	[Test]
+	public async Task WriteFileScopedNamespace_TypeValueObjectWithGlobalNamespace_WritesNothing()
+	{
+		var writer = CodeWriterFactory.ForTests();
+		var typeValue = new TypeValueObject("C", null);
+
+		writer.WriteFileScopedNamespace(typeValue);
+
+		var result = writer.ToString();
+
+		await Assert.That(result).DoesNotContain("namespace");
+	}
+
+	[Test]
 	public async Task WriteClass_WritesClassBlock()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		using (
 			writer.WriteClassScope(
@@ -275,7 +355,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task WriteClass_WithOptions_WritesModifiersInheritanceAndConstraints()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var declaration = new TypeDeclarationOptions("Repository")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
@@ -295,7 +375,8 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				"public sealed partial class Repository<T> : RepositoryBase<T>, IRepository<T>, IDisposable\n"
+				GeneratedAttributes()
+					+ "public sealed partial class Repository<T> : RepositoryBase<T>, IRepository<T>, IDisposable\n"
 					+ "where T : class, new()\n"
 					+ "{\n"
 					+ "\tpublic T Value { get; } = new();\n"
@@ -306,7 +387,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task WriteRecordStruct_WithOptions_WritesReadonlyRecordStruct()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var declaration = new TypeDeclarationOptions("Identifier")
 		{
 			Accessibility = TypeDeclarationAccessibility.Internal,
@@ -322,7 +403,8 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				"internal readonly partial record struct Identifier : IEquatable<Identifier>\n"
+				GeneratedAttributes()
+					+ "internal readonly partial record struct Identifier : IEquatable<Identifier>\n"
 					+ "{\n"
 					+ "}\n"
 			);
@@ -331,7 +413,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task WriteType_WithoutAccessibility_OmitsAccessibility()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		using (
 			writer.WriteTypeScope(
@@ -347,14 +429,16 @@ public class CodeWriterTests
 			// Here to prevent IDE0555
 		}
 
-		await Assert.That(writer.ToString()).StartsWith("record class State\n");
+		await Assert
+			.That(writer.ToString())
+			.StartsWith(GeneratedAttributes() + "record class State\n");
 	}
 
 	[Test]
 	public async Task WriteClass_GivenStaticDeclaration_WritesStaticClass()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var declaration = new TypeDeclarationOptions("Extensions")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
@@ -370,14 +454,14 @@ public class CodeWriterTests
 		// Assert
 		await Assert
 			.That(writer.ToString())
-			.IsEqualTo("public static partial class Extensions\n{\n}\n");
+			.IsEqualTo(GeneratedAttributes() + "public static partial class Extensions\n{\n}\n");
 	}
 
 	[Test]
 	public async Task WriteClass_GivenAbstractDeclaration_WritesAbstractInsteadOfDefaultSealed()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var declaration = new TypeDeclarationOptions("ServiceBase")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
@@ -393,14 +477,14 @@ public class CodeWriterTests
 		// Assert
 		await Assert
 			.That(writer.ToString())
-			.IsEqualTo("public abstract partial class ServiceBase\n{\n}\n");
+			.IsEqualTo(GeneratedAttributes() + "public abstract partial class ServiceBase\n{\n}\n");
 	}
 
 	[Test]
 	public async Task WriteStruct_GivenAbstractDeclaration_ThrowsArgumentException()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var declaration = new TypeDeclarationOptions("Invalid") { IsAbstract = true };
 
 		// Act
@@ -414,7 +498,7 @@ public class CodeWriterTests
 	public async Task WriteType_GivenStaticStruct_ThrowsArgumentException()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var declaration = new TypeDeclarationOptions("Invalid")
 		{
 			Kind = TypeDeclarationKind.Struct,
@@ -431,7 +515,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task WriteStruct_WithBaseType_Throws()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var declaration = new TypeDeclarationOptions("Invalid") { BaseType = Type("BaseType") };
 
 		await Assert.That(() => writer.WriteStructScope(declaration)).Throws<ArgumentException>();
@@ -440,7 +524,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task WriteClass_WithPrimaryConstructor_WritesParametersBeforeBaseType()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var declaration = new TypeDeclarationOptions("Repository")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
@@ -460,14 +544,15 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.StartsWith(
-				"public sealed partial class Repository(string connectionString, ILogger logger) : RepositoryBase(connectionString)\n"
+				GeneratedAttributes()
+					+ "public sealed partial class Repository(string connectionString, ILogger logger) : RepositoryBase(connectionString)\n"
 			);
 	}
 
 	[Test]
 	public async Task WriteClass_WithEmptyBaseType_DoesNotWriteBaseListColon()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var declaration = new TypeDeclarationOptions("ResourceKit")
 		{
 			BaseType = TypeReferenceOptions.Empty,
@@ -475,13 +560,15 @@ public class CodeWriterTests
 
 		writer.WriteClass(declaration, static _ => { });
 
-		await Assert.That(writer.ToString()).IsEqualTo("sealed partial class ResourceKit\n{\n}\n");
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(GeneratedAttributes() + "sealed partial class ResourceKit\n{\n}\n");
 	}
 
 	[Test]
 	public async Task WriteClass_WithEmptyBaseAndInterfaces_WritesOnlyNonEmptyInterfaces()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var declaration = new TypeDeclarationOptions("ResourceKit")
 		{
 			BaseType = TypeReferenceOptions.Empty,
@@ -497,13 +584,15 @@ public class CodeWriterTests
 
 		await Assert
 			.That(writer.ToString())
-			.IsEqualTo("sealed partial class ResourceKit : IResourceKit\n{\n}\n");
+			.IsEqualTo(
+				GeneratedAttributes() + "sealed partial class ResourceKit : IResourceKit\n{\n}\n"
+			);
 	}
 
 	[Test]
 	public async Task WriteConstructor_WritesParametersInitializerAndBody()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var declaration = new ConstructorDeclarationOptions("Repository")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
@@ -519,7 +608,8 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				"public Repository(string connectionString, ILogger logger)\n"
+				GeneratedAttributes()
+					+ "public Repository(string connectionString, ILogger logger)\n"
 					+ "\t: base(connectionString)\n"
 					+ "{\n"
 					+ "\t_logger = logger;\n"
@@ -530,7 +620,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task WriteConstructor_StaticConstructor_WritesStaticConstructor()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		using (
 			writer.WriteConstructorScope(
@@ -541,13 +631,15 @@ public class CodeWriterTests
 			// To stop IDE0055
 		}
 
-		await Assert.That(writer.ToString()).IsEqualTo("static Repository()\n{\n}\n");
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(GeneratedAttributes() + "static Repository()\n{\n}\n");
 	}
 
 	[Test]
 	public async Task WriteMethod_GivenShortParameters_WritesSingleLineDeclaration()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		using (
 			writer.WriteMethodScope(
@@ -566,7 +658,8 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				"public static void Execute(string name, bool enabled)\n"
+				GeneratedAttributes()
+					+ "public static void Execute(string name, bool enabled)\n"
 					+ "{\n"
 					+ "\tRun(name, enabled);\n"
 					+ "}\n"
@@ -577,7 +670,7 @@ public class CodeWriterTests
 	public async Task WriteInterface_WithInheritanceAndConstraints_WritesInterface()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var declaration = new TypeDeclarationOptions("IRepository")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
@@ -592,7 +685,8 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				"public partial interface IRepository<T> : IAsyncDisposable\n"
+				GeneratedAttributes(includeCoverageExclusion: false)
+					+ "public partial interface IRepository<T> : IAsyncDisposable\n"
 					+ "where T : class\n"
 					+ "{\n"
 					+ "\tT Get();\n"
@@ -604,7 +698,7 @@ public class CodeWriterTests
 	public async Task WriteEnum_WithUnderlyingType_WritesEnum()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var declaration = new TypeDeclarationOptions("Status")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
@@ -617,14 +711,17 @@ public class CodeWriterTests
 		// Assert
 		await Assert
 			.That(writer.ToString())
-			.IsEqualTo("public enum Status : byte\n{\n\tNone = 0,\n\tReady = 1,\n}\n");
+			.IsEqualTo(
+				GeneratedAttributes(includeCoverageExclusion: false)
+					+ "public enum Status : byte\n{\n\tNone = 0,\n\tReady = 1,\n}\n"
+			);
 	}
 
 	[Test]
 	public async Task WriteDelegate_WithGenericConstraints_WritesCompleteDeclaration()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var declaration = new TypeDeclarationOptions("Factory")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
@@ -643,13 +740,16 @@ public class CodeWriterTests
 		// Assert
 		await Assert
 			.That(writer.ToString())
-			.IsEqualTo("public delegate TResult Factory<T, TResult>(T value)\nwhere T : class;\n");
+			.IsEqualTo(
+				GeneratedAttributes(includeCoverageExclusion: false)
+					+ "public delegate TResult Factory<T, TResult>(T value)\nwhere T : class;\n"
+			);
 	}
 
 	[Test]
 	public async Task WriteMethod_GivenLongParameters_WritesOneParameterPerLine()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		using (
 			writer.WriteMethodScope(
@@ -702,7 +802,8 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				"public global::Aspire.Hosting.IDistributedApplicationBuilder AddAspireResourceKit(\n"
+				GeneratedAttributes()
+					+ "public global::Aspire.Hosting.IDistributedApplicationBuilder AddAspireResourceKit(\n"
 					+ "\tglobal::System.Action<global::Testing.HostKitNamespace.TestingHostKit, global::Aspire.Hosting.IDistributedApplicationBuilder>? onBuilt = null,\n"
 					+ "\tglobal::System.Action<global::Testing.HostKitNamespace.TestingHostKit>? onConfigured = null,\n"
 					+ "\tglobal::System.Action<global::Microsoft.Extensions.Options.OptionsBuilder<global::Testing.HostKitNamespace.TestingHostKit.TestingHostKitOptions>>? configureOptions = null)\n"
@@ -716,7 +817,7 @@ public class CodeWriterTests
 	public async Task WriteMethod_GivenStructuredOptions_WritesModifiersGenericsAndBody()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var declaration = new MethodDeclarationOptions(
 			"CreateAsync",
 			Type("Task").MakeGeneric(Type("T"))
@@ -740,7 +841,8 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				"public static async Task<T> CreateAsync<T>(T value, CancellationToken cancellationToken)\n"
+				GeneratedAttributes()
+					+ "public static async Task<T> CreateAsync<T>(T value, CancellationToken cancellationToken)\n"
 					+ "where T : class\n"
 					+ "{\n"
 					+ "\treturn await SaveAsync(value);\n"
@@ -752,7 +854,7 @@ public class CodeWriterTests
 	public async Task StructuredDeclarations_GivenAttributes_WritesTypeMemberReturnAndParameterAttributes()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var generatedCode = new AttributeDeclarationOptions("GeneratedCode")
 		{
 			Arguments =
@@ -792,9 +894,11 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				"[GeneratedCode(\"Generator\", version: \"1.0\", Enabled = false)]\n"
+				GeneratedAttributes()
+					+ "[GeneratedCode(\"Generator\", version: \"1.0\", Enabled = false)]\n"
 					+ "public sealed partial class Service\n"
 					+ "{\n"
+					+ IndentedGeneratedAttributes()
 					+ "\t[Obsolete]\n"
 					+ "\t[return: NotNull]\n"
 					+ "\tpublic bool TryGet([NotNullWhen(true)] out string? value)\n"
@@ -870,9 +974,9 @@ public class CodeWriterTests
 	public async Task WriteClass_GivenAttributeTypeValueObject_DoesNotDuplicateAttributeBrackets()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var attribute = new AttributeDeclarationOptions(
-			new Models.TypeValueObject("HostKitAttribute", "Purview.Aspire.ResourceKit")
+			new("HostKitAttribute", "Purview.Aspire.ResourceKit")
 		)
 		{
 			Arguments =
@@ -894,7 +998,8 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				"[global::Purview.Aspire.ResourceKit.HostKit(GenerateOptions = true)]\n"
+				GeneratedAttributes()
+					+ "[global::Purview.Aspire.ResourceKit.HostKit(GenerateOptions = true)]\n"
 					+ "sealed partial class Host\n"
 					+ "{\n"
 					+ "}\n"
@@ -905,7 +1010,7 @@ public class CodeWriterTests
 	public async Task TypeReference_GivenNestedNullableGenericAndArray_RendersStructuredType()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var valueType = Type("global::System.Collections.Generic.Dictionary")
 			.MakeGeneric(Type("string"), Type("Widget").Nullable())
 			.MakeArray()
@@ -931,7 +1036,8 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				"global::System.Collections.Generic.Dictionary<string, Widget?>[]? Load(\n"
+				GeneratedAttributes()
+					+ "global::System.Collections.Generic.Dictionary<string, Widget?>[]? Load(\n"
 					+ "\tglobal::System.Collections.Generic.List<Widget?>? items) => items.ToArray();\n"
 			);
 	}
@@ -940,7 +1046,7 @@ public class CodeWriterTests
 	public async Task WriteMethod_GivenNullableParameterOption_WritesNullableTypeOnce()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var method = new MethodDeclarationOptions("Use", Type("void"))
 		{
 			Parameters =
@@ -960,14 +1066,16 @@ public class CodeWriterTests
 		// Assert
 		await Assert
 			.That(writer.ToString())
-			.IsEqualTo("void Use(Widget? value = null) => Consume(value);\n");
+			.IsEqualTo(
+				GeneratedAttributes() + "void Use(Widget? value = null) => Consume(value);\n"
+			);
 	}
 
 	[Test]
 	public async Task WriteProperty_GivenAutoAccessorsAndInitializer_WritesProperty()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var declaration = new PropertyDeclarationOptions("Name", Type("string"))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
@@ -982,14 +1090,16 @@ public class CodeWriterTests
 		// Assert
 		await Assert
 			.That(writer.ToString())
-			.IsEqualTo("public string Name { get; init; } = string.Empty;\n");
+			.IsEqualTo(
+				GeneratedAttributes() + "public string Name { get; init; } = string.Empty;\n"
+			);
 	}
 
 	[Test]
 	public async Task WriteProperty_GivenAccessorBodies_WritesScopedAccessors()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var declaration = new PropertyDeclarationOptions("Value", Type("int"))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
@@ -1008,7 +1118,8 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				"public int Value\n"
+				GeneratedAttributes()
+					+ "public int Value\n"
 					+ "{\n"
 					+ "\tget\n\t{\n\t\treturn _value;\n\t}\n"
 					+ "\tprivate set\n\t{\n\t\t_value = value;\n\t}\n"
@@ -1020,7 +1131,7 @@ public class CodeWriterTests
 	public async Task WriteProperty_GivenExpressionBody_WritesExpressionProperty()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var declaration = new PropertyDeclarationOptions("Count", Type("int"))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
@@ -1031,14 +1142,16 @@ public class CodeWriterTests
 		writer.WriteProperty(declaration);
 
 		// Assert
-		await Assert.That(writer.ToString()).IsEqualTo("public int Count => _items.Count;\n");
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(GeneratedAttributes() + "public int Count => _items.Count;\n");
 	}
 
 	[Test]
 	public async Task WriteField_GivenReadonlyStaticField_WritesField()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var declaration = new FieldDeclarationOptions("Empty", Type("Example"))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
@@ -1053,14 +1166,17 @@ public class CodeWriterTests
 		// Assert
 		await Assert
 			.That(writer.ToString())
-			.IsEqualTo("public static readonly Example Empty = new();\n");
+			.IsEqualTo(
+				GeneratedAttributes(includeCoverageExclusion: false)
+					+ "public static readonly Example Empty = new();\n"
+			);
 	}
 
 	[Test]
 	public async Task StructuredMembers_GivenConsecutiveFields_DoesNotAddBlankLine()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		// Act
 		writer
@@ -1068,14 +1184,21 @@ public class CodeWriterTests
 			.WriteField(new FieldDeclarationOptions("_second", Type("int")));
 
 		// Assert
-		await Assert.That(writer.ToString()).IsEqualTo("int _first;\nint _second;\n");
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				GeneratedAttributes(includeCoverageExclusion: false)
+					+ "int _first;\n"
+					+ GeneratedAttributes(includeCoverageExclusion: false)
+					+ "int _second;\n"
+			);
 	}
 
 	[Test]
 	public async Task StructuredMembers_GivenDifferentMemberKinds_AddsBlankLine()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		// Act
 		writer.WriteField(new FieldDeclarationOptions("_value", Type("int")));
@@ -1089,14 +1212,20 @@ public class CodeWriterTests
 		// Assert
 		await Assert
 			.That(writer.ToString())
-			.IsEqualTo("int _value;\n\npublic int Value { get; }\n");
+			.IsEqualTo(
+				GeneratedAttributes(includeCoverageExclusion: false)
+					+ "int _value;\n"
+					+ "\n"
+					+ GeneratedAttributes()
+					+ "public int Value { get; }\n"
+			);
 	}
 
 	[Test]
 	public async Task StructuredMembers_GivenScopedMethods_AddsBlankLineAfterScopeCloses()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var first = new MethodDeclarationOptions("First", Type("void"));
 		var second = new MethodDeclarationOptions("Second", Type("void"));
 
@@ -1114,7 +1243,11 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				"void First()\n{\n\tExecute();\n}\n" + "\n" + "void Second()\n{\n\tExecute();\n}\n"
+				GeneratedAttributes()
+					+ "void First()\n{\n\tExecute();\n}\n"
+					+ "\n"
+					+ GeneratedAttributes()
+					+ "void Second()\n{\n\tExecute();\n}\n"
 			);
 	}
 
@@ -1122,7 +1255,7 @@ public class CodeWriterTests
 	public async Task StructuredMembers_GivenDocumentationTrivia_InsertsSeparatorBeforeTrivia()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		// Act
 		writer.WriteField(new FieldDeclarationOptions("_value", Type("int")));
@@ -1133,11 +1266,13 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				"int _value;\n"
+				GeneratedAttributes(includeCoverageExclusion: false)
+					+ "int _value;\n"
 					+ "\n"
 					+ "/// <summary>\n"
 					+ "/// Gets the value.\n"
 					+ "/// </summary>\n"
+					+ GeneratedAttributes()
 					+ "int Value { get; }\n"
 			);
 	}
@@ -1146,21 +1281,29 @@ public class CodeWriterTests
 	public async Task StructuredMembers_GivenExistingBlankLine_DoesNotAddAnother()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		// Act
 		writer.WriteField(new FieldDeclarationOptions("_value", Type("int"))).NewLine();
 		writer.WriteProperty(new PropertyDeclarationOptions("Value", Type("int")));
 
 		// Assert
-		await Assert.That(writer.ToString()).IsEqualTo("int _value;\n\nint Value { get; }\n");
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				GeneratedAttributes(includeCoverageExclusion: false)
+					+ "int _value;\n"
+					+ "\n"
+					+ GeneratedAttributes()
+					+ "int Value { get; }\n"
+			);
 	}
 
 	[Test]
 	public async Task Block_WithBodyAndCustomSeparators_WritesDelimitedBody()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		// Act
 		writer.WriteDelimitedBlock(
@@ -1184,7 +1327,7 @@ public class CodeWriterTests
 	public async Task Block_WithBodyLast_WritesBodyInsideCustomSeparators()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		// Act
 		writer.WriteDelimitedBlock("Create", "(", ");", body => body.Quote("value").WriteLine());
@@ -1197,7 +1340,7 @@ public class CodeWriterTests
 	public async Task ToString_GivenOpenBlockAndValidationEnabled_ThrowsScopeValidationException()
 	{
 		// Arrange
-		var writer = new CodeWriter(throwOnUnclosedScopes: true);
+		var writer = CodeWriterFactory.ForTests(throwOnUnclosedScopes: true);
 		var scope = writer.OpenBlockScope("public sealed class Example");
 
 		// Act
@@ -1225,7 +1368,7 @@ public class CodeWriterTests
 	public async Task ToString_GivenOpenBlockAndValidationDisabled_ReturnsPartialSource()
 	{
 		// Arrange
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests(throwOnUnclosedScopes: false);
 		var scope = writer.OpenBlockScope("public sealed class Example");
 
 		// Act
@@ -1242,7 +1385,7 @@ public class CodeWriterTests
 	public async Task ToString_GivenOpenIndentScopeAndValidationEnabled_ThrowsScopeValidationException()
 	{
 		// Arrange
-		var writer = new CodeWriter(throwOnUnclosedScopes: true);
+		var writer = CodeWriterFactory.ForTests(throwOnUnclosedScopes: true);
 		var scope = writer.IndentedScope();
 
 		// Act
@@ -1268,7 +1411,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task WriteAutoGeneratedHeader_WritesHeader()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		writer.WriteAutoGeneratedHeader("TestGenerator", "1.0");
 
@@ -1277,17 +1420,13 @@ public class CodeWriterTests
 		await Assert.That(result).Contains("// <auto-generated />");
 		await Assert.That(result).Contains("TestGenerator");
 		await Assert.That(result).Contains("version 1.0");
-		await Assert.That(result).Contains("// Generated at ");
+		await Assert.That(result).DoesNotContain("// Generated at ");
 	}
 
 	[Test]
 	public async Task GeneratorIdentity_GivenNoHeaderArguments_UsesDefaultsAndDecoratesDeclarations()
 	{
-		var writer = new CodeWriter(
-			throwOnUnclosedScopes: false,
-			generatorName: "HostKitGenerator",
-			generatorVersion: "2.3.4"
-		);
+		var writer = new CodeWriter("HostKitGenerator", "2.3.4", throwOnUnclosedScopes: false);
 
 		writer.WriteAutoGeneratedHeader();
 		writer.WriteClass(
@@ -1300,13 +1439,13 @@ public class CodeWriterTests
 
 		var result = writer.ToString();
 		await Assert.That(result).Contains("HostKitGenerator (version 2.3.4)");
-		await Assert.That(result).Contains("// Generated at ");
-		await Assert.That(result).Contains("[global::Microsoft.CodeAnalysis.EmbeddedAttribute]");
+		await Assert.That(result).DoesNotContain("// Generated at ");
 		await Assert
 			.That(result)
-			.Contains(
-				"[global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute(Justification = \"This code was generated by a source generator.\")]"
-			);
+			.DoesNotContain("[global::Microsoft.CodeAnalysis.EmbeddedAttribute]");
+		await Assert
+			.That(result)
+			.Contains("[global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute]");
 		await Assert
 			.That(result)
 			.Contains("[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]");
@@ -1320,7 +1459,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task WriteConstructor_WithMultilineParameters_WritesInitializerOnNewLine()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 		var declaration = new ConstructorDeclarationOptions("Repository")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
@@ -1334,7 +1473,8 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				"public Repository(\n"
+				GeneratedAttributes()
+					+ "public Repository(\n"
 					+ "\tstring connectionString,\n"
 					+ "\tILogger logger\n"
 					+ ")\n"
@@ -1347,11 +1487,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task GeneratorIdentity_GivenConstField_DoesNotWriteInvalidCoverageAttribute()
 	{
-		var writer = new CodeWriter(
-			throwOnUnclosedScopes: false,
-			generatorName: "HostKitGenerator",
-			generatorVersion: "2.3.4"
-		);
+		var writer = new CodeWriter("HostKitGenerator", "2.3.4", throwOnUnclosedScopes: false);
 
 		writer.WriteField(
 			new FieldDeclarationOptions("SectionName", new TypeReferenceOptions("string"))
@@ -1371,7 +1507,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task WriteGeneratedCodeAttribute_WritesAttribute()
 	{
-		var writer = new CodeWriter();
+		var writer = CodeWriterFactory.ForTests();
 
 		writer.WriteGeneratedCodeAttribute("TestGenerator", "1.0.0.0");
 
@@ -1382,5 +1518,288 @@ public class CodeWriterTests
 			.Contains(
 				"[global::System.CodeDom.Compiler.GeneratedCode(\"TestGenerator\", \"1.0.0.0\")]"
 			);
+	}
+
+	[Test]
+	public async Task Determinism_SameInputProducesIdenticalOutputAndNoTimestamp()
+	{
+		// Arrange
+		static string Generate()
+		{
+			var writer = CodeWriterFactory.ForTests();
+			writer.WriteAutoGeneratedHeader();
+			writer.WriteClass(
+				new TypeDeclarationOptions("Sample")
+				{
+					Accessibility = TypeDeclarationAccessibility.Public,
+				},
+				body =>
+					body.WriteMethod(
+						new MethodDeclarationOptions("M", Type("void"))
+						{
+							Accessibility = TypeDeclarationAccessibility.Public,
+						},
+						methodBody => methodBody.WriteLine("return;")
+					)
+			);
+			return writer.ToString();
+		}
+
+		// Act
+		var first = Generate();
+		var second = Generate();
+
+		// Assert
+		await Assert.That(first).IsEqualTo(second);
+		await Assert.That(first).DoesNotContain("// Generated at ");
+	}
+
+	[Test]
+	public async Task ScopeBalance_ThrowsWhenScopeLeftOpen()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests(throwOnUnclosedScopes: true);
+		writer.OpenBlockScope("public class Example");
+
+		// Act
+		string Action() => writer.ToString();
+
+		// Assert
+		await Assert.That(Action).Throws<CodeWriterScopeValidationException>();
+	}
+
+	[Test]
+	public async Task PragmaScope_EmitsDisableAndRestore()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+
+		// Act
+		writer.WriteLine("// before");
+		using (writer.OpenPragmasScope("CS0618", "CS1591"))
+		{
+			writer.WriteLine("// inside");
+		}
+		writer.WriteLine("// after");
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"// before\n"
+					+ "\n"
+					+ "#pragma warning disable CS0618\n"
+					+ "#pragma warning disable CS1591\n"
+					+ "// inside\n"
+					+ "\n"
+					+ "#pragma warning restore CS0618\n"
+					+ "#pragma warning restore CS1591\n"
+					+ "// after\n"
+			);
+	}
+
+	[Test]
+	public async Task OpenScope_CapturesOpeningStackTrace()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests(throwOnUnclosedScopes: true);
+		writer.OpenBlockScope("public class Example");
+
+		// Act
+		string Action() => writer.ToString();
+
+		// Assert
+		var exception = await Assert.That(Action).Throws<CodeWriterScopeValidationException>();
+		await Assert
+			.That(exception!.OpenScopes[0].OpeningStackTrace)
+			.Contains(nameof(OpenScope_CapturesOpeningStackTrace));
+	}
+
+	[Test]
+	public async Task MemberDeclarations_GivenIncludeGeneratedAttributesFalse_OmitsGeneratedAttributes()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+
+		// Act
+		writer.WriteClass(
+			new TypeDeclarationOptions("Sample")
+			{
+				Accessibility = TypeDeclarationAccessibility.Public,
+				IncludeGeneratedAttributes = false,
+			},
+			body =>
+			{
+				body.WriteField(
+					new FieldDeclarationOptions("_field", Type("int"))
+					{
+						IncludeGeneratedAttributes = false,
+					}
+				);
+				body.WriteProperty(
+					new PropertyDeclarationOptions("Property", Type("int"))
+					{
+						IncludeGeneratedAttributes = false,
+					}
+				);
+				body.WriteMethod(
+					new MethodDeclarationOptions("Method", Type("void"))
+					{
+						IncludeGeneratedAttributes = false,
+					},
+					methodBody => methodBody.WriteLine("return;")
+				);
+				body.WriteConstructor(
+					new ConstructorDeclarationOptions("Sample")
+					{
+						IncludeGeneratedAttributes = false,
+					},
+					constructorBody => constructorBody.WriteLine("// ctor")
+				);
+			}
+		);
+
+		// Assert
+		var result = writer.ToString();
+		await Assert
+			.That(result)
+			.DoesNotContain("[global::System.CodeDom.Compiler.GeneratedCode")
+			.Because("no generated attributes should be emitted");
+		await Assert.That(result).Contains("int _field;");
+		await Assert.That(result).Contains("int Property { get; }");
+		await Assert.That(result).Contains("void Method()");
+		await Assert.That(result).Contains("Sample()");
+	}
+
+	[Test]
+	public async Task ClassDeclaration_GivenDefaultCodeWriterAndNoOverride_EmitsGeneratedAttributes()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+
+		// Act
+		writer.WriteClass(
+			new TypeDeclarationOptions("Sample")
+			{
+				Accessibility = TypeDeclarationAccessibility.Public,
+			},
+			body => body.Comment("Empty")
+		);
+
+		// Assert
+		var result = writer.ToString();
+		await Assert
+			.That(result)
+			.Contains(GeneratedAttributes())
+			.Because("default CodeWriter emits generated attributes when not overridden");
+	}
+
+	[Test]
+	public async Task ClassDeclaration_GivenDefaultIncludeGeneratedAttributesFalseAndNoOverride_OmitsGeneratedAttributes()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		writer.DefaultIncludeGeneratedAttributes = false;
+
+		// Act
+		writer.WriteClass(
+			new TypeDeclarationOptions("Sample")
+			{
+				Accessibility = TypeDeclarationAccessibility.Public,
+			},
+			body => body.Comment("Empty")
+		);
+
+		// Assert
+		var result = writer.ToString();
+		await Assert
+			.That(result)
+			.DoesNotContain("[global::System.CodeDom.Compiler.GeneratedCode")
+			.Because("CodeWriter default set to false suppresses generated attributes");
+	}
+
+	[Test]
+	public async Task ClassDeclaration_GivenDefaultIncludeGeneratedAttributesFalseAndOverrideTrue_EmitsGeneratedAttributes()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		writer.DefaultIncludeGeneratedAttributes = false;
+
+		// Act
+		writer.WriteClass(
+			new TypeDeclarationOptions("Sample")
+			{
+				Accessibility = TypeDeclarationAccessibility.Public,
+				IncludeGeneratedAttributes = true,
+			},
+			body => body.Comment("Empty")
+		);
+
+		// Assert
+		var result = writer.ToString();
+		await Assert
+			.That(result)
+			.Contains(GeneratedAttributes())
+			.Because("explicit override on the declaration takes precedence");
+	}
+
+	[Test]
+	public async Task MemberDeclarations_GivenDefaultIncludeGeneratedAttributesFalseAndNoOverride_OmitsGeneratedAttributes()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		writer.DefaultIncludeGeneratedAttributes = false;
+
+		// Act
+		writer.WriteClass(
+			new TypeDeclarationOptions("Sample")
+			{
+				Accessibility = TypeDeclarationAccessibility.Public,
+			},
+			body =>
+			{
+				body.WriteField(new FieldDeclarationOptions("_field", Type("int")));
+				body.WriteProperty(new PropertyDeclarationOptions("Property", Type("int")));
+				body.WriteMethod(
+					new MethodDeclarationOptions("Method", Type("void")),
+					methodBody => methodBody.WriteLine("return;")
+				);
+				body.WriteConstructor(
+					new ConstructorDeclarationOptions("Sample"),
+					constructorBody => constructorBody.WriteLine("// ctor")
+				);
+			}
+		);
+
+		// Assert
+		var result = writer.ToString();
+		await Assert
+			.That(result)
+			.DoesNotContain("[global::System.CodeDom.Compiler.GeneratedCode")
+			.Because("members inherit the CodeWriter default");
+		await Assert.That(result).Contains("int _field;");
+		await Assert.That(result).Contains("int Property { get; }");
+		await Assert.That(result).Contains("void Method()");
+		await Assert.That(result).Contains("Sample()");
+	}
+
+	[Test]
+	public async Task CreateTestWriter_WithDefaultParameters_SetsDefaultIncludeGeneratedAttributesFalse()
+	{
+		// Arrange / Act
+		var writer = CodeWriter.CreateTestWriter();
+
+		// Assert
+		await Assert.That(writer.DefaultIncludeGeneratedAttributes).IsFalse();
+	}
+
+	[Test]
+	public async Task CreateTestWriter_WithTrueParameters_SetsDefaultIncludeGeneratedAttributesTrue()
+	{
+		// Arrange / Act
+		var writer = CodeWriter.CreateTestWriter(includeGeneratedAttributes: true);
+
+		// Assert
+		await Assert.That(writer.DefaultIncludeGeneratedAttributes).IsTrue();
 	}
 }

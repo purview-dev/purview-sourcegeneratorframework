@@ -27,7 +27,7 @@ public class AttributeDataExtensionsTests
 			new[] { syntaxTree },
 			[
 				MetadataReference.CreateFromFile(typeof(CodeWriter).Assembly.Location),
-				MetadataReference.CreateFromFile(typeof(Testing.ITestOutput).Assembly.Location),
+				MetadataReference.CreateFromFile(typeof(ITestOutput).Assembly.Location),
 				MetadataReference.CreateFromFile(typeof(Compilation).Assembly.Location),
 				MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
 				MetadataReference.CreateFromFile(typeof(ImmutableArray<>).Assembly.Location),

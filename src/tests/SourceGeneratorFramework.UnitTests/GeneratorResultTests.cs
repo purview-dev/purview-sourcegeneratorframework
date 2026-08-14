@@ -75,4 +75,35 @@ public class GeneratorResultTests
 		await Assert.That(result.HasDiagnostics).IsFalse();
 		await Assert.That(result.Value).IsNull();
 	}
+
+	[Test]
+	public async Task Empty_WithValueType_IsEmpty()
+	{
+		var result = GeneratorResult<int>.Empty;
+
+		await Assert.That(result.IsSuccess).IsFalse();
+		await Assert.That(result.IsEmpty).IsTrue();
+		await Assert.That(result.IsFatal).IsFalse();
+	}
+
+	[Test]
+	public async Task Fail_WithValueType_IsFatal()
+	{
+		var diagnostic = DiagnosticInfo.Create(
+			new Microsoft.CodeAnalysis.DiagnosticDescriptor(
+				"TEST001",
+				"Test",
+				"Message",
+				"Test",
+				Microsoft.CodeAnalysis.DiagnosticSeverity.Warning,
+				true
+			)
+		);
+
+		var result = GeneratorResult<int>.Fail(diagnostic);
+
+		await Assert.That(result.IsSuccess).IsFalse();
+		await Assert.That(result.IsEmpty).IsFalse();
+		await Assert.That(result.IsFatal).IsTrue();
+	}
 }

@@ -1,6 +1,5 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Purview.SourceGeneratorFramework.Testing;
 
 namespace Purview.SourceGeneratorFramework;
 
@@ -42,7 +41,7 @@ partial class TypeValueObjectTests
 		TypeDeclarationAccessibility accessibility = TypeDeclarationAccessibility.Public
 	)
 	{
-		CodeWriter writer = new();
+		var writer = CodeWriterFactory.ForTests();
 
 		IDisposable? blockNamespace = null;
 		if (namespaceInfo.HasNamespace)

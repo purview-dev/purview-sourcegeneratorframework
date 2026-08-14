@@ -163,7 +163,9 @@ public static class IncrementalPipeline
 	/// </summary>
 	public static IncrementalValueProvider<TContext> GenerationContextValueProvider<TContext>(
 		IncrementalGeneratorInitializationContext context,
-		Func<Compilation, CancellationToken, TContext> factory,
+		string generatorName,
+		string generatorVersion,
+		Func<Compilation, string, string, CancellationToken, TContext> factory,
 		GenerationLogger? logger = null
 	)
 		where TContext : notnull, GenerationContext
@@ -174,7 +176,10 @@ public static class IncrementalPipeline
 		// Wrap the factory to include the CodeWriter scope-validation build property.
 		return GenerationContextValueProvider(
 			context,
-			(compilation, _, cancellationToken) => factory(compilation, cancellationToken),
+			generatorName,
+			generatorVersion,
+			(compilation, _, name, version, cancellationToken) =>
+				factory(compilation, name, version, cancellationToken),
 			logger
 		);
 	}
@@ -185,7 +190,9 @@ public static class IncrementalPipeline
 	/// </summary>
 	public static IncrementalValueProvider<TContext> GenerationContextValueProvider<TContext>(
 		IncrementalGeneratorInitializationContext context,
-		Func<Compilation, bool, CancellationToken, TContext> factory,
+		string generatorName,
+		string generatorVersion,
+		Func<Compilation, bool, string, string, CancellationToken, TContext> factory,
 		GenerationLogger? logger = null
 	)
 		where TContext : notnull, GenerationContext
@@ -205,7 +212,13 @@ public static class IncrementalPipeline
 						$"Creating generation context ({nameof(TContext)}) for compilation '{input.Left.AssemblyName}'."
 					);
 
-					var generationContext = factory(input.Left, input.Right, cancellationToken);
+					var generationContext = factory(
+						input.Left,
+						input.Right,
+						generatorName,
+						generatorVersion,
+						cancellationToken
+					);
 					generationContext.ConfigureCodeWriterScopeValidation(input.Right);
 					return generationContext;
 				}
@@ -218,13 +231,17 @@ public static class IncrementalPipeline
 	/// </summary>
 	public static IncrementalValueProvider<GenerationContext> DefaultGenerationContextValueProvider(
 		IncrementalGeneratorInitializationContext context,
+		string generatorName,
+		string generatorVersion,
 		GenerationLogger? logger = null
 	)
 	{
 		return GenerationContextValueProvider(
 			context,
-			static (compilation, validateScopes, _) =>
-				new GenerationContext(compilation, validateScopes),
+			generatorName,
+			generatorVersion,
+			static (compilation, validateScopes, name, version, _) =>
+				new GenerationContext(compilation, name, version, validateScopes),
 			logger
 		);
 	}
@@ -286,6 +303,44 @@ public static class IncrementalPipeline
 		return valuesProvider.CombineWith(
 			contextProvider,
 			static (output, generationContext, _) => (output, generationContext)
+		);
+	}
+
+	/// <summary>
+	/// Registers a source output that combines each <see cref="GeneratorResult{T}"/> with a
+	/// generation context, reports any diagnostics, and invokes the generator callback only for
+	/// successful results. This keeps generator <see cref="IIncrementalGenerator.Initialize"/> methods thin
+	/// and enforces the rule that diagnostics are reported in the source output stage.
+	/// </summary>
+	public static void RegisterSourceOutput<TOutput, TContext>(
+		this IncrementalGeneratorInitializationContext context,
+		IncrementalValuesProvider<GeneratorResult<TOutput>> outputs,
+		IncrementalValueProvider<TContext> contextProvider,
+		Action<SourceProductionContext, TOutput, TContext> generate,
+		string? trackingName = null
+	)
+		where TOutput : notnull
+		where TContext : GenerationContext
+	{
+		if (generate is null)
+			throw new ArgumentNullException(nameof(generate));
+
+		var combined = outputs
+			.CombineWith(contextProvider, static (output, ctx, _) => (Output: output, Context: ctx))
+			.WithTrackingName(trackingName ?? $"RegisterSourceOutput_{typeof(TOutput).Name}");
+
+		context.RegisterSourceOutput(
+			combined,
+			(spc, item) =>
+			{
+				if (item.Output.HasDiagnostics)
+					spc.ReportDiagnostics(item.Output.Diagnostics);
+
+				if (!item.Output.IsSuccess || item.Output.IsFatal)
+					return;
+
+				generate(spc, item.Output.Value!, item.Context);
+			}
 		);
 	}
 }
