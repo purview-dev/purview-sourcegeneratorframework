@@ -188,63 +188,6 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>
-	/// Writes one XML documentation line.
-	/// </summary>
-	/// <param name="line">The documentation text.</param>
-	/// <returns>The current writer.</returns>
-	public CodeWriter WriteXml(string line)
-	{
-		return line is null
-			? throw new ArgumentNullException(nameof(line))
-			: Write("/// ").WriteLine(line);
-	}
-
-	/// <summary>
-	/// Writes one or more XML documentation lines.
-	/// </summary>
-	/// <param name="xmlComment">The documentation lines.</param>
-	/// <returns>The current writer.</returns>
-	public CodeWriter WriteXml(params string[] xmlComment)
-	{
-		if (xmlComment is null || xmlComment.Length == 0)
-			throw new ArgumentException("XML comment cannot be null or empty.", nameof(xmlComment));
-
-		for (var index = 0; index < xmlComment.Length; index++)
-			WriteXml(xmlComment[index]);
-
-		return this;
-	}
-
-	/// <summary>
-	/// Writes an XML <c>summary</c> documentation block.
-	/// </summary>
-	/// <param name="summary">The summary lines.</param>
-	/// <returns>The current writer.</returns>
-	public CodeWriter WriteXmlSummary(params string[] summary)
-	{
-		if (summary is null || summary.Length == 0)
-			throw new ArgumentException("Summary cannot be null or empty.", nameof(summary));
-
-		WriteLine("/// <summary>");
-		for (var index = 0; index < summary.Length; index++)
-			WriteXml(summary[index]);
-
-		return WriteLine("/// </summary>");
-	}
-
-	/// <summary>
-	/// Writes one comment line.
-	/// </summary>
-	/// <param name="comment">The comment text.</param>
-	/// <returns>The current writer.</returns>
-	public CodeWriter Comment(string comment)
-	{
-		return comment is null
-			? throw new ArgumentNullException(nameof(comment))
-			: Write("// ").WriteLine(comment);
-	}
-
-	/// <summary>
 	/// Writes a line comment or a multi-line comment block.
 	/// </summary>
 	/// <param name="comments">The comment lines.</param>
@@ -252,10 +195,10 @@ public sealed class CodeWriter
 	public CodeWriter Comment(params string[] comments)
 	{
 		if (comments is null || comments.Length == 0)
-			throw new ArgumentException("Comments cannot be null or empty.", nameof(comments));
+			return this;
 
 		if (comments.Length == 1)
-			return Comment(comments[0]);
+			return Write("// ").WriteLine(comments[0]);
 
 		WriteLine("/*");
 		for (var index = 0; index < comments.Length; index++)

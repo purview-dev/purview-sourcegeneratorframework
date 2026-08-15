@@ -5,6 +5,7 @@ solution := root_folder / "SourceGeneratorFramework.slnx"
 build_configuration := "Release"
 artifacts_folder := "./artifacts"
 default_test_filter := "/*/*/*/*/"
+current_version := `node -p "require('./package.json').version"`
 
 [private]
 default:
@@ -29,6 +30,10 @@ restore solutionOrProject=solution:
 pack solutionOrProject=solution configuration=build_configuration publish_folder=artifacts_folder:
     echo "Packing {{ BLUE }}{{ solutionOrProject }}{{ NORMAL }} with configuration {{ YELLOW }}{{ configuration }}{{ NORMAL }} to {{ GREEN }}{{ publish_folder }}{{ NORMAL }}"
     dotnet pack {{ solutionOrProject }} -c {{ configuration }} -o {{ publish_folder }}
+
+# Display the current version of the project
+version:
+    echo "Current version: {{ GREEN }}{{ current_version }}{{ NORMAL }}"
 
 # Check code formatting using CSharpier
 lint-check:

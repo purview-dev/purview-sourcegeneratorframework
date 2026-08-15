@@ -1258,9 +1258,9 @@ public class CodeWriterTests
 		var writer = CodeWriterFactory.ForTests();
 
 		// Act
-		writer.WriteField(new FieldDeclarationOptions("_value", Type("int")));
-		writer.WriteXmlSummary("Gets the value.");
-		writer.WriteProperty(new PropertyDeclarationOptions("Value", Type("int")));
+		writer.WriteField(new("_value", Type("int")));
+		writer.XmlSummary("Gets the value.");
+		writer.WriteProperty(new("Value", Type("int")));
 
 		// Assert
 		await Assert

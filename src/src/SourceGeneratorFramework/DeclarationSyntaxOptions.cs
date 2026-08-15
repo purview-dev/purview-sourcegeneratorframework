@@ -39,10 +39,23 @@ public readonly record struct AttributeDeclarationOptions
 public readonly record struct AttributeArgumentOptions
 {
 	/// <summary>Creates a positional attribute argument.</summary>
-	public AttributeArgumentOptions(string value) => Value = value;
+	public AttributeArgumentOptions(
+		string value,
+		string? name = null,
+		bool isPropertyAssignment = false
+	) => (Value, Name, IsPropertyAssignment) = (value, name, isPropertyAssignment);
 
 	/// <summary>Creates a positional Boolean attribute argument using a valid C# literal.</summary>
-	public AttributeArgumentOptions(bool value) => Value = value ? "true" : "false";
+	public AttributeArgumentOptions(
+		bool value,
+		string? name = null,
+		bool isPropertyAssignment = false
+	) =>
+		(Value, Name, IsPropertyAssignment) = (
+			value ? "true" : "false",
+			name,
+			isPropertyAssignment
+		);
 
 	/// <summary>Gets the argument expression.</summary>
 	public string Value { get; }

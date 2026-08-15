@@ -126,6 +126,13 @@ public readonly record struct TypeMapping
 	public bool IsEmpty => this == Empty;
 
 	/// <summary>
+	/// Defines an implicit conversion from TypeMapping to TypeValueObject. If the SpecialType is None, it returns an empty TypeValueObject; otherwise, it creates a new TypeValueObject with the specified SpecialType.
+	/// </summary>
+	/// <param name="mapping">The TypeMapping instance to convert.</param>
+	public static implicit operator TypeValueObject(TypeMapping mapping) =>
+		mapping.SpecialType == SpecialType.None ? TypeValueObject.Empty : new(mapping.SpecialType);
+
+	/// <summary>
 	/// Represents an empty TypeMapping instance with no associated type, special type, or keyword.
 	/// </summary>
 	public static readonly TypeMapping Empty;

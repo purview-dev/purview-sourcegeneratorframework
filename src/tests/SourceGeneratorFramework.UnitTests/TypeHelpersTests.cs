@@ -2,6 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Purview.SourceGeneratorFramework.Helpers;
+using Purview.SourceGeneratorFramework.Models;
 
 namespace Purview.SourceGeneratorFramework;
 
@@ -27,10 +28,7 @@ public class TypeHelpersTests
 		return model.GetDeclaredSymbol(typeDeclaration)!;
 	}
 
-	static async Task<Models.TargetSymbolDescriptor> GetTypeDescriptorAsync(
-		string source,
-		string typeName
-	)
+	static async Task<TargetSymbolDescriptor> GetTypeDescriptorAsync(string source, string typeName)
 	{
 		var syntaxTree = CSharpSyntaxTree.ParseText(source);
 		var compilation = CSharpCompilation.Create(
@@ -67,8 +65,8 @@ public class TypeHelpersTests
 		const string source =
 			"namespace Testing { interface IResource { } class DefaultAspireResource : IResource { } class ResourceKitBase<T> where T : IResource { } class HostKit : ResourceKitBase<DefaultAspireResource> { } }";
 		var descriptor = await GetTypeDescriptorAsync(source, "HostKit");
-		var expectedBase = new Models.TypeValueObject("ResourceKitBase", "Testing").MakeGeneric(
-			new Models.TypeValueObject("IResource", "Testing")
+		var expectedBase = new TypeValueObject("ResourceKitBase", "Testing").MakeGeneric(
+			new TypeValueObject("IResource", "Testing")
 		);
 
 		// Act
@@ -85,7 +83,7 @@ public class TypeHelpersTests
 		const string source =
 			"namespace Testing { interface IResource { } class DefaultAspireResource : IResource { } class ResourceKitBase<T> where T : IResource { } class HostKit : ResourceKitBase<DefaultAspireResource> { } }";
 		var descriptor = await GetTypeDescriptorAsync(source, "HostKit");
-		var expectedBase = new Models.TypeValueObject("ResourceKitBase", "Testing");
+		var expectedBase = new TypeValueObject("ResourceKitBase", "Testing");
 
 		// Act
 		var result = TypeHelpers.IsDerivedFromExpectedBase(descriptor, expectedBase);
@@ -464,5 +462,43 @@ public class TypeHelpersTests
 		var innerSymbol = symbol.GetTypeMembers("Inner").First();
 
 		await Assert.That(TypeHelpers.IsAccessibleAsPublicOrInternal(innerSymbol)).IsFalse();
+	}
+
+	[Test]
+	public async Task Property_GivenPropertyName_ReturnsRenderedTypeWithProperty()
+	{
+		// Arrange
+		var typeObject = (TypeValueObject)KnownLangTypes.Get(SpecialType.System_String);
+
+		// Act
+		var result = typeObject.Property("Empty");
+
+		// Assert
+		await Assert.That(result).IsEqualTo("string.Empty");
+	}
+
+	[Test]
+	[Arguments(null)]
+	[Arguments("")]
+	[Arguments("   ")]
+	[Arguments("\t")]
+	[Arguments("\n")]
+	[Arguments("\r")]
+	[Arguments("\r\n")]
+	[Arguments("\t\n\r")]
+	[Arguments(" \t\n\r ")]
+	[Arguments("   \t      \n    \r    ")]
+	public async Task Property_GivenPropertyNameIsNullEmptyOrWhitespace_ThrowsArgumentException(
+		string? propertyName
+	)
+	{
+		// Arrange
+		var typeObject = (TypeValueObject)KnownLangTypes.Get(SpecialType.System_String);
+
+		// Act
+		string Act() => typeObject.Property(propertyName!);
+
+		// Assert
+		await Assert.That(Act).Throws<ArgumentException>().WithParameterName(nameof(propertyName));
 	}
 }

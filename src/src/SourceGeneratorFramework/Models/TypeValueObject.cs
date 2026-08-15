@@ -346,6 +346,39 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 	}
 
 	/// <summary>
+	/// Returns a string representing a static property combined with this type, suitable for use in generated code.
+	/// </summary>
+	/// <param name="propertyName">The name of the property.</param>
+	/// <returns>A string representing the fully qualified property name.</returns>
+	/// <example>
+	/// <para>
+	/// For example, if the <see cref="TypeValueObject"/> represents <c>System.String</c> and the property name is <c>Empty</c>, this method will return <c>string.Empty</c>.
+	/// </para>
+	/// <para>
+	/// Called as:
+	/// <list type="bullet">
+	/// <item><c>KnownLangTypes.Get(SpecialType.System_String).ValueObject.Property("Empty")</c></item>
+	/// <item><c>new TypeValueObject(SpecialType.System_String).Property("Empty")</c></item>
+	/// <item><c>new TypeValueObject(typeof(string)).Property("Empty")</c></item>
+	/// <item><c>TypeValueObject.Create&lt;string&gt;().Property("Empty")</c></item>
+	/// </list>
+	/// </para>
+	/// </example>
+	public string Property(string propertyName)
+	{
+		if (string.IsNullOrWhiteSpace(propertyName))
+		{
+			throw new ArgumentException(
+				"Property name cannot be null, empty, or whitespace.",
+				nameof(propertyName)
+			);
+		}
+
+		// Property name is valid...
+		return $"{RenderFullName}.{propertyName}";
+	}
+
+	/// <summary>
 	/// Creates a constructed generic type using the specified type arguments.
 	/// </summary>
 	public TypeValueObject MakeGeneric(params TypeValueObject[] typeArguments)
