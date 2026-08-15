@@ -478,6 +478,19 @@ public class TypeHelpersTests
 	}
 
 	[Test]
+	public async Task Property_GivenPropertyNameAndAdditionOperator_ReturnsRenderedTypeWithProperty()
+	{
+		// Arrange
+		var typeObject = (TypeValueObject)KnownLangTypes.Get(SpecialType.System_String);
+
+		// Act
+		var result = typeObject + "Empty";
+
+		// Assert
+		await Assert.That(result).IsEqualTo("string.Empty");
+	}
+
+	[Test]
 	[Arguments(null)]
 	[Arguments("")]
 	[Arguments("   ")]

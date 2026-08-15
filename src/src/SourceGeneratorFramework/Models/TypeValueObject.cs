@@ -332,6 +332,21 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 		typeValueObject.RenderFullName;
 
 	/// <summary>
+	/// Returns a string representing a static property combined with this type, suitable for use in generated code.
+	/// </summary>
+	/// <param name="typeValueObject">The type value object.</param>
+	/// <param name="propertyName">The name of the property.</param>
+	/// <returns>A string representing the fully qualified property name.</returns>
+	public static string operator +(TypeValueObject typeValueObject, string propertyName) =>
+		typeValueObject.Property(propertyName);
+
+	/// <summary>
+	/// Returns a string representing the nullable form of this type, suitable for use in generated code.
+	/// </summary>
+	/// <returns>A string representing the nullable form of this type.</returns>
+	public string Nullable() => RenderFullName + "?";
+
+	/// <summary>
 	/// Creates a generic variant of this type using the standard angle-bracket syntax.
 	/// </summary>
 	public TypeValueObject MakeGeneric(params string[] typeArguments)

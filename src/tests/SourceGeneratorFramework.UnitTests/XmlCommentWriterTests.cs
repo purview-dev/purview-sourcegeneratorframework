@@ -22,9 +22,9 @@ public class XmlCommentWriterTests
 
 		writer.Xml("remarks", "content");
 
-		await Assert.That(writer.ToString()).IsEqualTo(
-			"/// <remarks>\n/// content\n/// </remarks>\n"
-		);
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("/// <remarks>\n/// content\n/// </remarks>\n");
 	}
 
 	[Test]
@@ -34,9 +34,9 @@ public class XmlCommentWriterTests
 
 		writer.Xml("remarks", "first", "second");
 
-		await Assert.That(writer.ToString()).IsEqualTo(
-			"/// <remarks>\n/// first\n/// second\n/// </remarks>\n"
-		);
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("/// <remarks>\n/// first\n/// second\n/// </remarks>\n");
 	}
 
 	[Test]
@@ -57,9 +57,9 @@ public class XmlCommentWriterTests
 
 		writer.XmlSummary("first", "second");
 
-		await Assert.That(writer.ToString()).IsEqualTo(
-			"/// <summary>\n/// first\n/// second\n/// </summary>\n"
-		);
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("/// <summary>\n/// first\n/// second\n/// </summary>\n");
 	}
 
 	[Test]
@@ -69,7 +69,9 @@ public class XmlCommentWriterTests
 
 		writer.XmlReturn("value");
 
-		await Assert.That(writer.ToString()).IsEqualTo("/// <returns>\n/// value\n/// </returns>\n");
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("/// <returns>\n/// value\n/// </returns>\n");
 	}
 
 	[Test]
@@ -79,9 +81,9 @@ public class XmlCommentWriterTests
 
 		writer.XmlCref("MyType", "type description");
 
-		await Assert.That(writer.ToString()).IsEqualTo(
-			"/// <cref cref=\"MyType\">\n/// type description\n/// </cref>\n"
-		);
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("/// <cref cref=\"MyType\">\n/// type description\n/// </cref>\n");
 	}
 
 	[Test]
@@ -91,9 +93,9 @@ public class XmlCommentWriterTests
 
 		writer.XmlCref(new TypeValueObject(typeof(string)), "first", "second");
 
-		await Assert.That(writer.ToString()).IsEqualTo(
-			"/// <cref cref=\"string\">\n/// first\n/// second\n/// </cref>\n"
-		);
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("/// <cref cref=\"string\">\n/// first\n/// second\n/// </cref>\n");
 	}
 
 	[Test]
@@ -114,9 +116,11 @@ public class XmlCommentWriterTests
 
 		writer.XmlException("InvalidOperationException", "reason");
 
-		await Assert.That(writer.ToString()).IsEqualTo(
-			"/// <exception cref=\"InvalidOperationException\">\n/// reason\n/// </exception>\n"
-		);
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"/// <exception cref=\"InvalidOperationException\">\n/// reason\n/// </exception>\n"
+			);
 	}
 
 	[Test]
@@ -126,9 +130,11 @@ public class XmlCommentWriterTests
 
 		writer.XmlException(new TypeValueObject(typeof(ArgumentException)), "reason");
 
-		await Assert.That(writer.ToString()).IsEqualTo(
-			"/// <exception cref=\"global::System.ArgumentException\">\n/// reason\n/// </exception>\n"
-		);
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"/// <exception cref=\"global::System.ArgumentException\">\n/// reason\n/// </exception>\n"
+			);
 	}
 
 	[Test]
@@ -139,7 +145,8 @@ public class XmlCommentWriterTests
 	{
 		var writer = CodeWriterFactory.ForTests();
 
-		await Assert.That(() => writer.XmlException(exceptionType!, "content"))
+		await Assert
+			.That(() => writer.XmlException(exceptionType!, "content"))
 			.Throws<ArgumentException>();
 	}
 
@@ -147,10 +154,7 @@ public class XmlCommentWriterTests
 	[Arguments("c", "/// <c>\n/// code\n/// </c>\n")]
 	[Arguments("example", "/// <example>\n/// sample\n/// </example>\n")]
 	[Arguments("para", "/// <para>\n/// paragraph\n/// </para>\n")]
-	public async Task SimpleXmlHelpers_WriteExpectedTag(
-		string tag,
-		string expected
-	)
+	public async Task SimpleXmlHelpers_WriteExpectedTag(string tag, string expected)
 	{
 		var writer = CodeWriterFactory.ForTests();
 
@@ -177,9 +181,9 @@ public class XmlCommentWriterTests
 
 		writer.XmlParam("value", "description");
 
-		await Assert.That(writer.ToString()).IsEqualTo(
-			"/// <param name=\"value\">\n/// description\n/// </param>\n"
-		);
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("/// <param name=\"value\">\n/// description\n/// </param>\n");
 	}
 
 	[Test]
@@ -190,7 +194,8 @@ public class XmlCommentWriterTests
 	{
 		var writer = CodeWriterFactory.ForTests();
 
-		await Assert.That(() => writer.XmlParam(parameterName!, "content"))
+		await Assert
+			.That(() => writer.XmlParam(parameterName!, "content"))
 			.Throws<ArgumentException>();
 	}
 
@@ -201,12 +206,14 @@ public class XmlCommentWriterTests
 
 		writer.XmlList(["first", "second"]);
 
-		await Assert.That(writer.ToString()).IsEqualTo(
-			"/// <list type=\"bullet\">\n"
-			+ "/// <item>first</item>\n"
-			+ "/// <item>second</item>\n"
-			+ "/// </list>\n"
-		);
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"/// <list type=\"bullet\">\n"
+					+ "/// <item>first</item>\n"
+					+ "/// <item>second</item>\n"
+					+ "/// </list>\n"
+			);
 	}
 
 	[Test]
@@ -216,14 +223,16 @@ public class XmlCommentWriterTests
 
 		writer.XmlList("bullet", "A description", "item");
 
-		await Assert.That(writer.ToString()).IsEqualTo(
-			"/// <list type=\"bullet\">\n"
-			+ "/// <description>\n"
-			+ "/// A description\n"
-			+ "/// </description>\n"
-			+ "/// <item>item</item>\n"
-			+ "/// </list>\n"
-		);
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"/// <list type=\"bullet\">\n"
+					+ "/// <description>\n"
+					+ "/// A description\n"
+					+ "/// </description>\n"
+					+ "/// <item>item</item>\n"
+					+ "/// </list>\n"
+			);
 	}
 
 	[Test]
@@ -233,9 +242,9 @@ public class XmlCommentWriterTests
 
 		writer.XmlList("number", null, "item");
 
-		await Assert.That(writer.ToString()).IsEqualTo(
-			"/// <list type=\"number\">\n/// <item>item</item>\n/// </list>\n"
-		);
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("/// <list type=\"number\">\n/// <item>item</item>\n/// </list>\n");
 	}
 
 	[Test]
@@ -246,7 +255,8 @@ public class XmlCommentWriterTests
 	{
 		var writer = CodeWriterFactory.ForTests();
 
-		await Assert.That(() => writer.XmlList(listType!, null, "item"))
+		await Assert
+			.That(() => writer.XmlList(listType!, null, "item"))
 			.Throws<ArgumentException>();
 	}
 
