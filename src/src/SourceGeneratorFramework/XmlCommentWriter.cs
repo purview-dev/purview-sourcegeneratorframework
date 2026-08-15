@@ -239,9 +239,13 @@ public static class XmlCommentWriter
 
 			endTag ??= startTag;
 
-			var isMultiLine = content.Length > 1;
+			var isMultiLine = startTag is not null;
 			if (startTag is not null)
-				writer.Write($"/// <{startTag}>");
+				writer.Write(
+					startTag.StartsWith("<", StringComparison.Ordinal)
+						? $"/// {startTag}"
+						: $"/// <{startTag}>"
+				);
 			if (isMultiLine)
 				writer.NewLine();
 
