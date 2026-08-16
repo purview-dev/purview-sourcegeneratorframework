@@ -22,9 +22,7 @@ public class XmlCommentWriterTests
 
 		writer.Xml("remarks", "content");
 
-		await Assert
-			.That(writer.ToString())
-			.IsEqualTo("/// <remarks>\n/// content\n/// </remarks>\n");
+		await Assert.That(writer.ToString()).IsEqualTo("/// <remarks>content</remarks>\n");
 	}
 
 	[Test]
@@ -34,9 +32,7 @@ public class XmlCommentWriterTests
 
 		writer.Xml("remarks", "first", "second");
 
-		await Assert
-			.That(writer.ToString())
-			.IsEqualTo("/// <remarks>\n/// first\n/// second\n/// </remarks>\n");
+		await Assert.That(writer.ToString()).IsEqualTo("/// <remarks>\n/// first\n/// second\n/// </remarks>\n");
 	}
 
 	[Test]
@@ -57,9 +53,7 @@ public class XmlCommentWriterTests
 
 		writer.XmlSummary("first", "second");
 
-		await Assert
-			.That(writer.ToString())
-			.IsEqualTo("/// <summary>\n/// first\n/// second\n/// </summary>\n");
+		await Assert.That(writer.ToString()).IsEqualTo("/// <summary>\n/// first\n/// second\n/// </summary>\n");
 	}
 
 	[Test]
@@ -69,9 +63,7 @@ public class XmlCommentWriterTests
 
 		writer.XmlReturn("value");
 
-		await Assert
-			.That(writer.ToString())
-			.IsEqualTo("/// <returns>\n/// value\n/// </returns>\n");
+		await Assert.That(writer.ToString()).IsEqualTo("/// <returns>value</returns>\n");
 	}
 
 	[Test]
@@ -81,9 +73,7 @@ public class XmlCommentWriterTests
 
 		writer.XmlCref("MyType", "type description");
 
-		await Assert
-			.That(writer.ToString())
-			.IsEqualTo("/// <cref cref=\"MyType\">\n/// type description\n/// </cref>\n");
+		await Assert.That(writer.ToString()).IsEqualTo("/// <cref cref=\"MyType\">type description</cref>\n");
 	}
 
 	[Test]
@@ -118,9 +108,7 @@ public class XmlCommentWriterTests
 
 		await Assert
 			.That(writer.ToString())
-			.IsEqualTo(
-				"/// <exception cref=\"InvalidOperationException\">\n/// reason\n/// </exception>\n"
-			);
+			.IsEqualTo("/// <exception cref=\"InvalidOperationException\">reason</exception>\n");
 	}
 
 	[Test]
@@ -132,9 +120,7 @@ public class XmlCommentWriterTests
 
 		await Assert
 			.That(writer.ToString())
-			.IsEqualTo(
-				"/// <exception cref=\"global::System.ArgumentException\">\n/// reason\n/// </exception>\n"
-			);
+			.IsEqualTo("/// <exception cref=\"global::System.ArgumentException\">reason</exception>\n");
 	}
 
 	[Test]
@@ -145,15 +131,13 @@ public class XmlCommentWriterTests
 	{
 		var writer = CodeWriterFactory.ForTests();
 
-		await Assert
-			.That(() => writer.XmlException(exceptionType!, "content"))
-			.Throws<ArgumentException>();
+		await Assert.That(() => writer.XmlException(exceptionType!, "content")).Throws<ArgumentException>();
 	}
 
 	[Test]
-	[Arguments("c", "/// <c>\n/// code\n/// </c>\n")]
-	[Arguments("example", "/// <example>\n/// sample\n/// </example>\n")]
-	[Arguments("para", "/// <para>\n/// paragraph\n/// </para>\n")]
+	[Arguments("c", "/// <c>code</c>\n")]
+	[Arguments("example", "/// <example>sample</example>\n")]
+	[Arguments("para", "/// <para>paragraph</para>\n")]
 	public async Task SimpleXmlHelpers_WriteExpectedTag(string tag, string expected)
 	{
 		var writer = CodeWriterFactory.ForTests();
@@ -181,9 +165,40 @@ public class XmlCommentWriterTests
 
 		writer.XmlParam("value", "description");
 
+		await Assert.That(writer.ToString()).IsEqualTo("/// <param name=\"value\">description</param>\n");
+	}
+
+	[Test]
+	public async Task XmlParam_MultipleLines_WritesExpandedElement()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.XmlParam("world", "this is a multi line", "description");
+
 		await Assert
 			.That(writer.ToString())
-			.IsEqualTo("/// <param name=\"value\">\n/// description\n/// </param>\n");
+			.IsEqualTo(
+				"/// <param name=\"world\">\n" + "/// this is a multi line\n" + "/// description\n" + "/// </param>\n"
+			);
+	}
+
+	[Test]
+	public async Task XmlTypeParam_UsesCompactAndExpandedForms()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.XmlTypeParam("T", "the item type");
+		writer.XmlTypeParam("TResult", "the first line", "the second line");
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"/// <typeparam name=\"T\">the item type</typeparam>\n"
+					+ "/// <typeparam name=\"TResult\">\n"
+					+ "/// the first line\n"
+					+ "/// the second line\n"
+					+ "/// </typeparam>\n"
+			);
 	}
 
 	[Test]
@@ -194,9 +209,7 @@ public class XmlCommentWriterTests
 	{
 		var writer = CodeWriterFactory.ForTests();
 
-		await Assert
-			.That(() => writer.XmlParam(parameterName!, "content"))
-			.Throws<ArgumentException>();
+		await Assert.That(() => writer.XmlParam(parameterName!, "content")).Throws<ArgumentException>();
 	}
 
 	[Test]
@@ -227,9 +240,7 @@ public class XmlCommentWriterTests
 			.That(writer.ToString())
 			.IsEqualTo(
 				"/// <list type=\"bullet\">\n"
-					+ "/// <description>\n"
-					+ "/// A description\n"
-					+ "/// </description>\n"
+					+ "/// <description>A description</description>\n"
 					+ "/// <item>item</item>\n"
 					+ "/// </list>\n"
 			);
@@ -255,9 +266,7 @@ public class XmlCommentWriterTests
 	{
 		var writer = CodeWriterFactory.ForTests();
 
-		await Assert
-			.That(() => writer.XmlList(listType!, null, "item"))
-			.Throws<ArgumentException>();
+		await Assert.That(() => writer.XmlList(listType!, null, "item")).Throws<ArgumentException>();
 	}
 
 	[Test]
@@ -266,7 +275,7 @@ public class XmlCommentWriterTests
 		var writer = CodeWriterFactory.ForTests();
 
 		writer.XmlSummary([]);
-		writer.XmlCode([]);
+		writer.XmlCodeBlock([]);
 		writer.XmlList([]);
 
 		await Assert.That(writer.ToString()).IsEmpty();
@@ -281,14 +290,85 @@ public class XmlCommentWriterTests
 	[Test]
 	public async Task BuildXmlTag_WithAttributes_WritesValuesAndLowercaseBooleans()
 	{
-		var result = XmlCommentWriter.BuildXmlTag(
-			"list",
-			("type", "bullet"),
-			("enabled", true),
-			("count", 2)
-		);
+		var result = XmlCommentWriter.BuildXmlTag("list", ("type", "bullet"), ("enabled", true), ("count", 2));
 
 		await Assert.That(result).IsEqualTo("<list type=\"bullet\" enabled=\"true\" count=\"2\">");
+	}
+
+	[Test]
+	public async Task InlineHelpers_ComposeInsideSummaryAndExample()
+	{
+		var writer = CodeWriterFactory.ForTests();
+		var parameter = XmlCommentWriter.XmlParamRef("value");
+		var typeParameter = XmlCommentWriter.XmlTypeParamRef("T");
+		var code = XmlCommentWriter.XmlInlineCode("default(T)");
+		var see = XmlCommentWriter.XmlSee("MyType");
+
+		writer.XmlSummary($"Pass {parameter} as {typeParameter}; use {code} or {see}.");
+		writer.XmlExample(XmlCommentWriter.XmlInlineElement("para", "An inline paragraph."));
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"/// <summary>Pass <paramref name=\"value\" /> as <typeparamref name=\"T\" />; use <c>default(T)</c> or <see cref=\"MyType\" />.</summary>\n"
+					+ "/// <example><para>An inline paragraph.</para></example>\n"
+			);
+	}
+
+	[Test]
+	public async Task XmlList_AcceptsComposableTermAndDescriptionItems()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.XmlList([
+			XmlCommentWriter.XmlListItem("first"),
+			XmlCommentWriter.XmlListItem("second", "its description"),
+		]);
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"/// <list type=\"bullet\">\n"
+					+ "/// <item>first</item>\n"
+					+ "/// <item><term>second</term><description>its description</description></item>\n"
+					+ "/// </list>\n"
+			);
+	}
+
+	[Test]
+	public async Task AdditionalBlockHelpers_WriteStandardDocumentationElements()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.XmlRemarks("More information.");
+		writer.XmlValue("The current value.");
+		writer.XmlCodeBlock("var value = 1;", "return value;");
+		writer.XmlPermission("System.Security.PermissionSet", "Required permission.");
+		writer.XmlSeeAlso("OtherType");
+		writer.XmlInheritDoc("BaseType.Member");
+		writer.XmlInclude("docs.xml", "/doc/member[@name='M:Example']/*");
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"/// <remarks>More information.</remarks>\n"
+					+ "/// <value>The current value.</value>\n"
+					+ "/// <code>\n/// var value = 1;\n/// return value;\n/// </code>\n"
+					+ "/// <permission cref=\"System.Security.PermissionSet\">Required permission.</permission>\n"
+					+ "/// <seealso cref=\"OtherType\" />\n"
+					+ "/// <inheritdoc cref=\"BaseType.Member\" />\n"
+					+ "/// <include file=\"docs.xml\" path=\"/doc/member[@name=&apos;M:Example&apos;]/*\" />\n"
+			);
+	}
+
+	[Test]
+	public async Task XmlTextAndAttributes_EscapeXmlSpecialCharacters()
+	{
+		var text = XmlCommentWriter.XmlText("one & two < three > zero ' \"");
+		var tag = XmlCommentWriter.BuildSelfClosingXmlTag("see", ("cref", "Dictionary<string, \"value\">"));
+
+		await Assert.That(text).IsEqualTo("one &amp; two &lt; three &gt; zero &apos; &quot;");
+		await Assert.That(tag).IsEqualTo("<see cref=\"Dictionary&lt;string, &quot;value&quot;&gt;\" />");
 	}
 
 	[Test]

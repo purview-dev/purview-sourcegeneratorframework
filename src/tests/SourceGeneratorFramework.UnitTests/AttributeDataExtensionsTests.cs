@@ -9,11 +9,7 @@ namespace Purview.SourceGeneratorFramework;
 
 public class AttributeDataExtensionsTests
 {
-	[SuppressMessage(
-		"Design",
-		"CA1506:Avoid excessive class coupling",
-		Justification = "Test helper"
-	)]
+	[SuppressMessage("Design", "CA1506:Avoid excessive class coupling", Justification = "Test helper")]
 	static async Task<AttributeData> GetAttributeAsync(
 		string source,
 		string typeName,
@@ -39,10 +35,7 @@ public class AttributeDataExtensionsTests
 		var typeDeclaration = root.DescendantNodes()
 			.OfType<TypeDeclarationSyntax>()
 			.First(t => t.Identifier.ValueText == typeName);
-		var symbol = model.GetDeclaredSymbol(
-			typeDeclaration,
-			cancellationToken: cancellationToken
-		)!;
+		var symbol = model.GetDeclaredSymbol(typeDeclaration, cancellationToken: cancellationToken)!;
 
 		return symbol.GetAttributes().First(a => a.AttributeClass?.Name == attributeTypeName);
 	}
@@ -62,12 +55,7 @@ public class AttributeDataExtensionsTests
 			[Test(Name = "Hello")]
 			public class MyClass { }
 			""";
-		var attribute = await GetAttributeAsync(
-			source,
-			"MyClass",
-			"TestAttribute",
-			cancellationToken
-		);
+		var attribute = await GetAttributeAsync(source, "MyClass", "TestAttribute", cancellationToken);
 
 		var value = attribute.GetNamedArgument<string>("Name");
 
@@ -86,12 +74,7 @@ public class AttributeDataExtensionsTests
 			[Test]
 			public class MyClass { }
 			""";
-		var attribute = await GetAttributeAsync(
-			source,
-			"MyClass",
-			"TestAttribute",
-			cancellationToken
-		);
+		var attribute = await GetAttributeAsync(source, "MyClass", "TestAttribute", cancellationToken);
 
 		var value = attribute.GetNamedArgument("Missing", "default");
 
@@ -113,12 +96,7 @@ public class AttributeDataExtensionsTests
 			[Test(Count = 42)]
 			public class MyClass { }
 			""";
-		var attribute = await GetAttributeAsync(
-			source,
-			"MyClass",
-			"TestAttribute",
-			cancellationToken
-		);
+		var attribute = await GetAttributeAsync(source, "MyClass", "TestAttribute", cancellationToken);
 
 		var found = attribute.TryGetNamedArgument<int>("Count", out var value);
 
@@ -127,9 +105,7 @@ public class AttributeDataExtensionsTests
 	}
 
 	[Test]
-	public async Task GetConstructorArgument_PositionalValue_ReturnsValue(
-		CancellationToken cancellationToken
-	)
+	public async Task GetConstructorArgument_PositionalValue_ReturnsValue(CancellationToken cancellationToken)
 	{
 		var source = """
 			using System;
@@ -143,12 +119,7 @@ public class AttributeDataExtensionsTests
 			[Test("Hello")]
 			public class MyClass { }
 			""";
-		var attribute = await GetAttributeAsync(
-			source,
-			"MyClass",
-			"TestAttribute",
-			cancellationToken
-		);
+		var attribute = await GetAttributeAsync(source, "MyClass", "TestAttribute", cancellationToken);
 
 		var value = attribute.GetConstructorArgument<string>(0);
 
@@ -156,9 +127,7 @@ public class AttributeDataExtensionsTests
 	}
 
 	[Test]
-	public async Task GetConstructorArgument_ParameterName_ReturnsValue(
-		CancellationToken cancellationToken
-	)
+	public async Task GetConstructorArgument_ParameterName_ReturnsValue(CancellationToken cancellationToken)
 	{
 		var source = """
 			using System;
@@ -172,12 +141,7 @@ public class AttributeDataExtensionsTests
 			[Test("Hello")]
 			public class MyClass { }
 			""";
-		var attribute = await GetAttributeAsync(
-			source,
-			"MyClass",
-			"TestAttribute",
-			cancellationToken
-		);
+		var attribute = await GetAttributeAsync(source, "MyClass", "TestAttribute", cancellationToken);
 
 		var value = attribute.GetConstructorArgument<string>("name");
 
@@ -202,12 +166,7 @@ public class AttributeDataExtensionsTests
 			[Test]
 			public class MyClass { }
 			""";
-		var attribute = await GetAttributeAsync(
-			source,
-			"MyClass",
-			"TestAttribute",
-			cancellationToken
-		);
+		var attribute = await GetAttributeAsync(source, "MyClass", "TestAttribute", cancellationToken);
 
 		var value = attribute.GetConstructorArgument(parameterName, "default-value");
 
@@ -236,12 +195,7 @@ public class AttributeDataExtensionsTests
 			[Test]
 			public class MyClass { }
 			""";
-		var attribute = await GetAttributeAsync(
-			source,
-			"MyClass",
-			"TestAttribute",
-			cancellationToken
-		);
+		var attribute = await GetAttributeAsync(source, "MyClass", "TestAttribute", cancellationToken);
 
 		var value = attribute.GetConstructorArgument(index, "default");
 
@@ -263,12 +217,7 @@ public class AttributeDataExtensionsTests
 			[Test(AttributeTargets.Class | AttributeTargets.Struct)]
 			public class MyClass { }
 			""";
-		var attribute = await GetAttributeAsync(
-			source,
-			"MyClass",
-			"TestAttribute",
-			cancellationToken
-		);
+		var attribute = await GetAttributeAsync(source, "MyClass", "TestAttribute", cancellationToken);
 
 		var value = attribute.ConstructorArguments[0].As<AttributeTargets>();
 
@@ -276,9 +225,7 @@ public class AttributeDataExtensionsTests
 	}
 
 	[Test]
-	public async Task As_ImmutableArrayTypedConstant_ReturnsValues(
-		CancellationToken cancellationToken
-	)
+	public async Task As_ImmutableArrayTypedConstant_ReturnsValues(CancellationToken cancellationToken)
 	{
 		var source = """
 			using System;
@@ -294,12 +241,7 @@ public class AttributeDataExtensionsTests
 			[Test("one", 2, true)]
 			public class MyClass { }
 			""";
-		var attribute = await GetAttributeAsync(
-			source,
-			"MyClass",
-			"TestAttribute",
-			cancellationToken
-		);
+		var attribute = await GetAttributeAsync(source, "MyClass", "TestAttribute", cancellationToken);
 
 		var value = attribute.ConstructorArguments[0].As<ImmutableArray<TypedConstant>>();
 
@@ -310,9 +252,7 @@ public class AttributeDataExtensionsTests
 	}
 
 	[Test]
-	public async Task TryGetGenericTypeArgument_ByIndex_ReturnsType(
-		CancellationToken cancellationToken
-	)
+	public async Task TryGetGenericTypeArgument_ByIndex_ReturnsType(CancellationToken cancellationToken)
 	{
 		var source = """
 			using System;
@@ -323,12 +263,7 @@ public class AttributeDataExtensionsTests
 			[Test<string>]
 			public class MyClass { }
 			""";
-		var attribute = await GetAttributeAsync(
-			source,
-			"MyClass",
-			"TestAttribute",
-			cancellationToken
-		);
+		var attribute = await GetAttributeAsync(source, "MyClass", "TestAttribute", cancellationToken);
 
 		var found = attribute.TryGetGenericTypeArgument<INamedTypeSymbol>(0, out var value);
 
@@ -337,9 +272,7 @@ public class AttributeDataExtensionsTests
 	}
 
 	[Test]
-	public async Task TryGetGenericTypeArgument_ByName_ReturnsType(
-		CancellationToken cancellationToken
-	)
+	public async Task TryGetGenericTypeArgument_ByName_ReturnsType(CancellationToken cancellationToken)
 	{
 		var source = """
 			using System;
@@ -350,12 +283,7 @@ public class AttributeDataExtensionsTests
 			[Test<int>]
 			public class MyClass { }
 			""";
-		var attribute = await GetAttributeAsync(
-			source,
-			"MyClass",
-			"TestAttribute",
-			cancellationToken
-		);
+		var attribute = await GetAttributeAsync(source, "MyClass", "TestAttribute", cancellationToken);
 
 		var found = attribute.TryGetGenericTypeArgument<INamedTypeSymbol>("TValue", out var value);
 
@@ -364,9 +292,7 @@ public class AttributeDataExtensionsTests
 	}
 
 	[Test]
-	public async Task TryGetGenericTypeArgument_NonGeneric_ReturnsNull(
-		CancellationToken cancellationToken
-	)
+	public async Task TryGetGenericTypeArgument_NonGeneric_ReturnsNull(CancellationToken cancellationToken)
 	{
 		var source = """
 			using System;
@@ -377,12 +303,7 @@ public class AttributeDataExtensionsTests
 			[Test]
 			public class MyClass { }
 			""";
-		var attribute = await GetAttributeAsync(
-			source,
-			"MyClass",
-			"TestAttribute",
-			cancellationToken
-		);
+		var attribute = await GetAttributeAsync(source, "MyClass", "TestAttribute", cancellationToken);
 
 		var found = attribute.TryGetGenericTypeArgument<INamedTypeSymbol>(0, out var value);
 
@@ -391,9 +312,7 @@ public class AttributeDataExtensionsTests
 	}
 
 	[Test]
-	public async Task GetConstructorArgument_SystemType_ReturnsINamedTypeSymbol(
-		CancellationToken cancellationToken
-	)
+	public async Task GetConstructorArgument_SystemType_ReturnsINamedTypeSymbol(CancellationToken cancellationToken)
 	{
 		var source = """
 			using System;
@@ -408,12 +327,7 @@ public class AttributeDataExtensionsTests
 			[Test(typeof(string))]
 			public class MyClass { }
 			""";
-		var attribute = await GetAttributeAsync(
-			source,
-			"MyClass",
-			"TestAttribute",
-			cancellationToken
-		);
+		var attribute = await GetAttributeAsync(source, "MyClass", "TestAttribute", cancellationToken);
 
 		var value = attribute.GetConstructorArgument<INamedTypeSymbol>(0);
 
@@ -422,9 +336,7 @@ public class AttributeDataExtensionsTests
 	}
 
 	[Test]
-	public async Task GetNamedArgument_SystemType_ReturnsINamedTypeSymbol(
-		CancellationToken cancellationToken
-	)
+	public async Task GetNamedArgument_SystemType_ReturnsINamedTypeSymbol(CancellationToken cancellationToken)
 	{
 		var source = """
 			using System;
@@ -439,12 +351,7 @@ public class AttributeDataExtensionsTests
 			[Test(TypeThing = typeof(string))]
 			public class MyClass { }
 			""";
-		var attribute = await GetAttributeAsync(
-			source,
-			"MyClass",
-			"TestAttribute",
-			cancellationToken
-		);
+		var attribute = await GetAttributeAsync(source, "MyClass", "TestAttribute", cancellationToken);
 
 		var value = attribute.GetNamedArgument<INamedTypeSymbol>("TypeThing");
 

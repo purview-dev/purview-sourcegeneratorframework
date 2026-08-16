@@ -48,9 +48,7 @@ public partial class TypeValueObjectTests
 
 		var generic = type.MakeGeneric("string", "int");
 
-		await Assert
-			.That(generic.RenderFullName)
-			.IsEqualTo("global::MyNamespace.MyType<string, int>");
+		await Assert.That(generic.RenderFullName).IsEqualTo("global::MyNamespace.MyType<string, int>");
 	}
 
 	[Test]
@@ -60,9 +58,7 @@ public partial class TypeValueObjectTests
 
 		var generic = type.MakeGenericXml("string", "int");
 
-		await Assert
-			.That(generic.RenderFullName)
-			.IsEqualTo("global::MyNamespace.MyType{string, int}");
+		await Assert.That(generic.RenderFullName).IsEqualTo("global::MyNamespace.MyType{string, int}");
 	}
 
 	[Test]
@@ -84,9 +80,7 @@ public partial class TypeValueObjectTests
 		await Assert.That(type.GenericArity).IsEqualTo(1);
 		await Assert.That(type.IsGenericTypeDefinition).IsTrue();
 		await Assert.That(type.MetadataFullName).IsEqualTo("System.Collections.Generic.List`1");
-		await Assert
-			.That(type.RenderFullName)
-			.IsEqualTo("global::System.Collections.Generic.List<>");
+		await Assert.That(type.RenderFullName).IsEqualTo("global::System.Collections.Generic.List<>");
 	}
 
 	[Test]
@@ -107,9 +101,7 @@ public partial class TypeValueObjectTests
 	}
 
 	[Test]
-	public async Task Constructor_GivenClosedGenericSymbol_PreservesArguments(
-		CancellationToken cancellationToken
-	)
+	public async Task Constructor_GivenClosedGenericSymbol_PreservesArguments(CancellationToken cancellationToken)
 	{
 		// Arrange
 		const string source = """

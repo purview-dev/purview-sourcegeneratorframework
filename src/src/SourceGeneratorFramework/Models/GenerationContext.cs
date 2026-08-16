@@ -100,11 +100,7 @@ public record class GenerationContext
 	/// </summary>
 	/// <returns>A new independently owned code writer, the same instance assigned to the <see cref="CodeWriter"/> property.</returns>
 	public CodeWriter CreateCodeWriter() =>
-		CodeWriter = new(
-			GeneratorName,
-			GeneratorVersion,
-			throwOnUnclosedScopes: ValidateCodeWriterScopes
-		);
+		CodeWriter = new(GeneratorName, GeneratorVersion, throwOnUnclosedScopes: ValidateCodeWriterScopes);
 
 	/// <summary>
 	/// Applies CodeWriter scope validation discovered by the incremental pipeline.

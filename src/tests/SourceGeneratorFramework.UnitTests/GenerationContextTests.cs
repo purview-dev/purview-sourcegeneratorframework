@@ -16,8 +16,7 @@ public class GenerationContextTests
 		);
 	}
 
-	sealed record TestContext(Compilation Compilation)
-		: GenerationContext(Compilation, "TestGenerator", "1.0.0");
+	sealed record TestContext(Compilation Compilation) : GenerationContext(Compilation, "TestGenerator", "1.0.0");
 
 	[Test]
 	public async Task GetTypeByMetadataName_KnownType_ReturnsSymbol()
@@ -60,12 +59,7 @@ public class GenerationContextTests
 	{
 		// Arrange
 		var compilation = CreateCompilation();
-		var context = new GenerationContext(
-			compilation,
-			"TestGenerator",
-			"1.0.0",
-			validateCodeWriterScopes: true
-		);
+		var context = new GenerationContext(compilation, "TestGenerator", "1.0.0", validateCodeWriterScopes: true);
 
 		// Act
 		var writer = context.CreateCodeWriter();
@@ -126,12 +120,7 @@ public class GenerationContextTests
 
 		var contextA = new GenerationContext(compilation, "A", "1.0.0");
 		var contextB = new GenerationContext(compilation, "B", "1.0.0");
-		var contextC = new GenerationContext(
-			compilation,
-			"A",
-			"1.0.0",
-			validateCodeWriterScopes: true
-		);
+		var contextC = new GenerationContext(compilation, "A", "1.0.0", validateCodeWriterScopes: true);
 
 		await Assert.That(contextA).IsNotEqualTo(contextB);
 		await Assert.That(contextA).IsNotEqualTo(contextC);

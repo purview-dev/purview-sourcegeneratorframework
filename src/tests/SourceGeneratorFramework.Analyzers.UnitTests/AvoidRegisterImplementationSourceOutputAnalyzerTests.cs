@@ -20,10 +20,9 @@ public class AvoidRegisterImplementationSourceOutputAnalyzerTests
 			}
 			""";
 
-		var diagnostics =
-			await new AvoidRegisterImplementationSourceOutputAnalyzer().GetAnalyzerDiagnosticsAsync(
-				source
-			);
+		var diagnostics = await new AvoidRegisterImplementationSourceOutputAnalyzer().GetAnalyzerDiagnosticsAsync(
+			source
+		);
 
 		await Assert.That(diagnostics).Count().IsEqualTo(1);
 		await Assert.That(diagnostics.First().Id).IsEqualTo("PSGFR14");
@@ -47,10 +46,9 @@ public class AvoidRegisterImplementationSourceOutputAnalyzerTests
 			}
 			""";
 
-		var diagnostics =
-			await new AvoidRegisterImplementationSourceOutputAnalyzer().GetAnalyzerDiagnosticsAsync(
-				source
-			);
+		var diagnostics = await new AvoidRegisterImplementationSourceOutputAnalyzer().GetAnalyzerDiagnosticsAsync(
+			source
+		);
 
 		await Assert.That(diagnostics).IsEmpty();
 	}

@@ -26,9 +26,7 @@ partial class AttributeDataExtensions
 				|| targetType == typeof(INamedTypeSymbol)
 			)
 			{
-				return constant.Kind == TypedConstantKind.Type && constant.Value is T typedValue
-					? typedValue
-					: default;
+				return constant.Kind == TypedConstantKind.Type && constant.Value is T typedValue ? typedValue : default;
 			}
 
 			if (constant.Kind == TypedConstantKind.Array)

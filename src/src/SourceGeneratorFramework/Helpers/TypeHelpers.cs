@@ -26,8 +26,7 @@ public static class TypeHelpers
 	/// <summary>
 	/// Determines whether the specified keyword is a recognized C# keyword type.
 	/// </summary>
-	public static bool IsKeywordType(string keyword) =>
-		KnownLangTypes.Get(keyword) != TypeMapping.Empty;
+	public static bool IsKeywordType(string keyword) => KnownLangTypes.Get(keyword) != TypeMapping.Empty;
 
 	/// <summary>
 	/// Determines whether the supplied type name ends with the 'Attribute' suffix.
@@ -41,8 +40,7 @@ public static class TypeHelpers
 		if (idx >= 0)
 			typeName = typeName.Substring(0, idx);
 
-		return typeName.Length > AttributeSuffix.Length
-			&& typeName.EndsWith(AttributeSuffix, StringComparison.Ordinal);
+		return typeName.Length > AttributeSuffix.Length && typeName.EndsWith(AttributeSuffix, StringComparison.Ordinal);
 	}
 
 	/// <summary>
@@ -80,10 +78,7 @@ public static class TypeHelpers
 	/// <summary>
 	/// Determines whether the target symbol is derived from the expected base type.
 	/// </summary>
-	public static bool IsDerivedFromExpectedBase(
-		TargetSymbolDescriptor descriptor,
-		TypeValueObject expectedBase
-	)
+	public static bool IsDerivedFromExpectedBase(TargetSymbolDescriptor descriptor, TypeValueObject expectedBase)
 	{
 		if (descriptor == null)
 			throw new ArgumentNullException(nameof(descriptor));
@@ -121,10 +116,7 @@ public static class TypeHelpers
 		var actualNamespace = actualDefinition.ContainingNamespace.IsGlobalNamespace
 			? null
 			: actualDefinition.ContainingNamespace.ToDisplayString();
-		if (
-			actualDefinition.Name != expectedBase.TypeName
-			|| actualNamespace != expectedBase.Namespace
-		)
+		if (actualDefinition.Name != expectedBase.TypeName || actualNamespace != expectedBase.Namespace)
 			return false;
 
 		// A name-only TypeValueObject has no generic shape information. Treat it as the generic
@@ -168,9 +160,7 @@ public static class TypeHelpers
 			IdentifierNameSyntax identifierName => identifierName.Identifier.ValueText,
 			GenericNameSyntax genericName => genericName.Identifier.ValueText,
 			QualifiedNameSyntax qualifiedName => GetUnqualifiedTypeName(qualifiedName.Right),
-			AliasQualifiedNameSyntax aliasQualifiedName => GetUnqualifiedTypeName(
-				aliasQualifiedName.Name
-			),
+			AliasQualifiedNameSyntax aliasQualifiedName => GetUnqualifiedTypeName(aliasQualifiedName.Name),
 			NullableTypeSyntax nullableType => GetUnqualifiedTypeName(nullableType.ElementType),
 			_ => typeSyntax.ToString(),
 		};
@@ -196,10 +186,7 @@ public static class TypeHelpers
 	/// <summary>
 	/// Creates a <see cref="TypeValueObject"/> for the embedded compiler attribute used by source generators.
 	/// </summary>
-	public static readonly TypeValueObject EmbeddedAttribute = new(
-		nameof(EmbeddedAttribute),
-		"Microsoft.CodeAnalysis"
-	);
+	public static readonly TypeValueObject EmbeddedAttribute = new(nameof(EmbeddedAttribute), "Microsoft.CodeAnalysis");
 
 	/// <summary>
 	/// Determines whether the type declaration is marked <see langword="partial"/>.
@@ -223,9 +210,7 @@ public static class TypeHelpers
 		foreach (
 			var constructor in declaration
 				.Members.OfType<ConstructorDeclarationSyntax>()
-				.Where(c =>
-					string.Equals(c.Identifier.ValueText, className, StringComparison.Ordinal)
-				)
+				.Where(c => string.Equals(c.Identifier.ValueText, className, StringComparison.Ordinal))
 		)
 		{
 			if (constructor.ParameterList.Parameters.Count > 0)
@@ -271,18 +256,13 @@ public static class TypeHelpers
 	/// <summary>
 	/// Determines whether the symbol has an attribute with the specified metadata name.
 	/// </summary>
-	public static ImmutableArray<AttributeData> GetAttributes(
-		ISymbol symbol,
-		TypeValueObject attributeType
-	) => GetAttributes(symbol, attributeType.MetadataFullName);
+	public static ImmutableArray<AttributeData> GetAttributes(ISymbol symbol, TypeValueObject attributeType) =>
+		GetAttributes(symbol, attributeType.MetadataFullName);
 
 	/// <summary>
 	/// Determines whether the symbol has an attribute with the specified metadata name.
 	/// </summary>
-	public static ImmutableArray<AttributeData> GetAttributes(
-		ISymbol symbol,
-		string fullyQualifiedName
-	)
+	public static ImmutableArray<AttributeData> GetAttributes(ISymbol symbol, string fullyQualifiedName)
 	{
 		if (symbol == null)
 			throw new ArgumentNullException(nameof(symbol));
@@ -331,8 +311,7 @@ public static class TypeHelpers
 		return symbol
 			.GetAttributes()
 			.FirstOrDefault(attr =>
-				attr.AttributeClass is not null
-				&& MatchesFullyQualifiedName(attr.AttributeClass, fullyQualifiedName)
+				attr.AttributeClass is not null && MatchesFullyQualifiedName(attr.AttributeClass, fullyQualifiedName)
 			);
 	}
 
@@ -361,8 +340,7 @@ public static class TypeHelpers
 		return symbol
 			.GetAttributes()
 			.Any(attr =>
-				attr.AttributeClass is not null
-				&& MatchesFullyQualifiedName(attr.AttributeClass, fullyQualifiedName)
+				attr.AttributeClass is not null && MatchesFullyQualifiedName(attr.AttributeClass, fullyQualifiedName)
 			);
 	}
 
@@ -409,10 +387,7 @@ public static class TypeHelpers
 	/// <summary>
 	/// Returns the fully qualified display string for a type symbol, optionally including nullable annotations.
 	/// </summary>
-	public static string ToFullyQualifiedDisplayString(
-		ITypeSymbol typeSymbol,
-		bool includeNullable = true
-	)
+	public static string ToFullyQualifiedDisplayString(ITypeSymbol typeSymbol, bool includeNullable = true)
 	{
 		if (typeSymbol == null)
 			throw new ArgumentNullException(nameof(typeSymbol));
@@ -535,9 +510,8 @@ public static class TypeHelpers
 	/// <exception cref="ArgumentException">
 	/// Thrown when the symbol is not a class, struct, record class, or record struct.
 	/// </exception>
-	public static TypeDeclarationOptions CreatePartialTypeDeclarationOptions(
-		INamedTypeSymbol containingType
-	) => CreatePartialTypeDeclarationOptions(containingType, includeOptionalParts: true);
+	public static TypeDeclarationOptions CreatePartialTypeDeclarationOptions(INamedTypeSymbol containingType) =>
+		CreatePartialTypeDeclarationOptions(containingType, includeOptionalParts: true);
 
 	/// <summary>
 	/// Creates the declaration options required to reopen a containing type as a partial type.
@@ -615,8 +589,7 @@ public static class TypeHelpers
 			constraints.Add("struct");
 		else if (typeParameter.HasReferenceTypeConstraint)
 			constraints.Add(
-				typeParameter.ReferenceTypeConstraintNullableAnnotation
-				== NullableAnnotation.Annotated
+				typeParameter.ReferenceTypeConstraintNullableAnnotation == NullableAnnotation.Annotated
 					? "class?"
 					: "class"
 			);

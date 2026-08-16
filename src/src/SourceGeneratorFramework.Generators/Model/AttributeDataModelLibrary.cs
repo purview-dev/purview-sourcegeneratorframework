@@ -212,15 +212,10 @@ static class AttributeDataModelLibrary
 			if (sources.IsEmpty)
 			{
 				sources = [new(AttributePropertySource.NamedArgument, propertyName, -1)];
-				logger?.Debug(
-					$"Parameter '{propertyName}' has no source attribute; defaulting to named argument."
-				);
+				logger?.Debug($"Parameter '{propertyName}' has no source attribute; defaulting to named argument.");
 			}
 
-			var (modelTypeName, isNonNullableReferenceType) = GetModelTypeInfo(
-				propertyType,
-				autoDiscover: false
-			);
+			var (modelTypeName, isNonNullableReferenceType) = GetModelTypeInfo(propertyType, autoDiscover: false);
 			var defaultValueExpression = GetDefaultValueExpression(
 				info.DefaultValue,
 				modelTypeName,
@@ -266,12 +261,7 @@ static class AttributeDataModelLibrary
 			logger?.Debug($"Parameter '{propertyName}' is excluded from the attribute model.");
 		}
 
-		var nestedModelInfo = ReadNestedModelAttributeInfo(
-			parameter,
-			propertyName,
-			isExcluded,
-			logger
-		);
+		var nestedModelInfo = ReadNestedModelAttributeInfo(parameter, propertyName, isExcluded, logger);
 		var isNestedModel = nestedModelInfo.IsNestedModel;
 		if (nestedModelInfo.IsNestedModel)
 		{
@@ -281,8 +271,12 @@ static class AttributeDataModelLibrary
 		}
 		else
 		{
-			var (IsTypeArgument, Sources, DefaultValue, HasDefaultValue) =
-				ReadTypeArgumentAttributeInfo(parameter, propertyName, isExcluded, logger);
+			var (IsTypeArgument, Sources, DefaultValue, HasDefaultValue) = ReadTypeArgumentAttributeInfo(
+				parameter,
+				propertyName,
+				isExcluded,
+				logger
+			);
 
 			isTypeArgument = IsTypeArgument;
 			defaultValue = DefaultValue;
@@ -303,21 +297,13 @@ static class AttributeDataModelLibrary
 
 			if (ctorName is not null)
 			{
-				sources.Add(
-					new PropertySource(AttributePropertySource.ConstructorName, ctorName, -1)
-				);
-				logger?.Debug(
-					$"Parameter '{propertyName}' maps to constructor parameter '{ctorName}'."
-				);
+				sources.Add(new PropertySource(AttributePropertySource.ConstructorName, ctorName, -1));
+				logger?.Debug($"Parameter '{propertyName}' maps to constructor parameter '{ctorName}'.");
 			}
 			else if (ctorIndex >= 0)
 			{
-				sources.Add(
-					new PropertySource(AttributePropertySource.ConstructorIndex, null, ctorIndex)
-				);
-				logger?.Debug(
-					$"Parameter '{propertyName}' maps to constructor argument index {ctorIndex}."
-				);
+				sources.Add(new PropertySource(AttributePropertySource.ConstructorIndex, null, ctorIndex));
+				logger?.Debug($"Parameter '{propertyName}' maps to constructor argument index {ctorIndex}.");
 			}
 
 			if (ctorDefaultValue is not null)
@@ -340,16 +326,8 @@ static class AttributeDataModelLibrary
 			var namedDefaultValue = GetNamedArgument(namedAttribute, "DefaultValue", (object?)null);
 			isEnum = isEnum || GetNamedArgument(namedAttribute, "IsEnum", false);
 
-			sources.Add(
-				new PropertySource(
-					AttributePropertySource.NamedArgument,
-					namedName ?? propertyName,
-					-1
-				)
-			);
-			logger?.Debug(
-				$"Parameter '{propertyName}' maps to named argument '{namedName ?? propertyName}'."
-			);
+			sources.Add(new PropertySource(AttributePropertySource.NamedArgument, namedName ?? propertyName, -1));
+			logger?.Debug($"Parameter '{propertyName}' maps to named argument '{namedName ?? propertyName}'.");
 
 			if (namedDefaultValue is not null)
 			{
@@ -397,10 +375,7 @@ static class AttributeDataModelLibrary
 		GenerationLogger? logger
 	)
 	{
-		var nestedModelAttribute = GetAttribute(
-			parameter,
-			GeneratorTypeLibrary.NestedModelAttribute
-		);
+		var nestedModelAttribute = GetAttribute(parameter, GeneratorTypeLibrary.NestedModelAttribute);
 		if (nestedModelAttribute is null)
 			return (false, [], null, false);
 
@@ -432,10 +407,7 @@ static class AttributeDataModelLibrary
 		GenerationLogger? logger
 	)
 	{
-		var typeArgumentAttribute = GetAttribute(
-			parameter,
-			GeneratorTypeLibrary.GenericTypeArgumentAttribute
-		);
+		var typeArgumentAttribute = GetAttribute(parameter, GeneratorTypeLibrary.GenericTypeArgumentAttribute);
 		if (typeArgumentAttribute is null)
 			return (false, [], null, false);
 
@@ -456,22 +428,14 @@ static class AttributeDataModelLibrary
 		if (typeArgName is not null)
 		{
 			sources.Add(new PropertySource(AttributePropertySource.TypeArgument, typeArgName, -1));
-			logger?.Debug(
-				$"Parameter '{propertyName}' maps to generic type argument '{typeArgName}'."
-			);
+			logger?.Debug($"Parameter '{propertyName}' maps to generic type argument '{typeArgName}'.");
 		}
 		else
 		{
 			sources.Add(
-				new PropertySource(
-					AttributePropertySource.TypeArgument,
-					null,
-					typeArgIndex >= 0 ? typeArgIndex : 0
-				)
+				new PropertySource(AttributePropertySource.TypeArgument, null, typeArgIndex >= 0 ? typeArgIndex : 0)
 			);
-			logger?.Debug(
-				$"Parameter '{propertyName}' maps to generic type argument index {typeArgIndex}."
-			);
+			logger?.Debug($"Parameter '{propertyName}' maps to generic type argument index {typeArgIndex}.");
 		}
 
 		return (true, sources.ToImmutable(), defaultValue, hasDefaultValue);
@@ -480,17 +444,14 @@ static class AttributeDataModelLibrary
 	static string? GetCtorPropertyName(AttributeData attributeData)
 	{
 		return
-			attributeData.ConstructorArguments.Length > 0
-			&& attributeData.ConstructorArguments[0].Value is string name
+			attributeData.ConstructorArguments.Length > 0 && attributeData.ConstructorArguments[0].Value is string name
 			? name
 			: GetNamedArgument(attributeData, "Name", (string?)null);
 	}
 
 	static int GetCtorPropertyIndex(AttributeData attributeData)
 	{
-		return
-			attributeData.ConstructorArguments.Length > 0
-			&& attributeData.ConstructorArguments[0].Value is int index
+		return attributeData.ConstructorArguments.Length > 0 && attributeData.ConstructorArguments[0].Value is int index
 			? index
 			: GetNamedArgument(attributeData, "Index", -1);
 	}
@@ -548,28 +509,14 @@ static class AttributeDataModelLibrary
 
 				discoveredNames.Add(propertyName);
 
-				var (modelTypeName, isNonNullableReferenceType) = GetModelTypeInfo(
-					parameter.Type,
-					autoDiscover: true
-				);
-				var defaultValueExpression = GetInferredDefaultExpression(
-					parameter,
-					modelTypeName,
-					diagnostics
-				);
+				var (modelTypeName, isNonNullableReferenceType) = GetModelTypeInfo(parameter.Type, autoDiscover: true);
+				var defaultValueExpression = GetInferredDefaultExpression(parameter, modelTypeName, diagnostics);
 
 				discovered.Add(
 					new AttributeDataModelProperty(
 						PropertyName: propertyName,
 						FullyQualifiedTypeName: modelTypeName,
-						Sources:
-						[
-							new PropertySource(
-								AttributePropertySource.ConstructorName,
-								parameter.Name,
-								i
-							),
-						],
+						Sources: [new PropertySource(AttributePropertySource.ConstructorName, parameter.Name, i)],
 						DefaultValueExpression: defaultValueExpression,
 						HasDefaultValue: parameter.HasExplicitDefaultValue,
 						IsExplicit: false,
@@ -619,29 +566,14 @@ static class AttributeDataModelLibrary
 
 			discoveredNames.Add(propertyName);
 
-			var (modelTypeName, isNonNullableReferenceType) = GetModelTypeInfo(
-				property.Type,
-				autoDiscover: true
-			);
-			var defaultValueExpression = GetDefaultValueExpression(
-				null,
-				modelTypeName,
-				property.Type,
-				diagnostics
-			);
+			var (modelTypeName, isNonNullableReferenceType) = GetModelTypeInfo(property.Type, autoDiscover: true);
+			var defaultValueExpression = GetDefaultValueExpression(null, modelTypeName, property.Type, diagnostics);
 
 			discovered.Add(
 				new AttributeDataModelProperty(
 					PropertyName: propertyName,
 					FullyQualifiedTypeName: modelTypeName,
-					Sources:
-					[
-						new PropertySource(
-							AttributePropertySource.NamedArgument,
-							property.Name,
-							-1
-						),
-					],
+					Sources: [new PropertySource(AttributePropertySource.NamedArgument, property.Name, -1)],
 					DefaultValueExpression: defaultValueExpression,
 					HasDefaultValue: false,
 					IsExplicit: false,
@@ -668,9 +600,7 @@ static class AttributeDataModelLibrary
 			return explicitProperties;
 
 		var merged = ImmutableArray.CreateBuilder<AttributeDataModelProperty>();
-		var explicitNames = new HashSet<string>(
-			explicitProperties.Select(static p => p.PropertyName)
-		);
+		var explicitNames = new HashSet<string>(explicitProperties.Select(static p => p.PropertyName));
 
 		merged.AddRange(explicitProperties);
 		foreach (var discovered in discoveredProperties)
@@ -714,12 +644,7 @@ static class AttributeDataModelLibrary
 	)
 	{
 		return parameter.HasExplicitDefaultValue
-			? GetDefaultValueExpression(
-				parameter.ExplicitDefaultValue,
-				modelTypeName,
-				parameter.Type,
-				diagnostics
-			)
+			? GetDefaultValueExpression(parameter.ExplicitDefaultValue, modelTypeName, parameter.Type, diagnostics)
 			: $"default({modelTypeName})";
 	}
 
@@ -754,8 +679,7 @@ static class AttributeDataModelLibrary
 		if (typeSymbol.TypeKind == TypeKind.Enum)
 		{
 			var enumTypeName = TypeHelpers.ToFullyQualifiedDisplayString(typeSymbol);
-			expression =
-				$"(global::{enumTypeName}){Convert.ToString(value, CultureInfo.InvariantCulture)}";
+			expression = $"(global::{enumTypeName}){Convert.ToString(value, CultureInfo.InvariantCulture)}";
 			return true;
 		}
 
@@ -797,9 +721,7 @@ static class AttributeDataModelLibrary
 			return ("global::Microsoft.CodeAnalysis.INamedTypeSymbol?", false);
 
 		var knownType = KnownLangTypes.Get(typeSymbol.SpecialType);
-		var typeName = knownType.IsEmpty
-			? TypeHelpers.ToFullyQualifiedDisplayString(typeSymbol)
-			: knownType.Keyword;
+		var typeName = knownType.IsEmpty ? TypeHelpers.ToFullyQualifiedDisplayString(typeSymbol) : knownType.Keyword;
 
 		var isNonNullableReferenceType = false;
 
@@ -811,18 +733,11 @@ static class AttributeDataModelLibrary
 		{
 			typeName += "?";
 		}
-		else if (
-			autoDiscover
-			&& typeSymbol.IsReferenceType
-			&& !typeName.EndsWith("?", StringComparison.Ordinal)
-		)
+		else if (autoDiscover && typeSymbol.IsReferenceType && !typeName.EndsWith("?", StringComparison.Ordinal))
 		{
 			typeName += "?";
 		}
-		else if (
-			typeSymbol.IsReferenceType
-			&& typeSymbol.NullableAnnotation != NullableAnnotation.Annotated
-		)
+		else if (typeSymbol.IsReferenceType && typeSymbol.NullableAnnotation != NullableAnnotation.Annotated)
 		{
 			isNonNullableReferenceType = true;
 		}
@@ -847,10 +762,7 @@ static class AttributeDataModelLibrary
 
 	static bool IsSupportedType(ITypeSymbol typeSymbol)
 	{
-		return typeSymbol.TypeKind
-			is not TypeKind.Array
-				and not TypeKind.Pointer
-				and not TypeKind.FunctionPointer;
+		return typeSymbol.TypeKind is not TypeKind.Array and not TypeKind.Pointer and not TypeKind.FunctionPointer;
 	}
 
 	static bool IsGeneratedAttributeModel(ITypeSymbol typeSymbol)
@@ -864,10 +776,7 @@ static class AttributeDataModelLibrary
 	{
 		foreach (var attribute in symbol.GetAttributes())
 		{
-			if (
-				attribute.AttributeClass is not null
-				&& attributeType.Equals(attribute.AttributeClass)
-			)
+			if (attribute.AttributeClass is not null && attributeType.Equals(attribute.AttributeClass))
 				return attribute;
 		}
 

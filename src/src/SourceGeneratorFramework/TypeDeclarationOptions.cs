@@ -73,9 +73,7 @@ public static class TypeDeclarationAccessibilityExtensions
 	/// </returns>
 	/// <remarks>This method never throws for an accessibility value.</remarks>
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0072:Add missing cases")]
-	public static TypeDeclarationAccessibility? ToTypeDeclarationAccessibility(
-		this Accessibility accessibility
-	) =>
+	public static TypeDeclarationAccessibility? ToTypeDeclarationAccessibility(this Accessibility accessibility) =>
 		accessibility switch
 		{
 			Accessibility.Private => TypeDeclarationAccessibility.Private,
@@ -102,9 +100,7 @@ public static class TypeDeclarationAccessibilityExtensions
 	/// throws for an accessibility value.
 	/// </remarks>
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0072:Add missing cases")]
-	public static Accessibility ToRoslynAccessibility(
-		this TypeDeclarationAccessibility accessibility
-	) =>
+	public static Accessibility ToRoslynAccessibility(this TypeDeclarationAccessibility accessibility) =>
 		accessibility switch
 		{
 			TypeDeclarationAccessibility.Private => Accessibility.Private,
@@ -129,10 +125,7 @@ public sealed record GenericTypeParameterOptions
 	public GenericTypeParameterOptions(string name)
 	{
 		if (string.IsNullOrWhiteSpace(name))
-			throw new ArgumentException(
-				"Type parameter name cannot be null or whitespace.",
-				nameof(name)
-			);
+			throw new ArgumentException("Type parameter name cannot be null or whitespace.", nameof(name));
 
 		Name = name;
 	}
@@ -256,8 +249,7 @@ public sealed record TypeDeclarationOptions
 	/// Gets the primary-constructor parameters written after the type name and generic parameters.
 	/// </summary>
 	/// <remarks>Each entry is emitted verbatim as a complete parameter declaration.</remarks>
-	public ImmutableArray<ParameterDeclarationOptions> PrimaryConstructorParameters { get; init; } =
-	[];
+	public ImmutableArray<ParameterDeclarationOptions> PrimaryConstructorParameters { get; init; } = [];
 
 	/// <summary>
 	/// If <see  langword="true" />, the primary-constructor parameters are emitted on separate lines with one parameter per line.

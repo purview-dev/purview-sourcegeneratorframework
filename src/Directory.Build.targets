@@ -4,7 +4,6 @@
 		<Description>Purview SourceGeneratorFramework libraries for building and testing incremental C# source generators.</Description>
 		<PackageProjectUrl>https://github.com/purview-dev/purview-sourcegeneratorframework</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/purview-dev/purview-sourcegeneratorframework</RepositoryUrl>
-		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageIcon>purview-logo.jpg</PackageIcon>
 		<PackageRequireLicenseAcceptance>False</PackageRequireLicenseAcceptance>

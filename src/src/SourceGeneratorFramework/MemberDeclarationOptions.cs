@@ -118,7 +118,10 @@ public readonly record struct PropertyDeclarationOptions
 	/// <summary>Gets whether a setter or init accessor is emitted.</summary>
 	public bool HasSetter { get; init; }
 
-	/// <summary>Gets whether the setter is emitted as an init accessor.</summary>
+	/// <summary>
+	/// Gets whether the setter is emitted as an init accessor. Setting this to <see langword="true"/>
+	/// implicitly enables the setter accessor even when <see cref="HasSetter"/> is <see langword="false"/>.
+	/// </summary>
 	public bool IsInitOnly { get; init; }
 
 	/// <summary>Gets optional getter accessibility.</summary>

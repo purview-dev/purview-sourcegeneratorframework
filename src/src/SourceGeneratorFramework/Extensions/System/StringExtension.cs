@@ -12,7 +12,6 @@ public static class StringExtension
 		/// </summary>
 		/// <param name="surroundWith">The string to surround the value with.</param>
 		/// <returns>The surrounded string.</returns>
-		public string Surround(string surroundWith = "\"") =>
-			$"{surroundWith}{value}{surroundWith}";
+		public string Surround(string surroundWith = "\"") => $"{surroundWith}{value}{surroundWith}";
 	}
 }

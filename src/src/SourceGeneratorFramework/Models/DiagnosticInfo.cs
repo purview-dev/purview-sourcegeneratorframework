@@ -35,10 +35,8 @@ public sealed record DiagnosticInfo(
 	/// <param name="messageArgs">The message arguments.</param>
 	/// <returns>A <see cref="DiagnosticInfo"/> instance.</returns>
 	/// <exception cref="ArgumentNullException"></exception>
-	public static DiagnosticInfo Create(
-		DiagnosticDescriptor descriptor,
-		params object[] messageArgs
-	) => Create(descriptor, location: null, additionalLocations: null, messageArgs: messageArgs);
+	public static DiagnosticInfo Create(DiagnosticDescriptor descriptor, params object[] messageArgs) =>
+		Create(descriptor, location: null, additionalLocations: null, messageArgs: messageArgs);
 
 	/// <summary>
 	/// Creates a <see cref="DiagnosticInfo"/> from a descriptor and a target symbol descriptor.
@@ -61,14 +59,10 @@ public sealed record DiagnosticInfo(
 		ImmutableArray<Location> additionalLocations = [];
 		if (location is null)
 		{
-			location = target.Symbol.Locations.FirstOrDefault(static loc => loc.IsInSource)
-				is { } firstLocation
+			location = target.Symbol.Locations.FirstOrDefault(static loc => loc.IsInSource) is { } firstLocation
 				? location = firstLocation
 				: location = null;
-			additionalLocations =
-			[
-				.. target.Symbol.Locations.Skip(1).Where(static loc => loc.IsInSource),
-			];
+			additionalLocations = [.. target.Symbol.Locations.Skip(1).Where(static loc => loc.IsInSource)];
 		}
 		else
 			additionalLocations = [.. target.Symbol.Locations.Where(static loc => loc.IsInSource)];
@@ -107,10 +101,7 @@ public sealed record DiagnosticInfo(
 		ImmutableArray<LinePositionSpan> lineSpaces = [];
 		if (additionalLocations is not null)
 		{
-			lineSpaces =
-			[
-				.. additionalLocations.Value.Select(static loc => loc.GetLineSpan().Span),
-			];
+			lineSpaces = [.. additionalLocations.Value.Select(static loc => loc.GetLineSpan().Span)];
 		}
 
 		if (location is null)
@@ -144,11 +135,7 @@ public sealed record DiagnosticInfo(
 	/// <param name="messageArgs">The message arguments.</param>
 	/// <returns>A <see cref="DiagnosticInfo"/> instance.</returns>
 	/// <exception cref="ArgumentNullException"></exception>
-	public static DiagnosticInfo Create(
-		DiagnosticDescriptor descriptor,
-		ISymbol symbol,
-		params object[] messageArgs
-	)
+	public static DiagnosticInfo Create(DiagnosticDescriptor descriptor, ISymbol symbol, params object[] messageArgs)
 	{
 		if (symbol is null)
 			throw new ArgumentNullException(nameof(symbol));

@@ -46,11 +46,7 @@ public class TypeHelpersTests
 	}
 
 	static string GeneratedAttributes(bool includeCoverageExclusion = true) =>
-		(
-			includeCoverageExclusion
-				? "[global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute]\n"
-				: ""
-		)
+		(includeCoverageExclusion ? "[global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute]\n" : "")
 		+ "[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]\n"
 		+ "[global::System.CodeDom.Compiler.GeneratedCode(\"TestGenerator\", \"1.0.0\")]\n";
 
@@ -125,10 +121,7 @@ public class TypeHelpersTests
 	{
 		var source = "public partial class MyClass { }";
 		var tree = CSharpSyntaxTree.ParseText(source);
-		var declaration = (await tree.GetRootAsync())
-			.DescendantNodes()
-			.OfType<ClassDeclarationSyntax>()
-			.First();
+		var declaration = (await tree.GetRootAsync()).DescendantNodes().OfType<ClassDeclarationSyntax>().First();
 
 		await Assert.That(TypeHelpers.IsPartial(declaration)).IsTrue();
 	}
@@ -138,10 +131,7 @@ public class TypeHelpersTests
 	{
 		var source = "public class MyClass { }";
 		var tree = CSharpSyntaxTree.ParseText(source);
-		var declaration = (await tree.GetRootAsync())
-			.DescendantNodes()
-			.OfType<ClassDeclarationSyntax>()
-			.First();
+		var declaration = (await tree.GetRootAsync()).DescendantNodes().OfType<ClassDeclarationSyntax>().First();
 
 		await Assert.That(TypeHelpers.IsPartial(declaration)).IsFalse();
 	}
@@ -156,10 +146,7 @@ public class TypeHelpersTests
 			}
 			""";
 		var tree = CSharpSyntaxTree.ParseText(source);
-		var declaration = (await tree.GetRootAsync())
-			.DescendantNodes()
-			.OfType<ClassDeclarationSyntax>()
-			.First();
+		var declaration = (await tree.GetRootAsync()).DescendantNodes().OfType<ClassDeclarationSyntax>().First();
 
 		await Assert.That(TypeHelpers.HasNonEmptyConstructors(declaration, "MyClass")).IsTrue();
 	}
@@ -174,10 +161,7 @@ public class TypeHelpersTests
 			}
 			""";
 		var tree = CSharpSyntaxTree.ParseText(source);
-		var declaration = (await tree.GetRootAsync())
-			.DescendantNodes()
-			.OfType<ClassDeclarationSyntax>()
-			.First();
+		var declaration = (await tree.GetRootAsync()).DescendantNodes().OfType<ClassDeclarationSyntax>().First();
 
 		await Assert.That(TypeHelpers.HasNonEmptyConstructors(declaration, "MyClass")).IsFalse();
 	}
@@ -193,9 +177,7 @@ public class TypeHelpersTests
 			""";
 		var symbol = await GetTypeSymbolAsync(source, "MyClass");
 
-		await Assert
-			.That(TypeHelpers.HasAttribute(symbol, "System.SerializableAttribute"))
-			.IsTrue();
+		await Assert.That(TypeHelpers.HasAttribute(symbol, "System.SerializableAttribute")).IsTrue();
 	}
 
 	[Test]
@@ -204,9 +186,7 @@ public class TypeHelpersTests
 		var source = "public class MyClass { }";
 		var symbol = await GetTypeSymbolAsync(source, "MyClass");
 
-		await Assert
-			.That(TypeHelpers.HasAttribute(symbol, "System.SerializableAttribute"))
-			.IsFalse();
+		await Assert.That(TypeHelpers.HasAttribute(symbol, "System.SerializableAttribute")).IsFalse();
 	}
 
 	[Test]
@@ -246,9 +226,7 @@ public class TypeHelpersTests
 			""";
 		var symbol = await GetTypeSymbolAsync(source, "MyCollection");
 
-		await Assert
-			.That(TypeHelpers.Implements(symbol, "System.Collections.Generic.IEnumerable`1"))
-			.IsTrue();
+		await Assert.That(TypeHelpers.Implements(symbol, "System.Collections.Generic.IEnumerable`1")).IsTrue();
 	}
 
 	[Test]
@@ -257,16 +235,13 @@ public class TypeHelpersTests
 		var source = "namespace Test { public class MyClass { } }";
 		var symbol = await GetTypeSymbolAsync(source, "MyClass");
 
-		await Assert
-			.That(TypeHelpers.ToFullyQualifiedDisplayString(symbol))
-			.IsEqualTo("global::Test.MyClass");
+		await Assert.That(TypeHelpers.ToFullyQualifiedDisplayString(symbol)).IsEqualTo("global::Test.MyClass");
 	}
 
 	[Test]
 	public async Task IsCollectionLike_List_ReturnsTrue()
 	{
-		var source =
-			"using System.Collections.Generic; public class MyClass { public List<int> Items; }";
+		var source = "using System.Collections.Generic; public class MyClass { public List<int> Items; }";
 		var symbol = await GetTypeSymbolAsync(source, "MyClass");
 		var fieldSymbol = symbol.GetMembers("Items").OfType<IFieldSymbol>().First();
 
@@ -276,8 +251,7 @@ public class TypeHelpersTests
 	[Test]
 	public async Task TryGetElementType_List_ReturnsIntElement()
 	{
-		var source =
-			"using System.Collections.Generic; public class MyClass { public List<int> Items; }";
+		var source = "using System.Collections.Generic; public class MyClass { public List<int> Items; }";
 		var symbol = await GetTypeSymbolAsync(source, "MyClass");
 		var fieldSymbol = symbol.GetMembers("Items").OfType<IFieldSymbol>().First();
 
@@ -307,10 +281,7 @@ public class TypeHelpersTests
 	[Arguments(Accessibility.Private, "private")]
 	[Arguments(Accessibility.ProtectedOrInternal, "protected internal")]
 	[Arguments(Accessibility.ProtectedAndInternal, "private protected")]
-	public async Task GetAccessibilityKeyword_ReturnsExpectedKeyword(
-		Accessibility accessibility,
-		string expected
-	)
+	public async Task GetAccessibilityKeyword_ReturnsExpectedKeyword(Accessibility accessibility, string expected)
 	{
 		await Assert.That(TypeHelpers.GetAccessibilityKeyword(accessibility)).IsEqualTo(expected);
 	}
@@ -328,12 +299,8 @@ public class TypeHelpersTests
 	)
 	{
 		// Arrange / Act / Assert
-		await Assert
-			.That(roslynAccessibility.ToTypeDeclarationAccessibility())
-			.IsEqualTo(declarationAccessibility);
-		await Assert
-			.That(declarationAccessibility.ToRoslynAccessibility())
-			.IsEqualTo(roslynAccessibility);
+		await Assert.That(roslynAccessibility.ToTypeDeclarationAccessibility()).IsEqualTo(declarationAccessibility);
+		await Assert.That(declarationAccessibility.ToRoslynAccessibility()).IsEqualTo(roslynAccessibility);
 	}
 
 	[Test]
@@ -401,9 +368,7 @@ public class TypeHelpersTests
 
 		// Assert
 		await Assert.That(declaration.Kind).IsEqualTo(TypeDeclarationKind.RecordStruct);
-		await Assert
-			.That(declaration.Accessibility)
-			.IsEqualTo(TypeDeclarationAccessibility.Internal);
+		await Assert.That(declaration.Accessibility).IsEqualTo(TypeDeclarationAccessibility.Internal);
 		await Assert.That(declaration.IsReadOnly).IsTrue();
 		await Assert.That(declaration.GenericTypes[0].Constraints).Contains("unmanaged");
 	}
@@ -421,10 +386,7 @@ public class TypeHelpersTests
 		var symbol = await GetTypeSymbolAsync(source, "Container");
 
 		// Act
-		var declaration = TypeHelpers.CreatePartialTypeDeclarationOptions(
-			symbol,
-			includeOptionalParts: false
-		);
+		var declaration = TypeHelpers.CreatePartialTypeDeclarationOptions(symbol, includeOptionalParts: false);
 		var writer = CodeWriterFactory.ForTests();
 		using (writer.WriteTypeScope(declaration))
 		{
@@ -435,9 +397,7 @@ public class TypeHelpersTests
 		await Assert.That(declaration.Accessibility).IsNull();
 		await Assert.That(declaration.IsSealed).IsFalse();
 		await Assert.That(declaration.GenericTypes[0].Constraints).IsEmpty();
-		await Assert
-			.That(writer.ToString())
-			.IsEqualTo(GeneratedAttributes() + "partial class Container<T>\n{\n}\n");
+		await Assert.That(writer.ToString()).IsEqualTo(GeneratedAttributes() + "partial class Container<T>\n{\n}\n");
 	}
 
 	[Test]
@@ -501,9 +461,7 @@ public class TypeHelpersTests
 	[Arguments("\t\n\r")]
 	[Arguments(" \t\n\r ")]
 	[Arguments("   \t      \n    \r    ")]
-	public async Task Property_GivenPropertyNameIsNullEmptyOrWhitespace_ThrowsArgumentException(
-		string? propertyName
-	)
+	public async Task Property_GivenPropertyNameIsNullEmptyOrWhitespace_ThrowsArgumentException(string? propertyName)
 	{
 		// Arrange
 		var typeObject = (TypeValueObject)KnownLangTypes.Get(SpecialType.System_String);

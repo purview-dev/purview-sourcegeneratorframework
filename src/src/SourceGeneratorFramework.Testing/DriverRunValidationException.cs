@@ -16,10 +16,7 @@ public sealed record GeneratorFailure(string GeneratorName, Exception Exception)
 /// <summary>
 /// Represents all validation failures found after a source generator test run.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.SuppressMessage(
-	"Design",
-	"CA1032:Implement standard exception constructors"
-)]
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1032:Implement standard exception constructors")]
 public sealed class DriverRunValidationException : Exception
 {
 	internal DriverRunValidationException(
@@ -51,14 +48,7 @@ public sealed class DriverRunValidationException : Exception
 		ImmutableArray<SyntaxTree> compilationTrees
 	)
 		: base(
-			BuildMessage(
-				generatorFailures,
-				compilationErrors,
-				emitErrors,
-				logErrors,
-				generatedTrees,
-				compilationTrees
-			)
+			BuildMessage(generatorFailures, compilationErrors, emitErrors, logErrors, generatedTrees, compilationTrees)
 		)
 	{
 		GeneratorFailures = generatorFailures;
@@ -105,13 +95,7 @@ public sealed class DriverRunValidationException : Exception
 			}
 		}
 
-		AppendDiagnostics(
-			builder,
-			"Compilation errors",
-			compilationErrors,
-			generatedTrees,
-			compilationTrees
-		);
+		AppendDiagnostics(builder, "Compilation errors", compilationErrors, generatedTrees, compilationTrees);
 		AppendDiagnostics(builder, "Emit errors", emitErrors, generatedTrees, compilationTrees);
 
 		if (logErrors.Count > 0)
@@ -149,9 +133,7 @@ public sealed class DriverRunValidationException : Exception
 		foreach (var group in diagnostics.GroupBy(diagnostic => diagnostic.Location.SourceTree))
 		{
 			var tree = group.Key;
-			builder
-				.Append("  Source: ")
-				.AppendLine(GetTreeDescription(tree, generatedTrees, compilationTrees));
+			builder.Append("  Source: ").AppendLine(GetTreeDescription(tree, generatedTrees, compilationTrees));
 
 			foreach (var diagnostic in group)
 				AppendDiagnostic(builder, diagnostic);
@@ -201,8 +183,7 @@ public sealed class DriverRunValidationException : Exception
 
 		for (var lineIndex = firstLine; lineIndex <= lastLine; lineIndex++)
 		{
-			var marker =
-				lineIndex >= start.Line && lineIndex <= lineSpan.EndLinePosition.Line ? '>' : ' ';
+			var marker = lineIndex >= start.Line && lineIndex <= lineSpan.EndLinePosition.Line ? '>' : ' ';
 			builder
 				.Append("    ")
 				.Append(marker)
@@ -236,8 +217,7 @@ public sealed class DriverRunValidationException : Exception
 			builder.Append(indentation).AppendLine(line);
 	}
 
-	static bool Contains(IReadOnlyList<SyntaxTree> trees, SyntaxTree tree) =>
-		IndexOf(trees, tree) >= 0;
+	static bool Contains(IReadOnlyList<SyntaxTree> trees, SyntaxTree tree) => IndexOf(trees, tree) >= 0;
 
 	static int IndexOf(IReadOnlyList<SyntaxTree> trees, SyntaxTree tree)
 	{

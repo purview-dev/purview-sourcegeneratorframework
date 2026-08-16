@@ -4,18 +4,14 @@ namespace Purview.SourceGeneratorFramework.Models;
 /// Represents the result of an incremental source generator transform, carrying either a value, diagnostics, or both.
 /// </summary>
 /// <typeparam name="T">The value type.</typeparam>
-[System.Diagnostics.CodeAnalysis.SuppressMessage(
-	"Design",
-	"CA1000:Do not declare static members on generic types"
-)]
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1000:Do not declare static members on generic types")]
 public readonly record struct GeneratorResult<T>
 {
 	public T? Value { get; private init; }
 
 	public EquatableArray<DiagnosticInfo> Diagnostics { get; private init; }
 
-	public bool IsSuccess =>
-		Value is not null && !EqualityComparer<T>.Default.Equals(Value, default!);
+	public bool IsSuccess => Value is not null && !EqualityComparer<T>.Default.Equals(Value, default!);
 
 	public bool HasDiagnostics => !Diagnostics.IsEmpty;
 

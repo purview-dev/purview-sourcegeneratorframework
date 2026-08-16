@@ -49,33 +49,22 @@ public partial class ServiceRegistrationGenerator : IIncrementalGenerator
 			.CollectWith(
 				targets,
 				(ctx, targetsArray, _) =>
-					new ServiceRegistrationGenerationModel(
-						ctx,
-						new EquatableArray<ServiceTarget>(targetsArray)
-					)
+					new ServiceRegistrationGenerationModel(ctx, new EquatableArray<ServiceTarget>(targetsArray))
 			)
 			.CombineWith(isDisabled, (m, disabled, _) => m with { IsDisabled = disabled })
 			.CombineWith(emitServiceInfo, (m, emit, _) => m with { EmitServiceInfo = emit });
 
-		context.RegisterSourceOutput(
-			model,
-			(spc, m) => ServiceRegistrationEmitter.Execute(spc, m, _logger)
-		);
+		context.RegisterSourceOutput(model, (spc, m) => ServiceRegistrationEmitter.Execute(spc, m, _logger));
 	}
 
-	static ServiceTarget CreateServiceTarget(
-		GeneratorAttributeSyntaxContext ctx,
-		CancellationToken ct
-	)
+	static ServiceTarget CreateServiceTarget(GeneratorAttributeSyntaxContext ctx, CancellationToken ct)
 	{
 		var symbol = ctx.SemanticModel.GetDeclaredSymbol(ctx.TargetNode, ct);
 		if (symbol is null)
 			return ServiceTarget.Empty;
 
 		var attributeData = ctx.Attributes.FirstOrDefault(a =>
-			ServiceRegistrationGeneratorTypeLibrary.GenerateServiceAttribute.Equals(
-				a.AttributeClass
-			)
+			ServiceRegistrationGeneratorTypeLibrary.GenerateServiceAttribute.Equals(a.AttributeClass)
 		);
 		if (attributeData is null)
 			return ServiceTarget.Empty;
@@ -84,8 +73,7 @@ public partial class ServiceRegistrationGenerator : IIncrementalGenerator
 		if (!model.Exists)
 			return ServiceTarget.Empty;
 
-		var lifetime =
-			model.Lifetime ?? "Purview.SourceGeneratorFramework.Examples.ServiceLifetime.Singleton";
+		var lifetime = model.Lifetime ?? "Purview.SourceGeneratorFramework.Examples.ServiceLifetime.Singleton";
 		var memberName = lifetime.Substring(lifetime.LastIndexOf('.') + 1);
 
 		return new ServiceTarget(
@@ -100,12 +88,7 @@ public partial class ServiceRegistrationGenerator : IIncrementalGenerator
 /// <summary>
 /// Describes a discovered service target.
 /// </summary>
-readonly record struct ServiceTarget(
-	string TypeName,
-	string ClassName,
-	string Name,
-	string LifetimeMemberName
-)
+readonly record struct ServiceTarget(string TypeName, string ClassName, string Name, string LifetimeMemberName)
 {
 	/// <summary>
 	/// An empty <see cref="ServiceTarget"/>.

@@ -1,4 +1,4 @@
-namespace Purview.SourceGeneratorFramework.Examples;
+namespace Purview.SourceGeneratorFramework.ExampleGenerator;
 
 /// <summary>
 /// Provides compiler-visible property names used by the service registration generator.

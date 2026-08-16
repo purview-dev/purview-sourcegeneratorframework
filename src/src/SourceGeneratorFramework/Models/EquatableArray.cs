@@ -7,9 +7,7 @@ namespace Purview.SourceGeneratorFramework.Models;
 /// An immutable, equatable wrapper around <see cref="ImmutableArray{T}"/> that is safe to use in incremental source generator pipelines.
 /// </summary>
 /// <typeparam name="T">The type of elements in the array. Must implement <see cref="IEquatable{T}"/>.</typeparam>
-public readonly struct EquatableArray<T>(ImmutableArray<T> array)
-	: IEquatable<EquatableArray<T>>,
-		IEnumerable<T>
+public readonly struct EquatableArray<T>(ImmutableArray<T> array) : IEquatable<EquatableArray<T>>, IEnumerable<T>
 	where T : IEquatable<T>
 {
 	public static readonly EquatableArray<T> Empty = new([]);
@@ -24,10 +22,7 @@ public readonly struct EquatableArray<T>(ImmutableArray<T> array)
 
 	public ImmutableArray<T> AsImmutableArray() => _array.IsDefault ? [] : _array;
 
-	[System.Diagnostics.CodeAnalysis.SuppressMessage(
-		"Design",
-		"CA1000:Do not declare static members on generic types"
-	)]
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1000:Do not declare static members on generic types")]
 	public static EquatableArray<T> Create(params T[] items)
 	{
 		if (items is null || items.Length == 0)
@@ -37,8 +32,7 @@ public readonly struct EquatableArray<T>(ImmutableArray<T> array)
 		return new EquatableArray<T>(ImmutableArray.Create(items));
 	}
 
-	public bool Equals(EquatableArray<T> other) =>
-		AsImmutableArray().SequenceEqual(other.AsImmutableArray());
+	public bool Equals(EquatableArray<T> other) => AsImmutableArray().SequenceEqual(other.AsImmutableArray());
 
 	public override bool Equals(object? obj) => obj is EquatableArray<T> other && Equals(other);
 
@@ -59,12 +53,9 @@ public readonly struct EquatableArray<T>(ImmutableArray<T> array)
 
 	public static implicit operator EquatableArray<T>(ImmutableArray<T> array) => new(array);
 
-	public static implicit operator ImmutableArray<T>(EquatableArray<T> array) =>
-		array.AsImmutableArray();
+	public static implicit operator ImmutableArray<T>(EquatableArray<T> array) => array.AsImmutableArray();
 
-	public static bool operator ==(EquatableArray<T> left, EquatableArray<T> right) =>
-		left.Equals(right);
+	public static bool operator ==(EquatableArray<T> left, EquatableArray<T> right) => left.Equals(right);
 
-	public static bool operator !=(EquatableArray<T> left, EquatableArray<T> right) =>
-		!left.Equals(right);
+	public static bool operator !=(EquatableArray<T> left, EquatableArray<T> right) => !left.Equals(right);
 }

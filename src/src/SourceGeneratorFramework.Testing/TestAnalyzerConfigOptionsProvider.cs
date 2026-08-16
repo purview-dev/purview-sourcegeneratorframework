@@ -12,8 +12,7 @@ namespace Purview.SourceGeneratorFramework.Testing;
 /// Initializes a new instance of the <see cref="TestAnalyzerConfigOptionsProvider"/> class.
 /// </remarks>
 /// <param name="options">The global options to expose.</param>
-sealed class TestAnalyzerConfigOptionsProvider(Dictionary<string, string> options)
-	: AnalyzerConfigOptionsProvider
+sealed class TestAnalyzerConfigOptionsProvider(Dictionary<string, string> options) : AnalyzerConfigOptionsProvider
 {
 	readonly TestAnalyzerConfigOptions _globalOptions = new(options);
 
@@ -21,15 +20,12 @@ sealed class TestAnalyzerConfigOptionsProvider(Dictionary<string, string> option
 	public override AnalyzerConfigOptions GlobalOptions => _globalOptions;
 
 	/// <inheritdoc />
-	public override AnalyzerConfigOptions GetOptions(SyntaxTree tree) =>
-		TestAnalyzerConfigOptions.Empty;
+	public override AnalyzerConfigOptions GetOptions(SyntaxTree tree) => TestAnalyzerConfigOptions.Empty;
 
 	/// <inheritdoc />
-	public override AnalyzerConfigOptions GetOptions(AdditionalText textFile) =>
-		TestAnalyzerConfigOptions.Empty;
+	public override AnalyzerConfigOptions GetOptions(AdditionalText textFile) => TestAnalyzerConfigOptions.Empty;
 
-	sealed class TestAnalyzerConfigOptions(Dictionary<string, string> options)
-		: AnalyzerConfigOptions
+	sealed class TestAnalyzerConfigOptions(Dictionary<string, string> options) : AnalyzerConfigOptions
 	{
 		public static readonly TestAnalyzerConfigOptions Empty = new([]);
 

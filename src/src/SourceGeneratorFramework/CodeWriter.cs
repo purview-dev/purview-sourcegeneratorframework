@@ -73,16 +73,10 @@ public sealed class CodeWriter
 		_builder = new StringBuilder(initialCapacity);
 		GeneratorName =
 			NormalizeOptionalIdentity(generatorName, nameof(generatorName))
-			?? throw new ArgumentException(
-				"Generator name cannot be null or whitespace.",
-				nameof(generatorName)
-			);
+			?? throw new ArgumentException("Generator name cannot be null or whitespace.", nameof(generatorName));
 		GeneratorVersion =
 			NormalizeOptionalIdentity(generatorVersion, nameof(generatorVersion))
-			?? throw new ArgumentException(
-				"Generator version cannot be null or whitespace.",
-				nameof(generatorVersion)
-			);
+			?? throw new ArgumentException("Generator version cannot be null or whitespace.", nameof(generatorVersion));
 		ThrowOnUnclosedScopes = throwOnUnclosedScopes;
 		if (throwOnUnclosedScopes)
 			_openScopes = [];
@@ -275,8 +269,7 @@ public sealed class CodeWriter
 	/// <param name="condition">Whether to write the line.</param>
 	/// <param name="value">The value to write.</param>
 	/// <returns>The current writer.</returns>
-	public CodeWriter WriteLineIf(bool condition, string? value) =>
-		condition ? WriteLine(value) : this;
+	public CodeWriter WriteLineIf(bool condition, string? value) => condition ? WriteLine(value) : this;
 
 	/// <summary>
 	/// Writes a value surrounded by double quotes.
@@ -303,8 +296,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="header">Optional content written before the opening brace.</param>
 	/// <returns>A scope that restores indentation and writes the closing token.</returns>
-	public BlockScope OpenBlockScope(string? header = null) =>
-		OpenDelimitedBlockScope(header, "{", "}");
+	public BlockScope OpenBlockScope(string? header = null) => OpenDelimitedBlockScope(header, "{", "}");
 
 	/// <summary>Writes a complete block and invokes a callback for its body.</summary>
 	public CodeWriter OpenBlock(string? header, Action<CodeWriter> bodyWriter)
@@ -325,11 +317,7 @@ public sealed class CodeWriter
 	/// <param name="openingToken">The opening token, or <see langword="null"/> for none.</param>
 	/// <param name="closingToken">The closing token, or <see langword="null"/> for none.</param>
 	/// <returns>A scope that restores indentation and writes the closing token.</returns>
-	public BlockScope OpenDelimitedBlockScope(
-		string? header,
-		string? openingToken,
-		string? closingToken
-	)
+	public BlockScope OpenDelimitedBlockScope(string? header, string? openingToken, string? closingToken)
 	{
 		if (header is not null)
 		{
@@ -401,14 +389,7 @@ public sealed class CodeWriter
 	{
 		if (bodyWriter is null)
 			throw new ArgumentNullException(nameof(bodyWriter));
-		using (
-			OpenDelimitedBlockWithHeaderScope(
-				header,
-				writeRemainingHeader,
-				openingToken,
-				closingToken
-			)
-		)
+		using (OpenDelimitedBlockWithHeaderScope(header, writeRemainingHeader, openingToken, closingToken))
 			bodyWriter(this);
 		return this;
 	}
@@ -459,10 +440,7 @@ public sealed class CodeWriter
 		ValidateMethodDeclaration(declaration);
 		BeginWrittenItem(WrittenItemKind.Method);
 		if (declaration.IncludeGeneratedAttributes ?? DefaultIncludeGeneratedAttributes)
-			WriteGeneratedAttributes(
-				includeCoverageExclusion: true,
-				includeEmbeddedAttribute: false
-			);
+			WriteGeneratedAttributes(includeCoverageExclusion: true, includeEmbeddedAttribute: false);
 		WriteAttributes(declaration.Attributes);
 		WriteAttributes(declaration.ReturnAttributes, defaultTarget: "return");
 		WriteMemberModifiers(
@@ -503,10 +481,7 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Writes a structured method and invokes a callback for its body.</summary>
-	public CodeWriter WriteMethod(
-		MethodDeclarationOptions declaration,
-		Action<CodeWriter> writeBody
-	)
+	public CodeWriter WriteMethod(MethodDeclarationOptions declaration, Action<CodeWriter> writeBody)
 	{
 		if (writeBody is null)
 			throw new ArgumentNullException(nameof(writeBody));
@@ -528,10 +503,7 @@ public sealed class CodeWriter
 		ValidatePropertyDeclaration(declaration);
 		BeginWrittenItem(WrittenItemKind.Property);
 		if (declaration.IncludeGeneratedAttributes ?? DefaultIncludeGeneratedAttributes)
-			WriteGeneratedAttributes(
-				includeCoverageExclusion: true,
-				includeEmbeddedAttribute: false
-			);
+			WriteGeneratedAttributes(includeCoverageExclusion: true, includeEmbeddedAttribute: false);
 		WriteAttributes(declaration.Attributes);
 		WritePropertyHeader(declaration);
 		if (declaration.ExpressionBody is not null)
@@ -544,11 +516,8 @@ public sealed class CodeWriter
 		Write(" { ");
 		if (declaration.HasGetter)
 			WriteAccessor(declaration.GetterAccessibility, "get;");
-		if (declaration.HasSetter)
-			WriteAccessor(
-				declaration.SetterAccessibility,
-				declaration.IsInitOnly ? "init;" : "set;"
-			);
+		if (declaration.HasSetter || declaration.IsInitOnly)
+			WriteAccessor(declaration.SetterAccessibility, declaration.IsInitOnly ? "init;" : "set;");
 		Write("}");
 		if (declaration.Initializer is not null)
 			Write(" = ").Write(declaration.Initializer).Write(';');
@@ -578,17 +547,14 @@ public sealed class CodeWriter
 
 		BeginWrittenItem(WrittenItemKind.Property);
 		if (declaration.IncludeGeneratedAttributes ?? DefaultIncludeGeneratedAttributes)
-			WriteGeneratedAttributes(
-				includeCoverageExclusion: true,
-				includeEmbeddedAttribute: false
-			);
+			WriteGeneratedAttributes(includeCoverageExclusion: true, includeEmbeddedAttribute: false);
 		WriteAttributes(declaration.Attributes);
 		WritePropertyHeader(declaration).NewLine();
 		using (OpenBlockScope())
 		{
 			if (declaration.HasGetter)
 				WriteAccessorBody(declaration.GetterAccessibility, "get", writeGetterBody);
-			if (declaration.HasSetter)
+			if (declaration.HasSetter || declaration.IsInitOnly)
 				WriteAccessorBody(
 					declaration.SetterAccessibility,
 					declaration.IsInitOnly ? "init" : "set",
@@ -607,10 +573,7 @@ public sealed class CodeWriter
 		ValidateFieldDeclaration(declaration);
 		BeginWrittenItem(WrittenItemKind.Field);
 		if (declaration.IncludeGeneratedAttributes ?? DefaultIncludeGeneratedAttributes)
-			WriteGeneratedAttributes(
-				includeCoverageExclusion: false,
-				includeEmbeddedAttribute: false
-			);
+			WriteGeneratedAttributes(includeCoverageExclusion: false, includeEmbeddedAttribute: false);
 		WriteAttributes(declaration.Attributes);
 		if (declaration.Accessibility is { } accessibility)
 			WriteAccessibility(accessibility).Write(' ');
@@ -636,10 +599,7 @@ public sealed class CodeWriter
 	public CodeWriter WriteUsing(string namespaceName)
 	{
 		return string.IsNullOrWhiteSpace(namespaceName)
-			? throw new ArgumentException(
-				"Namespace cannot be null or whitespace.",
-				nameof(namespaceName)
-			)
+			? throw new ArgumentException("Namespace cannot be null or whitespace.", nameof(namespaceName))
 			: Write("using ").Write(namespaceName).WriteLine(";");
 	}
 
@@ -792,10 +752,7 @@ public sealed class CodeWriter
 	/// <param name="declaration">The record class declaration options.</param>
 	/// <param name="bodyWriter">The action that writes the body of the record class.</param>
 	/// <returns>The current writer.</returns>
-	public CodeWriter WriteRecordClass(
-		TypeDeclarationOptions declaration,
-		Action<CodeWriter> bodyWriter
-	)
+	public CodeWriter WriteRecordClass(TypeDeclarationOptions declaration, Action<CodeWriter> bodyWriter)
 	{
 		if (bodyWriter is null)
 			throw new ArgumentNullException(nameof(bodyWriter));
@@ -824,10 +781,7 @@ public sealed class CodeWriter
 	/// <param name="declaration">The record struct declaration options.</param>
 	/// <param name="bodyWriter">The action that writes the body of the record struct.</param>
 	/// <returns>The current writer.</returns>
-	public CodeWriter WriteRecordStruct(
-		TypeDeclarationOptions declaration,
-		Action<CodeWriter> bodyWriter
-	)
+	public CodeWriter WriteRecordStruct(TypeDeclarationOptions declaration, Action<CodeWriter> bodyWriter)
 	{
 		if (bodyWriter is null)
 			throw new ArgumentNullException(nameof(bodyWriter));
@@ -845,10 +799,7 @@ public sealed class CodeWriter
 			: WriteTypeScope(declaration with { Kind = TypeDeclarationKind.Interface });
 
 	/// <summary>Writes an interface declaration and invokes a callback for its body.</summary>
-	public CodeWriter WriteInterface(
-		TypeDeclarationOptions declaration,
-		Action<CodeWriter> bodyWriter
-	)
+	public CodeWriter WriteInterface(TypeDeclarationOptions declaration, Action<CodeWriter> bodyWriter)
 	{
 		if (bodyWriter is null)
 			throw new ArgumentNullException(nameof(bodyWriter));
@@ -912,10 +863,8 @@ public sealed class CodeWriter
 		if (declaration.Accessibility is { } accessibility)
 			WriteAccessibility(accessibility).Write(' ');
 
-		var isStruct =
-			declaration.Kind is TypeDeclarationKind.Struct or TypeDeclarationKind.RecordStruct;
-		var isClass =
-			declaration.Kind is TypeDeclarationKind.Class or TypeDeclarationKind.RecordClass;
+		var isStruct = declaration.Kind is TypeDeclarationKind.Struct or TypeDeclarationKind.RecordStruct;
+		var isClass = declaration.Kind is TypeDeclarationKind.Class or TypeDeclarationKind.RecordClass;
 
 		if (declaration.IsStatic)
 			Write("static ");
@@ -959,10 +908,7 @@ public sealed class CodeWriter
 				declaration.ConstructorParametersOnSeparateLines
 			);
 		WriteBaseTypes(declaration);
-		if (
-			declaration.Kind == TypeDeclarationKind.Enum
-			&& declaration.EnumUnderlyingType is { IsEmpty: false }
-		)
+		if (declaration.Kind == TypeDeclarationKind.Enum && declaration.EnumUnderlyingType is { IsEmpty: false })
 			Write(" : ").WriteTypeReference(declaration.EnumUnderlyingType.Value);
 
 		if (declaration.Kind == TypeDeclarationKind.Delegate)
@@ -1004,10 +950,7 @@ public sealed class CodeWriter
 		ValidateConstructorDeclaration(declaration);
 		BeginWrittenItem(WrittenItemKind.Constructor);
 		if (declaration.IncludeGeneratedAttributes ?? DefaultIncludeGeneratedAttributes)
-			WriteGeneratedAttributes(
-				includeCoverageExclusion: true,
-				includeEmbeddedAttribute: false
-			);
+			WriteGeneratedAttributes(includeCoverageExclusion: true, includeEmbeddedAttribute: false);
 		WriteAttributes(declaration.Attributes);
 
 		if (declaration.IsStatic)
@@ -1017,11 +960,7 @@ public sealed class CodeWriter
 
 		Write(declaration.TypeName);
 		if (declaration.WriteParametersOnSeparateLines)
-			WriteParameterList(
-				declaration.Parameters,
-				writeOnSeparateLines: true,
-				writeWhenEmpty: true
-			);
+			WriteParameterList(declaration.Parameters, writeOnSeparateLines: true, writeWhenEmpty: true);
 		else
 			WriteParametersWithHeuristic(declaration.Parameters);
 
@@ -1038,10 +977,7 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Writes a structured constructor and invokes a callback for its body.</summary>
-	public CodeWriter WriteConstructor(
-		ConstructorDeclarationOptions declaration,
-		Action<CodeWriter> writeBody
-	)
+	public CodeWriter WriteConstructor(ConstructorDeclarationOptions declaration, Action<CodeWriter> writeBody)
 	{
 		if (writeBody is null)
 			throw new ArgumentNullException(nameof(writeBody));
@@ -1101,10 +1037,7 @@ public sealed class CodeWriter
 	{
 		if (string.IsNullOrWhiteSpace(generatorName))
 		{
-			throw new ArgumentException(
-				"Generator name cannot be null or whitespace.",
-				nameof(generatorName)
-			);
+			throw new ArgumentException("Generator name cannot be null or whitespace.", nameof(generatorName));
 		}
 
 		// The GeneratedCodeAttribute constructor requires a non-null version, so we default to "
@@ -1278,14 +1211,7 @@ public sealed class CodeWriter
 	public IndentScope IndentedScope()
 	{
 		Indent();
-		return new(
-			this,
-			OpenScope(
-				"indentation",
-				header: null,
-				new StackTrace(1, fNeedFileInfo: true).ToString()
-			)
-		);
+		return new(this, OpenScope("indentation", header: null, new StackTrace(1, fNeedFileInfo: true).ToString()));
 	}
 
 	/// <summary>Invokes a callback at one additional indentation level.</summary>
@@ -1394,11 +1320,7 @@ public sealed class CodeWriter
 
 	CodeWriter WriteParameter(ParameterDeclarationOptions parameter)
 	{
-		for (
-			var index = 0;
-			!parameter.Attributes.IsDefaultOrEmpty && index < parameter.Attributes.Length;
-			index++
-		)
+		for (var index = 0; !parameter.Attributes.IsDefaultOrEmpty && index < parameter.Attributes.Length; index++)
 			WriteAttribute(parameter.Attributes[index], defaultTarget: null).Write(' ');
 		WriteIf(parameter.IsThis, "this ")
 			.WriteIf(parameter.IsScoped, "scoped ")
@@ -1424,8 +1346,7 @@ public sealed class CodeWriter
 
 	static int GetParameterLength(ParameterDeclarationOptions parameter)
 	{
-		var length =
-			GetTypeReferenceLength(GetParameterType(parameter)) + parameter.Name.Length + 1;
+		var length = GetTypeReferenceLength(GetParameterType(parameter)) + parameter.Name.Length + 1;
 		if (parameter.IsThis)
 			length += 5;
 		if (parameter.IsScoped)
@@ -1442,11 +1363,7 @@ public sealed class CodeWriter
 		};
 		if (parameter.DefaultValue is not null)
 			length += parameter.DefaultValue.Length + 3;
-		for (
-			var index = 0;
-			!parameter.Attributes.IsDefaultOrEmpty && index < parameter.Attributes.Length;
-			index++
-		)
+		for (var index = 0; !parameter.Attributes.IsDefaultOrEmpty && index < parameter.Attributes.Length; index++)
 			length += GetAttributeLength(parameter.Attributes[index]) + 1;
 		return length;
 	}
@@ -1454,10 +1371,7 @@ public sealed class CodeWriter
 	static TypeReferenceOptions GetParameterType(ParameterDeclarationOptions parameter) =>
 		parameter.IsNullable ? parameter.Type.Nullable() : parameter.Type;
 
-	void WriteAttributes(
-		ImmutableArray<AttributeDeclarationOptions> attributes,
-		string? defaultTarget = null
-	)
+	void WriteAttributes(ImmutableArray<AttributeDeclarationOptions> attributes, string? defaultTarget = null)
 	{
 		ValidateAttributes(attributes, nameof(attributes));
 		for (var index = 0; !attributes.IsDefaultOrEmpty && index < attributes.Length; index++)
@@ -1546,11 +1460,7 @@ public sealed class CodeWriter
 		Write(accessor).Write(' ');
 	}
 
-	void WriteAccessorBody(
-		TypeDeclarationAccessibility? accessibility,
-		string accessor,
-		Action<CodeWriter>? writeBody
-	)
+	void WriteAccessorBody(TypeDeclarationAccessibility? accessibility, string accessor, Action<CodeWriter>? writeBody)
 	{
 		if (accessibility is { } value)
 			WriteAccessibility(value).Write(' ');
@@ -1568,14 +1478,10 @@ public sealed class CodeWriter
 		if (_lastWrittenItem == WrittenItemKind.None || _lastWrittenItemIndent != _indentLevel)
 			return;
 
-		var requiresBlankLine =
-			_lastWrittenItem != WrittenItemKind.Field || nextItem != WrittenItemKind.Field;
+		var requiresBlankLine = _lastWrittenItem != WrittenItemKind.Field || nextItem != WrittenItemKind.Field;
 		if (
 			requiresBlankLine
-			&& (
-				_builder.Length == _lastWrittenItemEnd
-				|| _builder[_lastWrittenItemEnd] != NewLineCharacter
-			)
+			&& (_builder.Length == _lastWrittenItemEnd || _builder[_lastWrittenItemEnd] != NewLineCharacter)
 		)
 		{
 			_builder.Insert(_lastWrittenItemEnd, NewLineCharacter);
@@ -1663,9 +1569,7 @@ public sealed class CodeWriter
 	void CloseScope(int scopeId, string kind)
 	{
 		if (OpenScopeCount <= 0)
-			throw new InvalidOperationException(
-				$"A {kind} scope was closed without a matching open scope."
-			);
+			throw new InvalidOperationException($"A {kind} scope was closed without a matching open scope.");
 
 		if (_openScopes is not null && !_openScopes.Remove(scopeId))
 			throw new InvalidOperationException($"The {kind} scope has already been closed.");
@@ -1791,11 +1695,7 @@ public sealed class CodeWriter
 				continue;
 
 			Write("where ").Write(genericType.Name).Write(" : ");
-			for (
-				var constraintIndex = 0;
-				constraintIndex < genericType.Constraints.Length;
-				constraintIndex++
-			)
+			for (var constraintIndex = 0; constraintIndex < genericType.Constraints.Length; constraintIndex++)
 			{
 				if (constraintIndex != 0)
 					Write(", ");
@@ -1809,8 +1709,7 @@ public sealed class CodeWriter
 
 	static void ValidateTypeDeclaration(TypeDeclarationOptions declaration)
 	{
-		var isStruct =
-			declaration.Kind is TypeDeclarationKind.Struct or TypeDeclarationKind.RecordStruct;
+		var isStruct = declaration.Kind is TypeDeclarationKind.Struct or TypeDeclarationKind.RecordStruct;
 		var supportsPrimaryConstructor =
 			declaration.Kind
 			is TypeDeclarationKind.Class
@@ -1826,11 +1725,7 @@ public sealed class CodeWriter
 			nameof(declaration)
 		);
 
-		for (
-			var index = 0;
-			!declaration.Interfaces.IsDefaultOrEmpty && index < declaration.Interfaces.Length;
-			index++
-		)
+		for (var index = 0; !declaration.Interfaces.IsDefaultOrEmpty && index < declaration.Interfaces.Length; index++)
 		{
 			ValidateTypeReference(declaration.Interfaces[index], nameof(declaration));
 		}
@@ -1849,11 +1744,7 @@ public sealed class CodeWriter
 			if (genericType.Constraints.IsDefaultOrEmpty)
 				continue;
 
-			for (
-				var constraintIndex = 0;
-				constraintIndex < genericType.Constraints.Length;
-				constraintIndex++
-			)
+			for (var constraintIndex = 0; constraintIndex < genericType.Constraints.Length; constraintIndex++)
 			{
 				if (string.IsNullOrWhiteSpace(genericType.Constraints[constraintIndex]))
 					throw new ArgumentException(
@@ -1867,16 +1758,11 @@ public sealed class CodeWriter
 	static void ValidateTypeDeclarationModifiers(TypeDeclarationOptions declaration, bool isStruct)
 	{
 		if (declaration.IsStatic && declaration.Kind != TypeDeclarationKind.Class)
-			throw new ArgumentException(
-				"Only class declarations can be static.",
-				nameof(declaration)
-			);
+			throw new ArgumentException("Only class declarations can be static.", nameof(declaration));
 
 		if (
 			declaration.IsAbstract
-			&& declaration.Kind
-				is not TypeDeclarationKind.Class
-					and not TypeDeclarationKind.RecordClass
+			&& declaration.Kind is not TypeDeclarationKind.Class and not TypeDeclarationKind.RecordClass
 		)
 			throw new ArgumentException(
 				"Only class and record class declarations can be abstract.",
@@ -1884,22 +1770,13 @@ public sealed class CodeWriter
 			);
 
 		if (declaration.IsAbstract && declaration.IsStatic)
-			throw new ArgumentException(
-				"A class cannot be both abstract and static.",
-				nameof(declaration)
-			);
+			throw new ArgumentException("A class cannot be both abstract and static.", nameof(declaration));
 
 		if (declaration.IsStatic && declaration.BaseType is { IsEmpty: false })
-			throw new ArgumentException(
-				"A static class cannot specify a base type.",
-				nameof(declaration)
-			);
+			throw new ArgumentException("A static class cannot specify a base type.", nameof(declaration));
 
 		if (declaration.IsStatic && HasNonEmptyTypeReferences(declaration.Interfaces))
-			throw new ArgumentException(
-				"A static class cannot implement interfaces.",
-				nameof(declaration)
-			);
+			throw new ArgumentException("A static class cannot implement interfaces.", nameof(declaration));
 
 		if (declaration.IsStatic && !declaration.PrimaryConstructorParameters.IsDefaultOrEmpty)
 			throw new ArgumentException(
@@ -1920,10 +1797,7 @@ public sealed class CodeWriter
 			);
 	}
 
-	static void ValidateAdditionalTypeKindOptions(
-		TypeDeclarationOptions declaration,
-		bool supportsPrimaryConstructor
-	)
+	static void ValidateAdditionalTypeKindOptions(TypeDeclarationOptions declaration, bool supportsPrimaryConstructor)
 	{
 		if (
 			declaration.Kind
@@ -1936,10 +1810,7 @@ public sealed class CodeWriter
 				"Interfaces, enums, and delegates cannot specify BaseType. Use Interfaces for interface inheritance and EnumUnderlyingType for enums.",
 				nameof(declaration)
 			);
-		if (
-			!supportsPrimaryConstructor
-			&& !declaration.PrimaryConstructorParameters.IsDefaultOrEmpty
-		)
+		if (!supportsPrimaryConstructor && !declaration.PrimaryConstructorParameters.IsDefaultOrEmpty)
 			throw new ArgumentException(
 				"This type declaration does not support primary-constructor parameters.",
 				nameof(declaration)
@@ -1948,39 +1819,21 @@ public sealed class CodeWriter
 			declaration.Kind is TypeDeclarationKind.Enum or TypeDeclarationKind.Delegate
 			&& HasNonEmptyTypeReferences(declaration.Interfaces)
 		)
-			throw new ArgumentException(
-				"Enums and delegates cannot declare interfaces.",
-				nameof(declaration)
-			);
-		if (
-			declaration.Kind == TypeDeclarationKind.Enum
-			&& !declaration.GenericTypes.IsDefaultOrEmpty
-		)
+			throw new ArgumentException("Enums and delegates cannot declare interfaces.", nameof(declaration));
+		if (declaration.Kind == TypeDeclarationKind.Enum && !declaration.GenericTypes.IsDefaultOrEmpty)
 			throw new ArgumentException("Enums cannot be generic.", nameof(declaration));
-		if (
-			declaration.EnumUnderlyingType is not null
-			&& declaration.Kind != TypeDeclarationKind.Enum
-		)
-			throw new ArgumentException(
-				"EnumUnderlyingType is only valid for enum declarations.",
-				nameof(declaration)
-			);
+		if (declaration.EnumUnderlyingType is not null && declaration.Kind != TypeDeclarationKind.Enum)
+			throw new ArgumentException("EnumUnderlyingType is only valid for enum declarations.", nameof(declaration));
 		if (
 			declaration.Kind == TypeDeclarationKind.Enum
 			&& declaration.EnumUnderlyingType is not null
 			&& string.IsNullOrWhiteSpace(declaration.EnumUnderlyingType.Value.Name)
 		)
-			throw new ArgumentException(
-				"Enum underlying type cannot be whitespace.",
-				nameof(declaration)
-			);
+			throw new ArgumentException("Enum underlying type cannot be whitespace.", nameof(declaration));
 		if (declaration.Kind == TypeDeclarationKind.Delegate)
 		{
 			if (declaration.DelegateReturnType is null)
-				throw new ArgumentException(
-					"Delegate return type is required.",
-					nameof(declaration)
-				);
+				throw new ArgumentException("Delegate return type is required.", nameof(declaration));
 			ValidateTypeReference(declaration.DelegateReturnType.Value, nameof(declaration));
 			ValidateParameters(
 				declaration.DelegateParameters,
@@ -1988,10 +1841,7 @@ public sealed class CodeWriter
 				nameof(declaration)
 			);
 		}
-		else if (
-			declaration.DelegateReturnType is not null
-			|| !declaration.DelegateParameters.IsDefaultOrEmpty
-		)
+		else if (declaration.DelegateReturnType is not null || !declaration.DelegateParameters.IsDefaultOrEmpty)
 			throw new ArgumentException(
 				"Delegate return type and parameters are only valid for delegate declarations.",
 				nameof(declaration)
@@ -2012,22 +1862,13 @@ public sealed class CodeWriter
 		);
 
 		if (declaration.IsStatic && !declaration.Parameters.IsDefaultOrEmpty)
-			throw new ArgumentException(
-				"A static constructor cannot declare parameters.",
-				nameof(declaration)
-			);
+			throw new ArgumentException("A static constructor cannot declare parameters.", nameof(declaration));
 
 		if (declaration.IsStatic && !string.IsNullOrWhiteSpace(declaration.Initializer))
-			throw new ArgumentException(
-				"A static constructor cannot specify an initializer.",
-				nameof(declaration)
-			);
+			throw new ArgumentException("A static constructor cannot specify an initializer.", nameof(declaration));
 
 		if (declaration.IsStatic && declaration.Accessibility is not null)
-			throw new ArgumentException(
-				"A static constructor cannot specify accessibility.",
-				nameof(declaration)
-			);
+			throw new ArgumentException("A static constructor cannot specify accessibility.", nameof(declaration));
 	}
 
 	void WriteMethodGenericConstraints(ImmutableArray<GenericTypeParameterOptions> genericTypes)
@@ -2072,10 +1913,7 @@ public sealed class CodeWriter
 			nameof(declaration)
 		);
 		if (declaration.IsAbstract && declaration.ExpressionBody is not null)
-			throw new ArgumentException(
-				"An abstract method cannot have an expression body.",
-				nameof(declaration)
-			);
+			throw new ArgumentException("An abstract method cannot have an expression body.", nameof(declaration));
 	}
 
 	static void ValidatePropertyDeclaration(PropertyDeclarationOptions declaration)
@@ -2090,31 +1928,20 @@ public sealed class CodeWriter
 			declaration.IsSealed,
 			nameof(declaration)
 		);
-		if (!declaration.HasGetter && !declaration.HasSetter)
+		if (!declaration.HasGetter && !declaration.HasSetter && !declaration.IsInitOnly)
 			throw new ArgumentException(
 				"A property must have a getter, setter, or init accessor.",
 				nameof(declaration)
 			);
-		if (declaration.IsInitOnly && !declaration.HasSetter)
-			throw new ArgumentException(
-				"An init-only property must enable its setter accessor.",
-				nameof(declaration)
-			);
 		if (declaration.ExpressionBody is not null && declaration.HasSetter)
-			throw new ArgumentException(
-				"An expression-bodied property cannot have a setter.",
-				nameof(declaration)
-			);
+			throw new ArgumentException("An expression-bodied property cannot have a setter.", nameof(declaration));
 		if (declaration.ExpressionBody is not null && declaration.Initializer is not null)
 			throw new ArgumentException(
 				"A property cannot specify both an expression body and an initializer.",
 				nameof(declaration)
 			);
 		if (declaration.IsAbstract && declaration.ExpressionBody is not null)
-			throw new ArgumentException(
-				"An abstract property cannot have an expression body.",
-				nameof(declaration)
-			);
+			throw new ArgumentException("An abstract property cannot have an expression body.", nameof(declaration));
 	}
 
 	static void ValidateFieldDeclaration(FieldDeclarationOptions declaration)
@@ -2126,24 +1953,15 @@ public sealed class CodeWriter
 				"The file accessibility modifier is only valid for types.",
 				nameof(declaration)
 			);
-		if (
-			declaration.IsConst
-			&& (declaration.IsStatic || declaration.IsReadOnly || declaration.IsVolatile)
-		)
+		if (declaration.IsConst && (declaration.IsStatic || declaration.IsReadOnly || declaration.IsVolatile))
 			throw new ArgumentException(
 				"A const field cannot also be static, readonly, or volatile.",
 				nameof(declaration)
 			);
 		if (declaration.IsReadOnly && declaration.IsVolatile)
-			throw new ArgumentException(
-				"A field cannot be both readonly and volatile.",
-				nameof(declaration)
-			);
+			throw new ArgumentException("A field cannot be both readonly and volatile.", nameof(declaration));
 		if (declaration.IsConst && declaration.Initializer is null)
-			throw new ArgumentException(
-				"A const field requires an initializer.",
-				nameof(declaration)
-			);
+			throw new ArgumentException("A const field requires an initializer.", nameof(declaration));
 	}
 
 	static void ValidateMemberModifiers(
@@ -2156,10 +1974,7 @@ public sealed class CodeWriter
 	)
 	{
 		if (accessibility == TypeDeclarationAccessibility.File)
-			throw new ArgumentException(
-				"The file accessibility modifier is only valid for types.",
-				parameterName
-			);
+			throw new ArgumentException("The file accessibility modifier is only valid for types.", parameterName);
 		var count = (isAbstract ? 1 : 0) + (isVirtual ? 1 : 0) + (isOverride ? 1 : 0);
 		if (count > 1)
 			throw new ArgumentException(
@@ -2173,10 +1988,7 @@ public sealed class CodeWriter
 	static void ValidateRequired(string? value, string description, string parameterName)
 	{
 		if (string.IsNullOrWhiteSpace(value))
-			throw new ArgumentException(
-				$"{description} cannot be null or whitespace.",
-				parameterName
-			);
+			throw new ArgumentException($"{description} cannot be null or whitespace.", parameterName);
 	}
 
 	static string? NormalizeOptionalIdentity(string? value, string parameterName)
@@ -2184,10 +1996,7 @@ public sealed class CodeWriter
 		if (value is null)
 			return null;
 		if (string.IsNullOrWhiteSpace(value))
-			throw new ArgumentException(
-				"Generator identity values cannot be empty or whitespace.",
-				parameterName
-			);
+			throw new ArgumentException("Generator identity values cannot be empty or whitespace.", parameterName);
 
 		// Normalize the value to a consistent form for comparison and storage.
 		return value;
@@ -2237,11 +2046,7 @@ public sealed class CodeWriter
 		else if (type.GenericArity > 0)
 			Write('<').Write(new string(',', type.GenericArity - 1)).Write('>');
 
-		for (
-			var index = 0;
-			!type.ArrayRanks.IsDefaultOrEmpty && index < type.ArrayRanks.Length;
-			index++
-		)
+		for (var index = 0; !type.ArrayRanks.IsDefaultOrEmpty && index < type.ArrayRanks.Length; index++)
 			Write('[').Write(new string(',', type.ArrayRanks[index] - 1)).Write(']');
 		WriteIf(type.IsPointer, "*").WriteIf(type.IsNullable, "?");
 		return this;
@@ -2256,16 +2061,11 @@ public sealed class CodeWriter
 		{
 			length += 2;
 			for (var index = 0; index < type.GenericArguments.Length; index++)
-				length +=
-					GetTypeReferenceLength(type.GenericArguments[index]) + (index == 0 ? 0 : 2);
+				length += GetTypeReferenceLength(type.GenericArguments[index]) + (index == 0 ? 0 : 2);
 		}
 		else if (type.GenericArity > 0)
 			length += type.GenericArity + 1;
-		for (
-			var index = 0;
-			!type.ArrayRanks.IsDefaultOrEmpty && index < type.ArrayRanks.Length;
-			index++
-		)
+		for (var index = 0; !type.ArrayRanks.IsDefaultOrEmpty && index < type.ArrayRanks.Length; index++)
 			length += type.ArrayRanks[index] + 1;
 		return length;
 	}
@@ -2283,39 +2083,22 @@ public sealed class CodeWriter
 				"A type cannot have both open generic arity and concrete generic arguments.",
 				parameterName
 			);
-		for (
-			var index = 0;
-			!type.GenericArguments.IsDefaultOrEmpty && index < type.GenericArguments.Length;
-			index++
-		)
+		for (var index = 0; !type.GenericArguments.IsDefaultOrEmpty && index < type.GenericArguments.Length; index++)
 			ValidateTypeReference(type.GenericArguments[index], parameterName);
-		for (
-			var index = 0;
-			!type.ArrayRanks.IsDefaultOrEmpty && index < type.ArrayRanks.Length;
-			index++
-		)
+		for (var index = 0; !type.ArrayRanks.IsDefaultOrEmpty && index < type.ArrayRanks.Length; index++)
 			if (type.ArrayRanks[index] < 1)
 				throw new ArgumentException("Array ranks must be positive.", parameterName);
 	}
 
-	static void ValidateAttributes(
-		ImmutableArray<AttributeDeclarationOptions> attributes,
-		string parameterName
-	)
+	static void ValidateAttributes(ImmutableArray<AttributeDeclarationOptions> attributes, string parameterName)
 	{
 		for (var index = 0; !attributes.IsDefaultOrEmpty && index < attributes.Length; index++)
 		{
 			var attribute = attributes[index];
 			if (string.IsNullOrWhiteSpace(attribute.TypeName))
-				throw new ArgumentException(
-					"Attribute type names cannot be null or whitespace.",
-					parameterName
-				);
+				throw new ArgumentException("Attribute type names cannot be null or whitespace.", parameterName);
 			if (attribute.Target is not null && string.IsNullOrWhiteSpace(attribute.Target))
-				throw new ArgumentException(
-					"Attribute targets cannot be whitespace.",
-					parameterName
-				);
+				throw new ArgumentException("Attribute targets cannot be whitespace.", parameterName);
 			for (
 				var argumentIndex = 0;
 				!attribute.Arguments.IsDefaultOrEmpty && argumentIndex < attribute.Arguments.Length;
@@ -2329,10 +2112,7 @@ public sealed class CodeWriter
 						parameterName
 					);
 				if (argument.Name is not null && string.IsNullOrWhiteSpace(argument.Name))
-					throw new ArgumentException(
-						"Attribute argument names cannot be whitespace.",
-						parameterName
-					);
+					throw new ArgumentException("Attribute argument names cannot be whitespace.", parameterName);
 			}
 		}
 	}
@@ -2427,13 +2207,7 @@ public sealed class CodeWriter
 		readonly int _completedItem;
 		readonly int _itemIndent;
 
-		internal BlockScope(
-			CodeWriter writer,
-			string? closingSeparator,
-			int scopeId,
-			int completedItem,
-			int itemIndent
-		)
+		internal BlockScope(CodeWriter writer, string? closingSeparator, int scopeId, int completedItem, int itemIndent)
 		{
 			_writer = writer;
 			_closingSeparator = closingSeparator;

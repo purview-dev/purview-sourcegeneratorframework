@@ -10,23 +10,11 @@ partial class TypeValueObjectTests
 		get
 		{
 			yield return () =>
-				CreateSymbolTestData(
-					new("Testing.Testing", true),
-					"TestingClass",
-					TypeDeclarationKind.Class
-				);
+				CreateSymbolTestData(new("Testing.Testing", true), "TestingClass", TypeDeclarationKind.Class);
 			yield return () =>
-				CreateSymbolTestData(
-					new("Testing.Testing", false),
-					"TestingClass",
-					TypeDeclarationKind.Class
-				);
+				CreateSymbolTestData(new("Testing.Testing", false), "TestingClass", TypeDeclarationKind.Class);
 			yield return () =>
-				CreateSymbolTestData(
-					NamespaceInfo.GlobalNamespace,
-					"TestingClass",
-					TypeDeclarationKind.Class
-				);
+				CreateSymbolTestData(NamespaceInfo.GlobalNamespace, "TestingClass", TypeDeclarationKind.Class);
 		}
 	}
 
@@ -54,11 +42,7 @@ partial class TypeValueObjectTests
 
 		using (
 			writer.WriteTypeScope(
-				new TypeDeclarationOptions(typeName)
-				{
-					Accessibility = accessibility,
-					Kind = declarationKind,
-				}
+				new TypeDeclarationOptions(typeName) { Accessibility = accessibility, Kind = declarationKind }
 			)
 		)
 		{
@@ -81,9 +65,7 @@ partial class TypeValueObjectTests
 		var compilation = SourceGeneratorHelpers.CreateCompilation([syntax], references, options);
 
 		//var model = compilation.GetSemanticModel(syntax);
-		var fullTypeName = namespaceInfo.HasNamespace
-			? $"{namespaceInfo.Namespace}.{typeName}"
-			: typeName;
+		var fullTypeName = namespaceInfo.HasNamespace ? $"{namespaceInfo.Namespace}.{typeName}" : typeName;
 		var symbol = compilation.GetTypeByMetadataName(fullTypeName) as ITypeSymbol;
 
 		ArgumentNullException.ThrowIfNull(symbol);
@@ -91,10 +73,7 @@ partial class TypeValueObjectTests
 		return new(fullTypeName, typeName, namespaceInfo, symbol);
 	}
 
-	[System.Diagnostics.CodeAnalysis.SuppressMessage(
-		"Design",
-		"CA1034:Nested types should not be visible"
-	)]
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1034:Nested types should not be visible")]
 	public sealed record class SymbolTestDataInfo(
 		string FullTypeName,
 		string TypeName,
@@ -102,10 +81,7 @@ partial class TypeValueObjectTests
 		ITypeSymbol Symbol
 	);
 
-	[System.Diagnostics.CodeAnalysis.SuppressMessage(
-		"Design",
-		"CA1034:Nested types should not be visible"
-	)]
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1034:Nested types should not be visible")]
 	public readonly record struct NamespaceInfo(string? Namespace, bool IsFileScoped)
 	{
 		public bool HasNamespace => !string.IsNullOrWhiteSpace(Namespace);

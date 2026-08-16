@@ -20,10 +20,7 @@ public class PreferForAttributeWithMetadataNameAnalyzerTests
 			}
 			""";
 
-		var diagnostics =
-			await new PreferForAttributeWithMetadataNameAnalyzer().GetAnalyzerDiagnosticsAsync(
-				source
-			);
+		var diagnostics = await new PreferForAttributeWithMetadataNameAnalyzer().GetAnalyzerDiagnosticsAsync(source);
 
 		await Assert.That(diagnostics).Count().IsEqualTo(1);
 		await Assert.That(diagnostics.First().Id).IsEqualTo("PSGFR11");
@@ -48,10 +45,7 @@ public class PreferForAttributeWithMetadataNameAnalyzerTests
 			}
 			""";
 
-		var diagnostics =
-			await new PreferForAttributeWithMetadataNameAnalyzer().GetAnalyzerDiagnosticsAsync(
-				source
-			);
+		var diagnostics = await new PreferForAttributeWithMetadataNameAnalyzer().GetAnalyzerDiagnosticsAsync(source);
 
 		await Assert.That(diagnostics).IsEmpty();
 	}

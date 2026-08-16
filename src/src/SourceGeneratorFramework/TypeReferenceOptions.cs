@@ -9,10 +9,7 @@ public readonly record struct TypeReferenceOptions
 	/// <summary>Creates a named type reference.</summary>
 	public TypeReferenceOptions(string name) =>
 		Name = string.IsNullOrWhiteSpace(name)
-			? throw new ArgumentException(
-				"Type name cannot be null, empty, or whitespace.",
-				nameof(name)
-			)
+			? throw new ArgumentException("Type name cannot be null, empty, or whitespace.", nameof(name))
 			: name;
 
 	/// <summary>Creates a type reference from a framework type value.</summary>
@@ -26,10 +23,7 @@ public readonly record struct TypeReferenceOptions
 
 		var name = type.RenderFullName;
 		Name = string.IsNullOrWhiteSpace(name)
-			? throw new ArgumentException(
-				"The type value must provide a non-empty rendered name.",
-				nameof(type)
-			)
+			? throw new ArgumentException("The type value must provide a non-empty rendered name.", nameof(type))
 			: name;
 	}
 
@@ -90,13 +84,11 @@ public readonly record struct TypeReferenceOptions
 	public static implicit operator TypeReferenceOptions?(TypeValueObject? type) =>
 		type == null || type == TypeValueObject.Empty ? null : new(type);
 
-	public static implicit operator TypeReferenceOptions?(Type? type) =>
-		type == null ? null : new(type);
+	public static implicit operator TypeReferenceOptions?(Type? type) => type == null ? null : new(type);
 
 	public static implicit operator TypeReferenceOptions(Type type) => new(type);
 
-	public static implicit operator TypeReferenceOptions?(string? type) =>
-		type == null ? null : new(type);
+	public static implicit operator TypeReferenceOptions?(string? type) => type == null ? null : new(type);
 
 	public static implicit operator TypeReferenceOptions(string type) => new(type);
 

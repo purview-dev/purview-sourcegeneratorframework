@@ -8,11 +8,9 @@ static class GeneratorTypeLibrary
 
 	public static readonly TypeValueObject ILogSupport = TypeValueObject.Create<ILogSupport>();
 
-	public static readonly TypeValueObject GenerationLogger =
-		TypeValueObject.Create<GenerationLogger>();
+	public static readonly TypeValueObject GenerationLogger = TypeValueObject.Create<GenerationLogger>();
 
-	public static readonly TypeValueObject TypeValueObject =
-		TypeValueObject.Create<TypeValueObject>();
+	public static readonly TypeValueObject TypeValueObject = TypeValueObject.Create<TypeValueObject>();
 
 	public static readonly TypeValueObject OutputType = TypeValueObject.Create<OutputType>();
 
@@ -25,30 +23,18 @@ static class GeneratorTypeLibrary
 	public static readonly TypeValueObject EmbeddedAttribute =
 		TypeValueObject.Create<Microsoft.CodeAnalysis.EmbeddedAttribute>();
 
-	public static readonly TypeValueObject GenerateAttribute = new(
-		nameof(GenerateAttribute),
-		GeneratorsNamespace
-	);
+	public static readonly TypeValueObject GenerateAttribute = new(nameof(GenerateAttribute), GeneratorsNamespace);
 
-	public static readonly TypeValueObject PropertyAttribute = new(
-		nameof(PropertyAttribute),
-		GeneratorsNamespace
-	);
+	public static readonly TypeValueObject PropertyAttribute = new(nameof(PropertyAttribute), GeneratorsNamespace);
 
-	public static readonly TypeValueObject ArgumentAttribute = new(
-		nameof(ArgumentAttribute),
-		GeneratorsNamespace
-	);
+	public static readonly TypeValueObject ArgumentAttribute = new(nameof(ArgumentAttribute), GeneratorsNamespace);
 
 	public static readonly TypeValueObject NestedModelAttribute = new(
 		nameof(NestedModelAttribute),
 		GeneratorsNamespace
 	);
 
-	public static readonly TypeValueObject ExcludeAttribute = new(
-		nameof(ExcludeAttribute),
-		GeneratorsNamespace
-	);
+	public static readonly TypeValueObject ExcludeAttribute = new(nameof(ExcludeAttribute), GeneratorsNamespace);
 
 	public static readonly TypeValueObject GenericTypeArgumentAttribute = new(
 		nameof(GenericTypeArgumentAttribute),

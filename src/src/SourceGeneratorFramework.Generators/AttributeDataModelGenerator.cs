@@ -11,10 +11,7 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, ILogSup
 
 	public void Initialize(IncrementalGeneratorInitializationContext context)
 	{
-		context.RegisterEmbeddedAttribute(
-			typeof(AttributeDataModelGenerator).FullName!,
-			AssemblyInfo.Version
-		);
+		context.RegisterEmbeddedAttribute(typeof(AttributeDataModelGenerator).FullName!, AssemblyInfo.Version);
 
 		context.RegisterPostInitializationOutput(context =>
 		{
@@ -50,10 +47,7 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, ILogSup
 		);
 	}
 
-	static void GenerateAttributeDataModel(
-		SourceProductionContext spc,
-		AttributeDataModelTarget target
-	)
+	static void GenerateAttributeDataModel(SourceProductionContext spc, AttributeDataModelTarget target)
 	{
 		var writer = new CodeWriter(
 			generatorName: typeof(AttributeDataModelGenerator).FullName,
@@ -91,7 +85,7 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, ILogSup
 		using (writer.WriteRecordStructScope(options))
 		{
 			writer.WriteProperty(
-				new("Exists", "bool") { Accessibility = TypeDeclarationAccessibility.Public }
+				new("Exists", "bool") { Accessibility = TypeDeclarationAccessibility.Public, HasSetter = false }
 			);
 			foreach (var property in target.Properties)
 			{
@@ -194,10 +188,7 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, ILogSup
 		);
 	}
 
-	static void WriteFromAttributeDataArrayMethod(
-		CodeWriter writer,
-		AttributeDataModelTarget target
-	)
+	static void WriteFromAttributeDataArrayMethod(CodeWriter writer, AttributeDataModelTarget target)
 	{
 		MethodDeclarationOptions methodOptions = new("FromAttributeData", new(target.StructName))
 		{
@@ -233,15 +224,9 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, ILogSup
 		);
 	}
 
-	static void WriteFromAttributeDataArrayWithOutMethod(
-		CodeWriter writer,
-		AttributeDataModelTarget target
-	)
+	static void WriteFromAttributeDataArrayWithOutMethod(CodeWriter writer, AttributeDataModelTarget target)
 	{
-		var methodOptions = new MethodDeclarationOptions(
-			"FromAttributeData",
-			new(target.StructName)
-		)
+		var methodOptions = new MethodDeclarationOptions("FromAttributeData", new(target.StructName))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			IsStatic = true,
@@ -289,17 +274,11 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, ILogSup
 
 	static void WriteFromAttributeDataMethod(CodeWriter writer, AttributeDataModelTarget target)
 	{
-		var methodOptions = new MethodDeclarationOptions(
-			"FromAttributeData",
-			new(target.StructName)
-		)
+		var methodOptions = new MethodDeclarationOptions("FromAttributeData", new(target.StructName))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			IsStatic = true,
-			Parameters =
-			[
-				new("attributeData", new("global::Microsoft.CodeAnalysis.AttributeData")),
-			],
+			Parameters = [new("attributeData", new("global::Microsoft.CodeAnalysis.AttributeData"))],
 		};
 
 		writer.WriteMethod(
@@ -339,15 +318,11 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, ILogSup
 	{
 		var variableName = ToCamelCase(property.PropertyName);
 		var typeName = GetNonNullableTypeName(property.FullyQualifiedTypeName);
-		var localTypeName = property.IsNonNullableReferenceType
-			? typeName + "?"
-			: property.FullyQualifiedTypeName;
+		var localTypeName = property.IsNonNullableReferenceType ? typeName + "?" : property.FullyQualifiedTypeName;
 
 		if (property.IsNestedModel)
 		{
-			writer.WriteLine(
-				$"var {variableName} = {property.NestedModelTypeName}.FromAttributeData(attributeData);"
-			);
+			writer.WriteLine($"var {variableName} = {property.NestedModelTypeName}.FromAttributeData(attributeData);");
 			return;
 		}
 
@@ -448,12 +423,7 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, ILogSup
 
 			var source = sources[index];
 			var isLast = index == sources.Length - 1 && !hasDefaultValue;
-			var methodCall = GetTryGetMethodCall(
-				source,
-				variableName,
-				typeName,
-				declareVariable: false
-			);
+			var methodCall = GetTryGetMethodCall(source, variableName, typeName, declareVariable: false);
 
 			if (isLast)
 			{
@@ -469,23 +439,14 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, ILogSup
 		WriteFallback(0);
 	}
 
-	static void WriteEnumPropertyExtraction(
-		CodeWriter writer,
-		AttributeDataModelProperty property,
-		string variableName
-	)
+	static void WriteEnumPropertyExtraction(CodeWriter writer, AttributeDataModelProperty property, string variableName)
 	{
 		var sources = property.Sources;
-		var defaultValueExpression = property.HasDefaultValue
-			? property.DefaultValueExpression
-			: "null";
+		var defaultValueExpression = property.HasDefaultValue ? property.DefaultValueExpression : "null";
 
 		if (sources.Length == 1)
 		{
-			var expression = GetEnumSingleSourceExtractionExpression(
-				sources[0],
-				defaultValueExpression
-			);
+			var expression = GetEnumSingleSourceExtractionExpression(sources[0], defaultValueExpression);
 			writer.WriteLine($"var {variableName} = {expression};");
 			return;
 		}
@@ -494,10 +455,7 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, ILogSup
 	}
 
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0072:Add missing cases")]
-	static string GetEnumSingleSourceExtractionExpression(
-		PropertySource source,
-		string defaultValueExpression
-	)
+	static string GetEnumSingleSourceExtractionExpression(PropertySource source, string defaultValueExpression)
 	{
 		return source.Source switch
 		{
@@ -507,9 +465,7 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, ILogSup
 				$"attributeData.GetEnumConstructorArgument({source.ConstructorIndex}, {defaultValueExpression})",
 			AttributePropertySource.ConstructorName =>
 				$"attributeData.GetEnumConstructorArgument(\"{source.MappedName}\", {defaultValueExpression})",
-			_ => throw new InvalidOperationException(
-				$"Unsupported enum property source: {source.Source}"
-			),
+			_ => throw new InvalidOperationException($"Unsupported enum property source: {source.Source}"),
 		};
 	}
 
@@ -535,12 +491,7 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, ILogSup
 
 			var source = sources[index];
 			var isLast = index == sources.Length - 1;
-			var methodCall = GetTryGetMethodCall(
-				source,
-				tempName,
-				typeName,
-				declareVariable: false
-			);
+			var methodCall = GetTryGetMethodCall(source, tempName, typeName, declareVariable: false);
 
 			if (isLast)
 			{
@@ -555,16 +506,10 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, ILogSup
 
 		WriteFallback(0);
 
-		writer.WriteLine(
-			$"var {variableName} = {tempName}.ToEnumString({defaultValueExpression});"
-		);
+		writer.WriteLine($"var {variableName} = {tempName}.ToEnumString({defaultValueExpression});");
 	}
 
-	static string GetSingleSourceExtractionExpression(
-		PropertySource source,
-		string variableName,
-		string typeName
-	)
+	static string GetSingleSourceExtractionExpression(PropertySource source, string variableName, string typeName)
 	{
 		var methodCall = GetTryGetMethodCall(source, variableName, typeName, declareVariable: true);
 		// TryGet method declares the variable via out var, so we just call it.
@@ -591,19 +536,12 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, ILogSup
 				$"var {variableName} = attributeData.GetGenericTypeArgument<{typeName}>(\"{source.MappedName}\", {defaultValueExpression});",
 			AttributePropertySource.TypeArgument =>
 				$"var {variableName} = attributeData.GetGenericTypeArgument<{typeName}>({source.ConstructorIndex}, {defaultValueExpression});",
-			_ => throw new InvalidOperationException(
-				$"Unsupported property source: {source.Source}"
-			),
+			_ => throw new InvalidOperationException($"Unsupported property source: {source.Source}"),
 		};
 	}
 
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0072:Add missing cases")]
-	static string GetTryGetMethodCall(
-		PropertySource source,
-		string variableName,
-		string typeName,
-		bool declareVariable
-	)
+	static string GetTryGetMethodCall(PropertySource source, string variableName, string typeName, bool declareVariable)
 	{
 		var outVariable = declareVariable ? $"out var {variableName}" : $"out {variableName}";
 		return source.Source switch
@@ -618,16 +556,12 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator, ILogSup
 				$"attributeData.TryGetGenericTypeArgument<{typeName}>(\"{source.MappedName}\", {outVariable})",
 			AttributePropertySource.TypeArgument =>
 				$"attributeData.TryGetGenericTypeArgument<{typeName}>({source.ConstructorIndex}, {outVariable})",
-			_ => throw new InvalidOperationException(
-				$"Unsupported property source: {source.Source}"
-			),
+			_ => throw new InvalidOperationException($"Unsupported property source: {source.Source}"),
 		};
 	}
 
 	static string GetNonNullableTypeName(string typeName) =>
-		typeName.EndsWith("?", StringComparison.Ordinal)
-			? typeName.Substring(0, typeName.Length - 1)
-			: typeName;
+		typeName.EndsWith("?", StringComparison.Ordinal) ? typeName.Substring(0, typeName.Length - 1) : typeName;
 
 	static string ToCamelCase(string value) =>
 		string.IsNullOrEmpty(value) ? value : char.ToLowerInvariant(value[0]) + value.Substring(1);

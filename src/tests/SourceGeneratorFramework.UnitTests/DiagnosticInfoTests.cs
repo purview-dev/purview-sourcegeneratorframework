@@ -43,9 +43,7 @@ public class DiagnosticInfoTests
 		var diagnostic = info.ToDiagnostic();
 
 		await Assert.That(diagnostic.Descriptor).IsEqualTo(TestDescriptor);
-		await Assert
-			.That(diagnostic.GetMessage(CultureInfo.InvariantCulture))
-			.Contains("Test message: arg");
+		await Assert.That(diagnostic.GetMessage(CultureInfo.InvariantCulture)).Contains("Test message: arg");
 		await Assert.That(diagnostic.Location.SourceSpan).IsEqualTo(default);
 	}
 

@@ -29,8 +29,7 @@ public enum ServiceLifetime
 /// </remarks>
 /// <param name="lifetime">The service lifetime.</param>
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
-public sealed class GenerateServiceAttribute(ServiceLifetime lifetime = ServiceLifetime.Singleton)
-	: Attribute
+public sealed class GenerateServiceAttribute(ServiceLifetime lifetime = ServiceLifetime.Singleton) : Attribute
 {
 	/// <summary>
 	/// Gets the service lifetime.

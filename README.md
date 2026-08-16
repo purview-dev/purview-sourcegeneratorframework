@@ -36,6 +36,12 @@ just tests
 dotnet test src/SourceGeneratorFramework.slnx -c Release
 ```
 
+When a test project must both run its generator (to use generated attributes or types in test
+fixtures) and reference the generator type through the testing framework, use two project
+references: one with `OutputItemType="Analyzer"` and `ReferenceOutputAssembly="false"`, and one
+normal reference with `ReferenceOutputAssembly="true"`. The complete pattern is documented in the
+[`Purview.SourceGeneratorFramework.Testing` README](src/src/SourceGeneratorFramework.Testing/Sdk/README.md#running-the-generator-in-the-test-project).
+
 ## Generators
 
 ### AttributeDataModelGenerator

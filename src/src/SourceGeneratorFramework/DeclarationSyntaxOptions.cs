@@ -18,9 +18,7 @@ public readonly record struct AttributeDeclarationOptions
 	{
 		var renderedName = type.RenderFullName;
 		TypeName =
-			renderedName.Length >= 2
-			&& renderedName[0] == '['
-			&& renderedName[renderedName.Length - 1] == ']'
+			renderedName.Length >= 2 && renderedName[0] == '[' && renderedName[renderedName.Length - 1] == ']'
 				? renderedName.Substring(1, renderedName.Length - 2)
 				: renderedName;
 	}
@@ -39,23 +37,12 @@ public readonly record struct AttributeDeclarationOptions
 public readonly record struct AttributeArgumentOptions
 {
 	/// <summary>Creates a positional attribute argument.</summary>
-	public AttributeArgumentOptions(
-		string value,
-		string? name = null,
-		bool isPropertyAssignment = false
-	) => (Value, Name, IsPropertyAssignment) = (value, name, isPropertyAssignment);
+	public AttributeArgumentOptions(string value, string? name = null, bool isPropertyAssignment = false) =>
+		(Value, Name, IsPropertyAssignment) = (value, name, isPropertyAssignment);
 
 	/// <summary>Creates a positional Boolean attribute argument using a valid C# literal.</summary>
-	public AttributeArgumentOptions(
-		bool value,
-		string? name = null,
-		bool isPropertyAssignment = false
-	) =>
-		(Value, Name, IsPropertyAssignment) = (
-			value ? "true" : "false",
-			name,
-			isPropertyAssignment
-		);
+	public AttributeArgumentOptions(bool value, string? name = null, bool isPropertyAssignment = false) =>
+		(Value, Name, IsPropertyAssignment) = (value ? "true" : "false", name, isPropertyAssignment);
 
 	/// <summary>Gets the argument expression.</summary>
 	public string Value { get; }

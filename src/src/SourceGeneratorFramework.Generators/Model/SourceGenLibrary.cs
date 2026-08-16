@@ -6,20 +6,15 @@ namespace Purview.SourceGeneratorFramework.Generators.Model;
 
 static class SourceGenLibrary
 {
-	public static IncrementalValuesProvider<
-		GeneratorResult<TypeValueObject>
-	> GetGeneratorValueProviders(IncrementalGeneratorInitializationContext context)
+	public static IncrementalValuesProvider<GeneratorResult<TypeValueObject>> GetGeneratorValueProviders(
+		IncrementalGeneratorInitializationContext context
+	)
 	{
 #pragma warning disable format
 		return context
 			.SyntaxProvider.CreateSyntaxProvider(
 				predicate: static (node, _) =>
-					node
-						is ClassDeclarationSyntax
-						{
-							BaseList.Types.Count: > 0,
-							Modifiers: var modifiers,
-						}
+					node is ClassDeclarationSyntax { BaseList.Types.Count: > 0, Modifiers: var modifiers }
 					&& modifiers.Any(SyntaxKind.PublicKeyword),
 				transform: static (ctx, ct) => GetGeneratorClassInfo(ctx, ct)
 			)
@@ -43,8 +38,7 @@ static class SourceGenLibrary
 
 		var interfaces = typeSymbol.AllInterfaces;
 		var isGenerator = interfaces.Any(static i =>
-			GeneratorTypeLibrary.IIncrementalGenerator.Equals(i)
-			|| GeneratorTypeLibrary.ISourceGenerator.Equals(i)
+			GeneratorTypeLibrary.IIncrementalGenerator.Equals(i) || GeneratorTypeLibrary.ISourceGenerator.Equals(i)
 		);
 
 		if (!isGenerator)

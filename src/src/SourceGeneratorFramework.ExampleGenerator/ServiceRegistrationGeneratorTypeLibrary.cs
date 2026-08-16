@@ -1,4 +1,4 @@
-namespace Purview.SourceGeneratorFramework.Examples;
+namespace Purview.SourceGeneratorFramework.ExampleGenerator;
 
 /// <summary>
 /// Provides <see cref="TypeValueObject"/> instances used by the service registration generator.

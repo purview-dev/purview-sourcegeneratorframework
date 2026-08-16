@@ -55,6 +55,45 @@ public class MyGeneratorTests
 
 Or derive from `SourceGeneratorTestBase<TGenerator>` and plug in your own `ITestOutput` implementation.
 
+## Running the generator in the test project
+
+Sometimes the test project's own source uses types produced by the generator—for example, an
+integration test may attach a generated marker attribute to a fixture class while also passing the
+generator type to `SourceGeneratorTestRunner<TGenerator>`.
+
+Reference the generator project twice, once in each role:
+
+```xml
+<ItemGroup>
+  <!-- Runs the generator during compilation of the test project. -->
+  <ProjectReference
+    Include="..\..\src\MyGenerator\MyGenerator.csproj"
+    PrivateAssets="all"
+    OutputItemType="Analyzer"
+    ReferenceOutputAssembly="false"
+  />
+
+  <!-- Exposes MyGenerator to SourceGeneratorTestRunner<MyGenerator>. -->
+  <ProjectReference
+    Include="..\..\src\MyGenerator\MyGenerator.csproj"
+    PrivateAssets="all"
+    ReferenceOutputAssembly="true"
+  />
+</ItemGroup>
+```
+
+The analyzer reference makes generated declarations available to the test project's compilation.
+The normal reference makes the generator's CLR type available to the testing API. These are
+separate from the in-memory compilation created by `SourceGeneratorTestRunner`; source supplied to
+the runner is still compiled and generated independently.
+
+The normal reference also exposes the generator's assembly dependencies to every target framework
+of the test project. Keep the generator on the oldest compatible Roslyn version—for example,
+Roslyn 4.13 when tests target .NET 8, .NET 9, and .NET 10. A generator built against Roslyn 5 and
+`System.Collections.Immutable` 10 will conflict with the framework assemblies supplied by .NET 8
+and .NET 9. Use the framework's `RegisterEmbeddedAttribute` helper when avoiding a newer Roslyn API
+such as `AddEmbeddedAttributeDefinition`.
+
 ## Options
 
 Configure a test run with `SourceGeneratorTestOptions`:

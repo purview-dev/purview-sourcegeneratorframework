@@ -1,7 +1,6 @@
 <Project>
 	<PropertyGroup>
-		<_PurviewSourceGeneratorFrameworkAssembly
-			Condition="'$(_PurviewSourceGeneratorFrameworkAssembly)' == ''"
+		<_PurviewSourceGeneratorFrameworkAssembly Condition="'$(_PurviewSourceGeneratorFrameworkAssembly)' == ''"
 			>$(MSBuildThisFileDirectory)..\lib\netstandard2.0\Purview.SourceGeneratorFramework.dll</_PurviewSourceGeneratorFrameworkAssembly>
 	</PropertyGroup>
 
@@ -36,18 +35,5 @@
 			DestinationFolder="$(TargetDir)"
 			SkipUnchangedFiles="true"
 		/>
-	</Target>
-
-	<Target
-		Name="GetSourceGeneratorAnalyzerFiles"
-		Returns="@(SourceGeneratorAnalyzerFile)"
-		DependsOnTargets="GetTargetPathWithTargetPlatformMoniker"
-		Condition="'$(IsRoslynComponent)' == 'true'"
-		Label="Returns analyzer files without adding runtime dependencies to normal project outputs."
-	>
-		<ItemGroup>
-			<SourceGeneratorAnalyzerFile Include="@(TargetPathWithTargetPlatformMoniker)" />
-			<SourceGeneratorAnalyzerFile Include="@(SourceGeneratorRuntimeDependency)" />
-		</ItemGroup>
 	</Target>
 </Project>

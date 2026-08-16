@@ -47,28 +47,20 @@ public sealed class CodeWriterScopeValidationException : InvalidOperationExcepti
 	/// </summary>
 	public IReadOnlyList<CodeWriterOpenScope> OpenScopes => _openScopes;
 
-	static ImmutableArray<CodeWriterOpenScope> Capture(
-		IEnumerable<CodeWriterOpenScope> openScopes
-	) => openScopes is null ? throw new ArgumentNullException(nameof(openScopes)) : [.. openScopes];
+	static ImmutableArray<CodeWriterOpenScope> Capture(IEnumerable<CodeWriterOpenScope> openScopes) =>
+		openScopes is null ? throw new ArgumentNullException(nameof(openScopes)) : [.. openScopes];
 
 	static string CreateMessage(ImmutableArray<CodeWriterOpenScope> openScopes)
 	{
 		var builder = new System.Text.StringBuilder()
 			.Append("Cannot create generated source while ")
 			.Append(openScopes.Length)
-			.AppendLine(
-				" disposable scope(s) remain open. Dispose every scope before calling ToString()."
-			);
+			.AppendLine(" disposable scope(s) remain open. Dispose every scope before calling ToString().");
 
 		for (var index = 0; index < openScopes.Length; index++)
 		{
 			var scope = openScopes[index];
-			builder
-				.AppendLine()
-				.Append("Open scope #")
-				.Append(index + 1)
-				.Append(": ")
-				.Append(scope.Kind);
+			builder.AppendLine().Append("Open scope #").Append(index + 1).Append(": ").Append(scope.Kind);
 
 			if (!string.IsNullOrWhiteSpace(scope.Header))
 				builder.Append(" — ").Append(scope.Header);

@@ -5,14 +5,8 @@ namespace Purview.SourceGeneratorFramework.Extensions;
 /// <summary>
 /// Provides extension methods for extracting values from <see cref="AttributeData"/>.
 /// </summary>
-[System.Diagnostics.CodeAnalysis.SuppressMessage(
-	"Usage",
-	"CA2208:Instantiate argument exceptions correctly"
-)]
-[System.Diagnostics.CodeAnalysis.SuppressMessage(
-	"Naming",
-	"CA1708:Identifiers should differ by more than case"
-)]
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly")]
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1708:Identifiers should differ by more than case")]
 public static partial class AttributeDataExtensions
 {
 	extension(AttributeData attribute)
@@ -25,10 +19,7 @@ public static partial class AttributeDataExtensions
 			if (attribute == null)
 				throw new ArgumentNullException(nameof(attribute));
 			if (string.IsNullOrWhiteSpace(name))
-				throw new ArgumentException(
-					"Argument name cannot be null or whitespace.",
-					nameof(name)
-				);
+				throw new ArgumentException("Argument name cannot be null or whitespace.", nameof(name));
 
 			// All valid...
 			return TryGetNamedArgument(attribute, name, out T? value) ? value : defaultValue;
@@ -42,10 +33,7 @@ public static partial class AttributeDataExtensions
 			if (attribute == null)
 				throw new ArgumentNullException(nameof(attribute));
 			if (string.IsNullOrWhiteSpace(name))
-				throw new ArgumentException(
-					"Argument name cannot be null or whitespace.",
-					nameof(name)
-				);
+				throw new ArgumentException("Argument name cannot be null or whitespace.", nameof(name));
 
 			foreach (var namedArg in attribute.NamedArguments)
 			{
@@ -67,10 +55,7 @@ public static partial class AttributeDataExtensions
 		{
 			if (string.IsNullOrWhiteSpace(parameterName))
 			{
-				throw new ArgumentException(
-					"Parameter name cannot be null or whitespace.",
-					nameof(parameterName)
-				);
+				throw new ArgumentException("Parameter name cannot be null or whitespace.", nameof(parameterName));
 			}
 
 			var constructor = attribute.AttributeConstructor;
@@ -82,13 +67,7 @@ public static partial class AttributeDataExtensions
 
 			for (var index = 0; index < constructor.Parameters.Length; index++)
 			{
-				if (
-					string.Equals(
-						constructor.Parameters[index].Name,
-						parameterName,
-						StringComparison.Ordinal
-					)
-				)
+				if (string.Equals(constructor.Parameters[index].Name, parameterName, StringComparison.Ordinal))
 				{
 					return attribute.TryGetConstructorArgument(index, out value);
 				}

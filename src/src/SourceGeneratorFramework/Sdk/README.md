@@ -1,5 +1,67 @@
 # Purview.SourceGeneratorFramework
 
+## Referencing a generator project
+
+Roslyn must receive both a source-generator assembly and its framework runtime dependency as
+analyzer inputs. Use an analyzer project reference:
+
+```xml
+<ProjectReference
+	Include="..\MyGenerator\MyGenerator.csproj"
+	PrivateAssets="all"
+	OutputItemType="Analyzer"
+	ReferenceOutputAssembly="false"
+/>
+```
+
+The Purview SDK automatically invokes `GetSourceGeneratorAnalyzerFiles`, which returns both the
+generator and its framework dependency without adding either file to the consuming application's
+runtime references. Specifying `Targets="GetSourceGeneratorAnalyzerFiles"` explicitly remains
+supported but is not required.
+
+### Referencing a generator from its test project
+
+A test project can need the source-generator project in two different roles at the same time:
+
+- as an analyzer, so the generator runs against the test project and its generated attributes and
+  other types can be used directly by test source files; and
+- as a normal assembly reference, so the test code can name and instantiate the generator type
+  through `Purview.SourceGeneratorFramework.Testing`.
+
+Add two project references with deliberately different metadata:
+
+```xml
+<ItemGroup>
+  <!-- Run the generator against this test project. -->
+  <ProjectReference
+    Include="..\MyGenerator\MyGenerator.csproj"
+    PrivateAssets="all"
+    OutputItemType="Analyzer"
+    ReferenceOutputAssembly="false"
+  />
+
+  <!-- Make MyGenerator available to the test code and test runner. -->
+  <ProjectReference
+    Include="..\MyGenerator\MyGenerator.csproj"
+    PrivateAssets="all"
+    ReferenceOutputAssembly="true"
+  />
+</ItemGroup>
+```
+
+Do not put `OutputItemType="Analyzer"` on the normal reference. The Purview SDK automatically
+uses `GetSourceGeneratorAnalyzerFiles` for the analyzer reference and supplies the generator's
+runtime dependencies to Roslyn.
+
+Because the second reference is a normal assembly reference, the generator's Roslyn dependencies
+also become visible to the test compilation. For a multi-target test project, build the generator
+against the oldest Roslyn version that supports its API usage and is compatible with the oldest
+test target. This framework supports Roslyn 4.13; prefer
+`IncrementalGeneratorInitializationContext.RegisterEmbeddedAttribute(...)` over Roslyn 4.14's
+`IncrementalGeneratorPostInitializationContext.AddEmbeddedAttributeDefinition()` when the tests
+must also target .NET 8. Do not centrally pin `System.Collections.Immutable` to a newer runtime
+version merely to make the generator load.
+
 Core helpers, models, and MSBuild integration for writing incremental C# source generators with Roslyn.
 
 ## Installation

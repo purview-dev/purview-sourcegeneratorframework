@@ -4,8 +4,7 @@ namespace Purview.SourceGeneratorFramework.Generators.Model;
 
 sealed record AttributeDataGenerationModel(bool IsDisabled, GenerationContext GenerationContext)
 {
-	public ImmutableArray<
-		GeneratorResult<AttributeDataModelTarget>
+	public ImmutableArray<GeneratorResult<AttributeDataModelTarget>
 #pragma warning disable format
 	> AttributeDataTargets { get; set; } = [];
 #pragma warning restore format

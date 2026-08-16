@@ -10,16 +10,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None
-			Include="Sdk\Purview.SourceGeneratorFramework.Testing.TUnit.props"
-			Pack="true"
-			PackagePath="build\Purview.SourceGeneratorFramework.Testing.TUnit.props"
-			Visible="true"
-		/>
-		<None Include="README.md" Pack="true" PackagePath="/" Visible="true" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<PackageReference Include="TUnit.Core" />
 		<PackageReference Include="TUnit.Assertions" />
 		<PackageReference Include="System.Collections.Immutable" VersionOverride="[9.0.0,)" />

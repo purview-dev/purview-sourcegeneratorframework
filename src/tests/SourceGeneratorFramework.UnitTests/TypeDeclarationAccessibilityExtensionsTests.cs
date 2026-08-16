@@ -28,9 +28,7 @@ public sealed class TypeDeclarationAccessibilityExtensionsTests
 	[Test]
 	[Arguments(Accessibility.NotApplicable)]
 	[Arguments((Accessibility)int.MaxValue)]
-	public async Task ToTypeDeclarationAccessibility_GivenUnmappedValue_ReturnsNull(
-		Accessibility accessibility
-	)
+	public async Task ToTypeDeclarationAccessibility_GivenUnmappedValue_ReturnsNull(Accessibility accessibility)
 	{
 		// Arrange performed by test arguments.
 

@@ -22,6 +22,11 @@ tests solutionOrProject=solution configuration=build_configuration filter=defaul
     dotnet test {{ solutionOrProject }} -c {{ configuration }} --treenode-filter "{{ filter }}" {{ args }}
 
 # Run tests with the specified configuration, defaulting to "Release"
+clean solutionOrProject=solution configuration=build_configuration *args:
+    echo "Cleaning {{ BLUE }}{{ solutionOrProject }}{{ NORMAL }} with configuration {{ YELLOW }}{{ configuration }}{{ NORMAL }}"
+    dotnet clean {{ solutionOrProject }} -c {{ configuration }} {{ args }}
+
+# Run tests with the specified configuration, defaulting to "Release"
 restore solutionOrProject=solution:
     echo "Restoring dependencies for {{ BLUE }}{{ solutionOrProject }}{{ NORMAL }}"
     dotnet restore {{ solutionOrProject }}

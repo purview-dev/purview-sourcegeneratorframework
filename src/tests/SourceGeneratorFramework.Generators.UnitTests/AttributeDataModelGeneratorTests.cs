@@ -9,9 +9,7 @@ namespace Purview.SourceGeneratorFramework.Generators;
 public class AttributeDataModelGeneratorTests
 {
 	[Test]
-	public async Task Generate_RequiredAttributeData_DefaultNamedAndNestedModel(
-		CancellationToken cancellationToken
-	)
+	public async Task Generate_RequiredAttributeData_DefaultNamedAndNestedModel(CancellationToken cancellationToken)
 	{
 		var source = """
 			using Microsoft.CodeAnalysis;
@@ -45,19 +43,13 @@ public class AttributeDataModelGeneratorTests
 		);
 
 		await Assert.That(generated).IsNotNull();
-		await Assert
-			.That(generated)
-			.Contains("readonly partial record struct RequiredAttributeData");
+		await Assert.That(generated).Contains("readonly partial record struct RequiredAttributeData");
 		await Assert.That(generated).Contains("bool Exists");
 		await Assert.That(generated).Contains("bool AllowEmptyStrings");
+		await Assert.That(generated).Contains("global::Test.ValidationAttributeData ValidationAttribute");
 		await Assert
 			.That(generated)
-			.Contains("global::Test.ValidationAttributeData ValidationAttribute");
-		await Assert
-			.That(generated)
-			.Contains(
-				"attributeData.TryGetNamedArgument<bool>(\"AllowEmptyStrings\", out var allowEmptyStrings)"
-			);
+			.Contains("attributeData.TryGetNamedArgument<bool>(\"AllowEmptyStrings\", out var allowEmptyStrings)");
 		await Assert
 			.That(generated)
 			.Contains(
@@ -100,23 +92,15 @@ public class AttributeDataModelGeneratorTests
 		await Assert.That(generated).Contains("readonly partial record struct LengthAttributeData");
 		await Assert.That(generated).Contains("int MinimumLength");
 		await Assert.That(generated).Contains("int MaximumLength");
+		await Assert.That(generated).Contains("attributeData.TryGetConstructorArgument<int>(0, out var minimumLength)");
+		await Assert.That(generated).Contains("attributeData.TryGetConstructorArgument<int>(1, out var maximumLength)");
 		await Assert
 			.That(generated)
-			.Contains("attributeData.TryGetConstructorArgument<int>(0, out var minimumLength)");
-		await Assert
-			.That(generated)
-			.Contains("attributeData.TryGetConstructorArgument<int>(1, out var maximumLength)");
-		await Assert
-			.That(generated)
-			.Contains(
-				"public static readonly LengthAttributeData Empty = new(false, default(int), default(int))"
-			);
+			.Contains("public static readonly LengthAttributeData Empty = new(false, default(int), default(int))");
 	}
 
 	[Test]
-	public async Task Generate_StringLengthAttributeData_CtorNameAndDefaultValue(
-		CancellationToken cancellationToken
-	)
+	public async Task Generate_StringLengthAttributeData_CtorNameAndDefaultValue(CancellationToken cancellationToken)
 	{
 		var source = """
 			using Microsoft.CodeAnalysis;
@@ -153,14 +137,10 @@ public class AttributeDataModelGeneratorTests
 		await Assert.That(generated).Contains("int MinimumLength");
 		await Assert
 			.That(generated)
-			.Contains(
-				"var maximumLength = attributeData.GetConstructorArgument<int>(\"maximumLength\", 2147483647)"
-			);
+			.Contains("var maximumLength = attributeData.GetConstructorArgument<int>(\"maximumLength\", 2147483647)");
 		await Assert
 			.That(generated)
-			.Contains(
-				"attributeData.TryGetNamedArgument<int>(\"MinimumLength\", out var minimumLength)"
-			);
+			.Contains("attributeData.TryGetNamedArgument<int>(\"MinimumLength\", out var minimumLength)");
 		await Assert
 			.That(generated)
 			.Contains(
@@ -169,9 +149,7 @@ public class AttributeDataModelGeneratorTests
 	}
 
 	[Test]
-	public async Task Generate_HostKitAttribute_CtorAndNamedCombined(
-		CancellationToken cancellationToken
-	)
+	public async Task Generate_HostKitAttribute_CtorAndNamedCombined(CancellationToken cancellationToken)
 	{
 		var source = """
 			using Purview.SourceGeneratorFramework.Generators;
@@ -204,9 +182,7 @@ public class AttributeDataModelGeneratorTests
 		);
 
 		await Assert.That(generated).IsNotNull();
-		await Assert
-			.That(generated)
-			.Contains("readonly partial record struct HostKitAttributeData");
+		await Assert.That(generated).Contains("readonly partial record struct HostKitAttributeData");
 		await Assert.That(generated).Contains("string? Name");
 		await Assert.That(generated).Contains("bool GenerateOptions");
 		await Assert
@@ -214,21 +190,15 @@ public class AttributeDataModelGeneratorTests
 			.Contains("attributeData.TryGetConstructorArgument<string>(\"name\", out var name)");
 		await Assert
 			.That(generated)
-			.Contains(
-				"if (!attributeData.TryGetConstructorArgument<bool>(\"generateOptions\", out generateOptions))"
-			);
+			.Contains("if (!attributeData.TryGetConstructorArgument<bool>(\"generateOptions\", out generateOptions))");
 		await Assert
 			.That(generated)
-			.Contains(
-				"if (!attributeData.TryGetNamedArgument<bool>(\"GenerateOptions\", out generateOptions))"
-			);
+			.Contains("if (!attributeData.TryGetNamedArgument<bool>(\"GenerateOptions\", out generateOptions))");
 		await Assert.That(generated).Contains("generateOptions = true");
 	}
 
 	[Test]
-	public async Task Generate_AutoDiscover_DiscoversNamedArguments(
-		CancellationToken cancellationToken
-	)
+	public async Task Generate_AutoDiscover_DiscoversNamedArguments(CancellationToken cancellationToken)
 	{
 		var source = """
 			using Purview.SourceGeneratorFramework.Generators;
@@ -251,20 +221,14 @@ public class AttributeDataModelGeneratorTests
 		);
 
 		await Assert.That(generated).IsNotNull();
-		await Assert
-			.That(generated)
-			.Contains("readonly partial record struct RequiredAttributeData");
+		await Assert.That(generated).Contains("readonly partial record struct RequiredAttributeData");
 		await Assert.That(generated).Contains("bool AllowEmptyStrings");
 		await Assert
 			.That(generated)
-			.Contains(
-				"attributeData.TryGetNamedArgument<bool>(\"AllowEmptyStrings\", out var allowEmptyStrings)"
-			);
+			.Contains("attributeData.TryGetNamedArgument<bool>(\"AllowEmptyStrings\", out var allowEmptyStrings)");
 		await Assert
 			.That(generated)
-			.Contains(
-				"public static readonly RequiredAttributeData Empty = new(false, default(bool))"
-			);
+			.Contains("public static readonly RequiredAttributeData Empty = new(false, default(bool))");
 	}
 
 	[Test]
@@ -298,15 +262,11 @@ public class AttributeDataModelGeneratorTests
 		await Assert.That(generated).DoesNotContain("int Ignored");
 		await Assert
 			.That(generated)
-			.Contains(
-				"public static readonly RequiredAttributeData Empty = new(false, default(bool))"
-			);
+			.Contains("public static readonly RequiredAttributeData Empty = new(false, default(bool))");
 	}
 
 	[Test]
-	public async Task Generate_NestedModelNotGenerated_ReportsDiagnostic(
-		CancellationToken cancellationToken
-	)
+	public async Task Generate_NestedModelNotGenerated_ReportsDiagnostic(CancellationToken cancellationToken)
 	{
 		var source = """
 			using Purview.SourceGeneratorFramework.Generators;
@@ -330,9 +290,7 @@ public class AttributeDataModelGeneratorTests
 	}
 
 	[Test]
-	public async Task Generate_StringTargetAttributeData_NamedArgument(
-		CancellationToken cancellationToken
-	)
+	public async Task Generate_StringTargetAttributeData_NamedArgument(CancellationToken cancellationToken)
 	{
 		var source = """
 			using Purview.SourceGeneratorFramework.Generators;
@@ -357,24 +315,16 @@ public class AttributeDataModelGeneratorTests
 		);
 
 		await Assert.That(generated).IsNotNull();
-		await Assert
-			.That(generated)
-			.Contains("readonly partial record struct RequiredAttributeData");
+		await Assert.That(generated).Contains("readonly partial record struct RequiredAttributeData");
 		await Assert.That(generated).Contains("bool AllowEmptyStrings");
 		await Assert
 			.That(generated)
-			.Contains(
-				"attributeData.TryGetNamedArgument<bool>(\"AllowEmptyStrings\", out var allowEmptyStrings)"
-			);
-		await Assert
-			.That(generated)
-			.Contains("new(\"RequiredAttribute\", \"System.ComponentModel.DataAnnotations\")");
+			.Contains("attributeData.TryGetNamedArgument<bool>(\"AllowEmptyStrings\", out var allowEmptyStrings)");
+		await Assert.That(generated).Contains("new(\"RequiredAttribute\", \"System.ComponentModel.DataAnnotations\")");
 	}
 
 	[Test]
-	public async Task Generate_StringTarget_WithAutoDiscover_ReportsDiagnostic(
-		CancellationToken cancellationToken
-	)
+	public async Task Generate_StringTarget_WithAutoDiscover_ReportsDiagnostic(CancellationToken cancellationToken)
 	{
 		var source = """
 			using Purview.SourceGeneratorFramework.Generators;
@@ -394,9 +344,7 @@ public class AttributeDataModelGeneratorTests
 	}
 
 	[Test]
-	public async Task Generate_StringTarget_ConstructorArrayOfTypedConstant(
-		CancellationToken cancellationToken
-	)
+	public async Task Generate_StringTarget_ConstructorArrayOfTypedConstant(CancellationToken cancellationToken)
 	{
 		var source = """
 			using System.Collections.Immutable;
@@ -441,9 +389,7 @@ public class AttributeDataModelGeneratorTests
 	}
 
 	[Test]
-	public async Task Generate_NonNullableReferenceType_GeneratesDefaultSuppress(
-		CancellationToken cancellationToken
-	)
+	public async Task Generate_NonNullableReferenceType_GeneratesDefaultSuppress(CancellationToken cancellationToken)
 	{
 		var source = """
 			using Purview.SourceGeneratorFramework.Generators;
@@ -470,16 +416,12 @@ public class AttributeDataModelGeneratorTests
 		await Assert.That(generated).IsNotNull();
 		await Assert
 			.That(generated)
-			.Contains(
-				"public static readonly RequiredAttributeData Empty = new(false, default(string)!)"
-			);
+			.Contains("public static readonly RequiredAttributeData Empty = new(false, default(string)!)");
 	}
 
 	[Test]
 	[SuppressMessage("Design", "CA1506:Avoid excessive class coupling")]
-	public async Task Generate_ResourceDefinitionAttributeData_PullsDataOut(
-		CancellationToken cancellationToken
-	)
+	public async Task Generate_ResourceDefinitionAttributeData_PullsDataOut(CancellationToken cancellationToken)
 	{
 		var source = """
 			using Microsoft.CodeAnalysis;
@@ -537,9 +479,7 @@ public class AttributeDataModelGeneratorTests
 		);
 
 		await Assert.That(generated).IsNotNull();
-		await Assert
-			.That(generated)
-			.Contains("readonly partial record struct ResourceDefinitionAttributeData");
+		await Assert.That(generated).Contains("readonly partial record struct ResourceDefinitionAttributeData");
 		await Assert.That(generated).Contains("string? Name");
 		await Assert.That(generated).Contains("string? PropertyName");
 		await Assert.That(generated).Contains("INamedTypeSymbol? AspireResourceType");
@@ -597,29 +537,19 @@ public class AttributeDataModelGeneratorTests
 			}
 			""";
 
-		var generatedTree = result.GetGeneratedTree(
-			"ResourceDefinitionAttributeData.AttributeDataModel.g.cs"
-		);
+		var generatedTree = result.GetGeneratedTree("ResourceDefinitionAttributeData.AttributeDataModel.g.cs");
 		var generatedText = (await generatedTree!.GetTextAsync(cancellationToken)).ToString();
-		var runtimeSyntaxTree = CSharpSyntaxTree.ParseText(
-			runtimeSource,
-			cancellationToken: cancellationToken
-		);
-		var generatedSyntaxTree = CSharpSyntaxTree.ParseText(
-			generatedText,
-			cancellationToken: cancellationToken
-		);
+		var runtimeSyntaxTree = CSharpSyntaxTree.ParseText(runtimeSource, cancellationToken: cancellationToken);
+		var generatedSyntaxTree = CSharpSyntaxTree.ParseText(generatedText, cancellationToken: cancellationToken);
 
-		var trustedAssemblies = (
-			(string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") ?? ""
-		).Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries);
+		var trustedAssemblies = ((string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") ?? "").Split(
+			Path.PathSeparator,
+			StringSplitOptions.RemoveEmptyEntries
+		);
 
 		var references = trustedAssemblies
 			.Where(path =>
-				!path.EndsWith(
-					"Purview.SourceGeneratorFramework.Generators.dll",
-					StringComparison.OrdinalIgnoreCase
-				)
+				!path.EndsWith("Purview.SourceGeneratorFramework.Generators.dll", StringComparison.OrdinalIgnoreCase)
 			)
 			.Select(path => MetadataReference.CreateFromFile(path))
 			.ToArray();
@@ -632,16 +562,11 @@ public class AttributeDataModelGeneratorTests
 		);
 
 		var runtimeCompilationDiagnostics = runtimeCompilation.GetDiagnostics(cancellationToken);
-		var runtimeErrors = runtimeCompilationDiagnostics
-			.Where(d => d.Severity == DiagnosticSeverity.Error)
-			.ToList();
+		var runtimeErrors = runtimeCompilationDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
 		await Assert.That(runtimeErrors).IsEmpty();
 
 		await using var assemblyStream = new MemoryStream();
-		var emitResult = runtimeCompilation.Emit(
-			assemblyStream,
-			cancellationToken: cancellationToken
-		);
+		var emitResult = runtimeCompilation.Emit(assemblyStream, cancellationToken: cancellationToken);
 		await Assert.That(emitResult.Success).IsTrue();
 
 		assemblyStream.Position = 0;
@@ -653,12 +578,8 @@ public class AttributeDataModelGeneratorTests
 			references,
 			new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
 		);
-		var myResourceType = runtimeCompilationForAttributes.GetTypeByMetadataName(
-			"Test.MyResource"
-		);
-		var myGenericResourceType = runtimeCompilationForAttributes.GetTypeByMetadataName(
-			"Test.MyGenericResource"
-		);
+		var myResourceType = runtimeCompilationForAttributes.GetTypeByMetadataName("Test.MyResource");
+		var myGenericResourceType = runtimeCompilationForAttributes.GetTypeByMetadataName("Test.MyGenericResource");
 		await Assert.That(myResourceType).IsNotNull();
 		await Assert.That(myGenericResourceType).IsNotNull();
 
@@ -691,24 +612,15 @@ public class AttributeDataModelGeneratorTests
 		await Assert.That(propertyNameProperty!.GetValue(resourceData)).IsEqualTo("MyResource");
 		await Assert.That(aspireResourceTypeProperty!.GetValue(resourceData)).IsNull();
 
-		await Assert
-			.That(nameProperty.GetValue(genericResourceData))
-			.IsEqualTo("myGenericResource");
-		await Assert
-			.That(propertyNameProperty.GetValue(genericResourceData))
-			.IsEqualTo("MyGenericResource");
-		var aspireResourceType =
-			aspireResourceTypeProperty.GetValue(genericResourceData) as INamedTypeSymbol;
+		await Assert.That(nameProperty.GetValue(genericResourceData)).IsEqualTo("myGenericResource");
+		await Assert.That(propertyNameProperty.GetValue(genericResourceData)).IsEqualTo("MyGenericResource");
+		var aspireResourceType = aspireResourceTypeProperty.GetValue(genericResourceData) as INamedTypeSymbol;
 		await Assert.That(aspireResourceType).IsNotNull();
-		await Assert
-			.That(SymbolEqualityComparer.Default.Equals(aspireResourceType, myResourceType))
-			.IsTrue();
+		await Assert.That(SymbolEqualityComparer.Default.Equals(aspireResourceType, myResourceType)).IsTrue();
 	}
 
 	[Test]
-	public async Task Generate_SystemTypeProperty_MapsToINamedTypeSymbol(
-		CancellationToken cancellationToken
-	)
+	public async Task Generate_SystemTypeProperty_MapsToINamedTypeSymbol(CancellationToken cancellationToken)
 	{
 		var source = """
 			using Microsoft.CodeAnalysis;
@@ -741,9 +653,7 @@ public class AttributeDataModelGeneratorTests
 		);
 
 		await Assert.That(generated).IsNotNull();
-		await Assert
-			.That(generated)
-			.Contains("readonly partial record struct TestingAttributeData");
+		await Assert.That(generated).Contains("readonly partial record struct TestingAttributeData");
 		await Assert.That(generated).Contains("INamedTypeSymbol? TypeThing");
 		await Assert
 			.That(generated)
@@ -802,9 +712,7 @@ public class AttributeDataModelGeneratorTests
 	}
 
 	[Test]
-	public async Task Generate_IsEnumNamedArgument_WithDefaultValue(
-		CancellationToken cancellationToken
-	)
+	public async Task Generate_IsEnumNamedArgument_WithDefaultValue(CancellationToken cancellationToken)
 	{
 		var source = """
 			using Purview.SourceGeneratorFramework.Generators;
@@ -837,15 +745,11 @@ public class AttributeDataModelGeneratorTests
 
 		await Assert.That(generated).IsNotNull();
 		await Assert.That(generated).Contains("string? Value");
-		await Assert
-			.That(generated)
-			.Contains("attributeData.GetEnumNamedArgument(\"Value\", \"Test.MyEnum.B\")");
+		await Assert.That(generated).Contains("attributeData.GetEnumNamedArgument(\"Value\", \"Test.MyEnum.B\")");
 	}
 
 	[Test]
-	public async Task Generate_IsEnumMultipleSources_WithDefaultValue(
-		CancellationToken cancellationToken
-	)
+	public async Task Generate_IsEnumMultipleSources_WithDefaultValue(CancellationToken cancellationToken)
 	{
 		var source = """
 			using Purview.SourceGeneratorFramework.Generators;
@@ -880,9 +784,7 @@ public class AttributeDataModelGeneratorTests
 
 		await Assert.That(generated).IsNotNull();
 		await Assert.That(generated).Contains("string? Value");
-		await Assert
-			.That(generated)
-			.Contains("var value = __valueTc.ToEnumString(\"Test.MyEnum.B\");");
+		await Assert.That(generated).Contains("var value = __valueTc.ToEnumString(\"Test.MyEnum.B\");");
 	}
 
 	static async Task<string?> GetGeneratedStringAsync(

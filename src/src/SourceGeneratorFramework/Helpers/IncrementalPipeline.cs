@@ -27,13 +27,9 @@ public static class IncrementalPipeline
 
 		var result = stateProvider
 			.Combine(valueProvider)
-			.Select(
-				(pair, cancellationToken) => selector(pair.Left, pair.Right, cancellationToken)
-			);
+			.Select((pair, cancellationToken) => selector(pair.Left, pair.Right, cancellationToken));
 
-		return string.IsNullOrWhiteSpace(trackingName)
-			? result
-			: result.WithTrackingName(trackingName!);
+		return string.IsNullOrWhiteSpace(trackingName) ? result : result.WithTrackingName(trackingName!);
 	}
 
 	/// <summary>
@@ -52,13 +48,9 @@ public static class IncrementalPipeline
 
 		var result = stateProvider
 			.Combine(valueProvider)
-			.Select(
-				(pair, cancellationToken) => selector(pair.Left, pair.Right, cancellationToken)
-			);
+			.Select((pair, cancellationToken) => selector(pair.Left, pair.Right, cancellationToken));
 
-		return string.IsNullOrWhiteSpace(trackingName)
-			? result
-			: result.WithTrackingName(trackingName!);
+		return string.IsNullOrWhiteSpace(trackingName) ? result : result.WithTrackingName(trackingName!);
 	}
 
 	/// <summary>
@@ -138,10 +130,7 @@ public static class IncrementalPipeline
 	)
 	{
 		if (string.IsNullOrWhiteSpace(propertyName))
-			throw new ArgumentException(
-				"Property name cannot be null or whitespace.",
-				nameof(propertyName)
-			);
+			throw new ArgumentException("Property name cannot be null or whitespace.", nameof(propertyName));
 
 		if (!propertyName.StartsWith(BuildProperty, StringComparison.Ordinal))
 			propertyName = BuildProperty + propertyName;
@@ -280,21 +269,14 @@ public static class IncrementalPipeline
 		predicate ??= static (_, _) => true;
 
 		return context
-			.SyntaxProvider.ForAttributeWithMetadataName(
-				attributeType.MetadataFullName,
-				predicate,
-				transform
-			)
+			.SyntaxProvider.ForAttributeWithMetadataName(attributeType.MetadataFullName, predicate, transform)
 			.WithTrackingName(trackingName ?? $"ForAttribute_{attributeType.TypeName}");
 	}
 
 	/// <summary>
 	/// Combines a values provider with a single value provider, returning a values provider of tuples.
 	/// </summary>
-	public static IncrementalValuesProvider<(TOutput Output, TContext Context)> CombineWithContext<
-		TOutput,
-		TContext
-	>(
+	public static IncrementalValuesProvider<(TOutput Output, TContext Context)> CombineWithContext<TOutput, TContext>(
 		this IncrementalValuesProvider<TOutput> valuesProvider,
 		IncrementalValueProvider<TContext> contextProvider
 	)

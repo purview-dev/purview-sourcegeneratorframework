@@ -27,10 +27,7 @@ public class ServiceRegistrationGeneratorTests
 			source,
 			new SourceGeneratorTestOptions
 			{
-				AdditionalAssemblyTypes =
-				[
-					typeof(Microsoft.Extensions.DependencyInjection.IServiceCollection),
-				],
+				AdditionalAssemblyTypes = [typeof(Microsoft.Extensions.DependencyInjection.IServiceCollection)],
 			}
 		);
 
@@ -78,10 +75,7 @@ public class ServiceRegistrationGeneratorTests
 				DisableSourceGeneratorPropertyName =
 					ServiceRegistrationGeneratorPropertyLibrary.DisableServiceRegistrationGenerator,
 				DisableSourceGeneratorValue = true,
-				AdditionalAssemblyTypes =
-				[
-					typeof(Microsoft.Extensions.DependencyInjection.IServiceCollection),
-				],
+				AdditionalAssemblyTypes = [typeof(Microsoft.Extensions.DependencyInjection.IServiceCollection)],
 			}
 		);
 
@@ -114,10 +108,7 @@ public class ServiceRegistrationGeneratorTests
 							+ ServiceRegistrationGeneratorPropertyLibrary.EmitServiceRegistrationInfo
 					] = "true",
 				},
-				AdditionalAssemblyTypes =
-				[
-					typeof(Microsoft.Extensions.DependencyInjection.IServiceCollection),
-				],
+				AdditionalAssemblyTypes = [typeof(Microsoft.Extensions.DependencyInjection.IServiceCollection)],
 			}
 		);
 
@@ -152,17 +143,12 @@ public class ServiceRegistrationGeneratorTests
 			source,
 			new SourceGeneratorTestOptions
 			{
-				AdditionalAssemblyTypes =
-				[
-					typeof(Microsoft.Extensions.DependencyInjection.IServiceCollection),
-				],
+				AdditionalAssemblyTypes = [typeof(Microsoft.Extensions.DependencyInjection.IServiceCollection)],
 			}
 		);
 
 		var attributeTree = result.GetGeneratedTree("GenerateServiceAttribute.g.cs");
-		var attributeSource = attributeTree is null
-			? null
-			: (await attributeTree.GetTextAsync()).ToString();
+		var attributeSource = attributeTree is null ? null : (await attributeTree.GetTextAsync()).ToString();
 
 		await Assert.That(attributeSource).IsNotNull();
 		await Assert.That(attributeSource).Contains("public enum ServiceLifetime");
@@ -171,8 +157,6 @@ public class ServiceRegistrationGeneratorTests
 			.Contains("public sealed class GenerateServiceAttribute : global::System.Attribute");
 		await Assert
 			.That(attributeSource)
-			.Contains(
-				"public global::Purview.SourceGeneratorFramework.Examples.ServiceLifetime Lifetime { get; }"
-			);
+			.Contains("public global::Purview.SourceGeneratorFramework.Examples.ServiceLifetime Lifetime { get; }");
 	}
 }

@@ -3,55 +3,23 @@
 		<TargetFrameworks></TargetFrameworks>
 		<TargetFramework>netstandard2.0</TargetFramework>
 		<IsPackable>true</IsPackable>
+		<!-- This library is loaded inside the compiler alongside the generator, but it must
+		     remain normal package build output and therefore is not an IsRoslynComponent. -->
+		<DisableSourceLink>true</DisableSourceLink>
 		<NoWarn>$(NoWarn);CS1591;</NoWarn>
 		<AssemblyName>$(RootNamespace)</AssemblyName>
 		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
 	</PropertyGroup>
 
-	<PropertyGroup>
-		<SGFrameworkSourceGeneratorProjectName>SourceGeneratorFramework.Generators</SGFrameworkSourceGeneratorProjectName>
-		<SGFrameworkSourceGeneratorProject>$(MSBuildThisFileDirectory)..\$(SGFrameworkSourceGeneratorProjectName)\$(SGFrameworkSourceGeneratorProjectName).csproj</SGFrameworkSourceGeneratorProject>
-		<SGFrameworkSourceGeneratorTargetFramework>netstandard2.0</SGFrameworkSourceGeneratorTargetFramework>
-		<SGFrameworkSourceGeneratorAssembly>$(MSBuildThisFileDirectory)..\$(SGFrameworkSourceGeneratorProjectName)\bin\$(Configuration)\$(SGFrameworkSourceGeneratorTargetFramework)\Purview.$(SGFrameworkSourceGeneratorProjectName).dll</SGFrameworkSourceGeneratorAssembly>
-		<TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeSGFrameworkSourceGenerator</TargetsForTfmSpecificContentInPackage>
-	</PropertyGroup>
-
 	<ItemGroup>
-		<ProjectReference Include="$(SGFrameworkSourceGeneratorProject)">
-			<PrivateAssets>all</PrivateAssets>
-			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-			<OutputItemType>Analyzer</OutputItemType>
-		</ProjectReference>
+		<ProjectReference
+			Include="..\SourceGeneratorFramework.Generators\SourceGeneratorFramework.Generators.csproj"
+			PrivateAssets="all"
+			ReferenceOutputAssembly="false"
+			OutputItemType="Analyzer"
+			Targets="GetSourceGeneratorAnalyzerFiles"
+		/>
 	</ItemGroup>
-
-	<ItemGroup>
-		<None
-			Include="Sdk\Purview.SourceGeneratorFramework.targets"
-			Pack="true"
-			PackagePath="build\Purview.SourceGeneratorFramework.targets"
-			Visible="true"
-		/>
-		<None
-			Include="Sdk\Purview.SourceGeneratorFramework.props"
-			Pack="true"
-			PackagePath="build\Purview.SourceGeneratorFramework.props"
-			Visible="true"
-		/>
-		<None Include="README.md" Pack="true" PackagePath="/" Visible="true" />
-	</ItemGroup>
-
-	<Target Name="IncludeSGFrameworkSourceGenerator" DependsOnTargets="Build">
-		<Error
-			Condition="!Exists('$(SGFrameworkSourceGeneratorAssembly)')"
-			Text="The Purview SourceGeneratorFramework Source Generator was not found at '$(SGFrameworkSourceGeneratorAssembly)'."
-		/>
-
-		<ItemGroup>
-			<TfmSpecificPackageFile Include="$(SGFrameworkSourceGeneratorAssembly)">
-				<PackagePath>analyzers/dotnet/cs/</PackagePath>
-			</TfmSpecificPackageFile>
-		</ItemGroup>
-	</Target>
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />

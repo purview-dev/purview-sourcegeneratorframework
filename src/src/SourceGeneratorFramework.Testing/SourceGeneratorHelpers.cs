@@ -24,16 +24,12 @@ static class SourceGeneratorHelpers
 		);
 	}
 
-	public static ImmutableArray<MetadataReference> ResolveReferences(
-		SourceGeneratorTestOptions options
-	)
+	public static ImmutableArray<MetadataReference> ResolveReferences(SourceGeneratorTestOptions options)
 	{
 		var builder = ImmutableArray.CreateBuilder<MetadataReference>();
 		builder.AddRange(TrustedAssemblies.Select(static p => MetadataReference.CreateFromFile(p)));
 		builder.AddRange(
-			options.AdditionalAssemblyTypes.Select(static a =>
-				MetadataReference.CreateFromFile(a.Assembly.Location)
-			)
+			options.AdditionalAssemblyTypes.Select(static a => MetadataReference.CreateFromFile(a.Assembly.Location))
 		);
 		builder.AddRange(options.AdditionalReferences);
 

@@ -48,11 +48,7 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 			)
 			.ToImmutableArray();
 		var references = SourceGeneratorHelpers.ResolveReferences(options);
-		var compilation = SourceGeneratorHelpers.CreateCompilation(
-			syntaxTrees,
-			references,
-			options
-		);
+		var compilation = SourceGeneratorHelpers.CreateCompilation(syntaxTrees, references, options);
 		TGenerator generator = new();
 		ConfigureLogging(generator, options, logEntries);
 
@@ -69,16 +65,10 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		Diagnostic[] compilationDiagnostics = [];
 		if (options.CompileToAssembly)
 		{
-			(assembly, compilationDiagnostics) = await CompileToAssemblyAsync(
-				outputCompilation,
-				cancellationToken
-			);
+			(assembly, compilationDiagnostics) = await CompileToAssemblyAsync(outputCompilation, cancellationToken);
 		}
 
-		var nonAttributeTrees = ExcludeGeneratedAttributes(
-			result,
-			options.ExcludeGeneratedAttributes
-		);
+		var nonAttributeTrees = ExcludeGeneratedAttributes(result, options.ExcludeGeneratedAttributes);
 
 		return new(
 			result,
@@ -111,32 +101,20 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 
 		var analyzerOptions = new Dictionary<string, string>(options.AnalyzerConfigOptions)
 		{
-			[
-				IncrementalPipeline.BuildProperty
-					+ GenerationContext.ValidateCodeWriterScopesBuildProperty
-			] = options.ValidateCodeWriterScopes ? "true" : "false",
+			[IncrementalPipeline.BuildProperty + GenerationContext.ValidateCodeWriterScopesBuildProperty] =
+				options.ValidateCodeWriterScopes ? "true" : "false",
 		};
-		if (
-			options.DisableSourceGeneratorPropertyName is not null
-			&& options.DisableSourceGeneratorValue is not null
-		)
-			analyzerOptions[
-				IncrementalPipeline.BuildProperty + options.DisableSourceGeneratorPropertyName
-			] = options.DisableSourceGeneratorValue.Value.ToString();
+		if (options.DisableSourceGeneratorPropertyName is not null && options.DisableSourceGeneratorValue is not null)
+			analyzerOptions[IncrementalPipeline.BuildProperty + options.DisableSourceGeneratorPropertyName] =
+				options.DisableSourceGeneratorValue.Value.ToString();
 
 		if (analyzerOptions.Count > 0)
-			driver = driver.WithUpdatedAnalyzerConfigOptions(
-				new TestAnalyzerConfigOptionsProvider(analyzerOptions)
-			);
+			driver = driver.WithUpdatedAnalyzerConfigOptions(new TestAnalyzerConfigOptionsProvider(analyzerOptions));
 
 		return driver;
 	}
 
-	static void ConfigureLogging(
-		TGenerator generator,
-		SourceGeneratorTestOptions options,
-		List<LogEntry> logEntries
-	)
+	static void ConfigureLogging(TGenerator generator, SourceGeneratorTestOptions options, List<LogEntry> logEntries)
 	{
 		if (generator is ILogSupport logSupport)
 		{

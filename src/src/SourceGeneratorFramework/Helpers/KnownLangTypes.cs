@@ -32,9 +32,7 @@ public static class KnownLangTypes
 
 	static readonly Dictionary<Type, TypeMapping> ByType = All.ToDictionary(static x => x.Type);
 
-	static readonly Dictionary<SpecialType, TypeMapping> BySpecialType = All.ToDictionary(
-		static x => x.SpecialType
-	);
+	static readonly Dictionary<SpecialType, TypeMapping> BySpecialType = All.ToDictionary(static x => x.SpecialType);
 
 	static readonly Dictionary<string, TypeMapping> ByKeyword = All.ToDictionary(
 		static x => x.Keyword,

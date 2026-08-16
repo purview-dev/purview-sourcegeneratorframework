@@ -15,9 +15,7 @@ public class UseIncrementalGeneratorAnalyzerTests
 			}
 			""";
 
-		var diagnostics = await new UseIncrementalGeneratorAnalyzer().GetAnalyzerDiagnosticsAsync(
-			source
-		);
+		var diagnostics = await new UseIncrementalGeneratorAnalyzer().GetAnalyzerDiagnosticsAsync(source);
 
 		await Assert.That(diagnostics).Count().IsEqualTo(1);
 		await Assert.That(diagnostics.First().Id).IsEqualTo("PSGFR12");
@@ -35,9 +33,7 @@ public class UseIncrementalGeneratorAnalyzerTests
 			}
 			""";
 
-		var diagnostics = await new UseIncrementalGeneratorAnalyzer().GetAnalyzerDiagnosticsAsync(
-			source
-		);
+		var diagnostics = await new UseIncrementalGeneratorAnalyzer().GetAnalyzerDiagnosticsAsync(source);
 
 		await Assert.That(diagnostics).IsEmpty();
 	}

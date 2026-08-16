@@ -176,10 +176,7 @@ namespace Test
 	{
 		// Arrange
 		var runner = new SourceGeneratorTestRunner<InvalidSourceGenerator>();
-		var result = await runner.RunAsync(
-			"public sealed class Input { }",
-			cancellationToken: cancellationToken
-		);
+		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 		DriverRunValidationException? exception = null;
 
 		// Act
@@ -211,11 +208,7 @@ namespace Test
 		var options = new SourceGeneratorTestOptions();
 
 		// Act
-		var result = await runner.RunAsync(
-			"public sealed class Input { }",
-			options,
-			cancellationToken
-		);
+		var result = await runner.RunAsync("public sealed class Input { }", options, cancellationToken);
 
 		// Assert
 		await Assert.That(options.ValidateCodeWriterScopes).IsTrue();

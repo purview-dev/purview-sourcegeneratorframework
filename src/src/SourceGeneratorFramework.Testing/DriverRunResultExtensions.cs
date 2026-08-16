@@ -16,16 +16,12 @@ public static class DriverRunResultExtensions
 		if (result == null)
 			throw new ArgumentNullException(nameof(result));
 
-		var exceptions = result
-			.Result.Results.Select(r => r.Exception)
-			.Where(e => e != null)
-			.ToList();
+		var exceptions = result.Result.Results.Select(r => r.Exception).Where(e => e != null).ToList();
 
 		if (exceptions.Count > 0)
 		{
 			throw new InvalidOperationException(
-				"Generator threw exceptions:\n"
-					+ string.Join("\n", exceptions.Select(e => e!.ToString()))
+				"Generator threw exceptions:\n" + string.Join("\n", exceptions.Select(e => e!.ToString()))
 			);
 		}
 
@@ -65,16 +61,11 @@ public static class DriverRunResultExtensions
 		if (result == null)
 			throw new ArgumentNullException(nameof(result));
 
-		var errors = result
-			.LogEntries.Where(e => e.Type == OutputType.Error)
-			.Select(e => e.Message)
-			.ToList();
+		var errors = result.LogEntries.Where(e => e.Type == OutputType.Error).Select(e => e.Message).ToList();
 
 		if (errors.Count > 0)
 		{
-			throw new InvalidOperationException(
-				"Generator logged errors:\n" + string.Join("\n", errors)
-			);
+			throw new InvalidOperationException("Generator logged errors:\n" + string.Join("\n", errors));
 		}
 
 		// All valid...
@@ -92,9 +83,7 @@ public static class DriverRunResultExtensions
 		var actual = result.NonAttributeSyntaxTrees.Count();
 		if (actual != count)
 		{
-			throw new InvalidOperationException(
-				$"Expected {count} generated sources but found {actual}."
-			);
+			throw new InvalidOperationException($"Expected {count} generated sources but found {actual}.");
 		}
 
 		// All valid...
@@ -111,9 +100,7 @@ public static class DriverRunResultExtensions
 
 		var tree =
 			result.NonAttributeSyntaxTrees.SingleOrDefault()
-			?? throw new InvalidOperationException(
-				"Expected a single generated source but found none."
-			);
+			?? throw new InvalidOperationException("Expected a single generated source but found none.");
 
 		return tree.GetText().ToString();
 	}
@@ -121,10 +108,7 @@ public static class DriverRunResultExtensions
 	/// <summary>
 	/// Throws <see cref="InvalidOperationException"/> if the generated source does not contain the expected text.
 	/// </summary>
-	public static DriverRunResult AssertGeneratedSourceContains(
-		this DriverRunResult result,
-		string expected
-	)
+	public static DriverRunResult AssertGeneratedSourceContains(this DriverRunResult result, string expected)
 	{
 		if (result == null)
 			throw new ArgumentNullException(nameof(result));

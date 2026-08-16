@@ -4,6 +4,5 @@ static class PropertyLibrary
 {
 	public const string DisableLoggingSourceGenerator = "DisablePurviewLoggingSourceGenerator";
 
-	public const string DisableAttributeDataSourceGenerator =
-		"DisablePurviewAttributeDataSourceGenerator";
+	public const string DisableAttributeDataSourceGenerator = "DisablePurviewAttributeDataSourceGenerator";
 }

@@ -28,14 +28,10 @@ public class LoggingSupportGeneratorTests
 
 		await Assert.That(generated).IsNotNull();
 		await Assert.That(generated).Contains("partial class MyGenerator");
+		await Assert.That(generated).Contains("global::Purview.SourceGeneratorFramework.Logging.ILogSupport");
 		await Assert
 			.That(generated)
-			.Contains("global::Purview.SourceGeneratorFramework.Logging.ILogSupport");
-		await Assert
-			.That(generated)
-			.Contains(
-				"void global::Purview.SourceGeneratorFramework.Logging.ILogSupport.SetLogOutput"
-			);
+			.Contains("void global::Purview.SourceGeneratorFramework.Logging.ILogSupport.SetLogOutput");
 	}
 
 	[Test]

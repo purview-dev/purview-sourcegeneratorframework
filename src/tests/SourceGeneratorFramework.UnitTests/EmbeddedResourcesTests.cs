@@ -7,10 +7,7 @@ public class EmbeddedResourcesTests
 	[Test]
 	public async Task Load_ExistingResource_ReturnsContent()
 	{
-		var content = EmbeddedResources.Load(
-			"Resources.TestResource.txt",
-			typeof(EmbeddedResourcesTests).Assembly
-		);
+		var content = EmbeddedResources.Load("Resources.TestResource.txt", typeof(EmbeddedResourcesTests).Assembly);
 
 		await Assert.That(content).IsEqualTo("Hello from embedded resource!");
 	}
@@ -30,12 +27,7 @@ public class EmbeddedResourcesTests
 	public async Task Load_MissingResource_Throws()
 	{
 		await Assert
-			.That(() =>
-				EmbeddedResources.Load(
-					"Missing.Resource.txt",
-					typeof(EmbeddedResourcesTests).Assembly
-				)
-			)
+			.That(() => EmbeddedResources.Load("Missing.Resource.txt", typeof(EmbeddedResourcesTests).Assembly))
 			.ThrowsException()
 			.WithMessageContaining("Missing.Resource.txt", StringComparison.Ordinal);
 	}
@@ -43,10 +35,7 @@ public class EmbeddedResourcesTests
 	[Test]
 	public async Task Load_SourceFileResourceWithoutExtension_ReturnsContent()
 	{
-		var content = EmbeddedResources.Load(
-			"TestResource",
-			typeof(EmbeddedResourcesTests).Assembly
-		);
+		var content = EmbeddedResources.Load("TestResource", typeof(EmbeddedResourcesTests).Assembly);
 
 		await Assert.That(content).IsEqualTo("Hello from embedded C# resource!");
 	}
@@ -56,8 +45,6 @@ public class EmbeddedResourcesTests
 	{
 		var names = EmbeddedResources.GetResourceNames(typeof(EmbeddedResourcesTests).Assembly);
 
-		await Assert
-			.That(names)
-			.Contains("Purview.SourceGeneratorFramework.Resources.TestResource.txt");
+		await Assert.That(names).Contains("Purview.SourceGeneratorFramework.Resources.TestResource.txt");
 	}
 }

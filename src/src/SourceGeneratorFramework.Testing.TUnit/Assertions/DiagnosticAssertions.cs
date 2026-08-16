@@ -16,10 +16,7 @@ public static partial class DiagnosticAssertions
 	/// <returns>An <see cref="AssertionResult"/> indicating whether the assertion passed or failed.</returns>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
-	public static AssertionResult HasDiagnostic(
-		this DriverRunResult diagnostic,
-		DiagnosticDescriptor expected
-	)
+	public static AssertionResult HasDiagnostic(this DriverRunResult diagnostic, DiagnosticDescriptor expected)
 	{
 		// Don't change the name of the `diagnostic` parameter, as it is used in the generated assertion method.
 		ArgumentNullException.ThrowIfNull(diagnostic);
@@ -31,11 +28,7 @@ public static partial class DiagnosticAssertions
 				$"expected to contain diagnostic with Id {expected.Id}\n\n"
 					+ diagnostic
 						.Result.GeneratedTrees.Select(t => $"  - {t.FilePath}")
-						.Concat(
-							diagnostic.Result.Diagnostics.Select(d =>
-								$"  - {d.Id}: {d.Descriptor.Title}"
-							)
-						)
+						.Concat(diagnostic.Result.Diagnostics.Select(d => $"  - {d.Id}: {d.Descriptor.Title}"))
 						.DefaultIfEmpty("  - (none)")
 						.Aggregate((a, b) => $"{a}\n{b}")
 			);
@@ -49,10 +42,7 @@ public static partial class DiagnosticAssertions
 	/// <returns>An <see cref="AssertionResult"/> indicating whether the assertion passed or failed.</returns>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
-	public static AssertionResult DoesNotHaveDiagnostic(
-		this DriverRunResult result,
-		DiagnosticDescriptor expected
-	)
+	public static AssertionResult DoesNotHaveDiagnostic(this DriverRunResult result, DiagnosticDescriptor expected)
 	{
 		ArgumentNullException.ThrowIfNull(result);
 
@@ -63,11 +53,7 @@ public static partial class DiagnosticAssertions
 				$"expected not to contain diagnostic with Id {expected.Id}\n\n"
 					+ result
 						.Result.GeneratedTrees.Select(t => $"  - {t.FilePath}")
-						.Concat(
-							result.Result.Diagnostics.Select(d =>
-								$"  - {d.Id}: {d.Descriptor.Title}"
-							)
-						)
+						.Concat(result.Result.Diagnostics.Select(d => $"  - {d.Id}: {d.Descriptor.Title}"))
 						.DefaultIfEmpty("  - (none)")
 						.Aggregate((a, b) => $"{a}\n{b}")
 			);
@@ -90,17 +76,13 @@ public static partial class DiagnosticAssertions
 				+ string.Join(
 					'\n',
 					result
-						.Result.Diagnostics.Where(static d =>
-							d.Severity == DiagnosticSeverity.Error
-						)
+						.Result.Diagnostics.Where(static d => d.Severity == DiagnosticSeverity.Error)
 						.Select(d => $"  - {d.Id}: {d.Descriptor.Title}")
 				)
 				+ "\n\n"
 				+ result
 					.Result.GeneratedTrees.Select(t => $"  - {t.FilePath}")
-					.Concat(
-						result.Result.Diagnostics.Select(d => $"  - {d.Id}: {d.Descriptor.Title}")
-					)
+					.Concat(result.Result.Diagnostics.Select(d => $"  - {d.Id}: {d.Descriptor.Title}"))
 					.DefaultIfEmpty("  - (none)")
 					.Aggregate((a, b) => $"{a}\n{b}")
 		);

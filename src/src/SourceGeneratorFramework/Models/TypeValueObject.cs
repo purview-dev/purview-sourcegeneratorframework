@@ -31,17 +31,12 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 			var metadataName = type.Name;
 			var aritySeparator = metadataName.IndexOf('`');
 
-			TypeName =
-				aritySeparator < 0 ? metadataName : metadataName.Substring(0, aritySeparator);
+			TypeName = aritySeparator < 0 ? metadataName : metadataName.Substring(0, aritySeparator);
 			Namespace = type.Namespace;
 			GenericArity = type.IsGenericType ? type.GetGenericArguments().Length : 0;
 			TypeArguments =
 				type.IsGenericType && !type.IsGenericTypeDefinition
-					?
-					[
-						.. type.GetGenericArguments()
-							.Select(static argument => new TypeValueObject(argument)),
-					]
+					? [.. type.GetGenericArguments().Select(static argument => new TypeValueObject(argument))]
 					: [];
 		}
 	}
@@ -178,8 +173,7 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 	/// <summary>
 	/// Gets the namespace-qualified CLR metadata name used by Roslyn type lookup.
 	/// </summary>
-	public string MetadataFullName =>
-		IsGlobalNamespace ? MetadataName : $"{Namespace}.{MetadataName}";
+	public string MetadataFullName => IsGlobalNamespace ? MetadataName : $"{Namespace}.{MetadataName}";
 
 	/// <summary>
 	/// Gets the fully-qualified global name for use in generated code, rendered as an attribute when applicable.
@@ -191,12 +185,8 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 			if (SpecialType != SpecialType.None)
 				return Keyword!;
 
-			var result = IsGlobalNamespace
-				? RenderTypeName
-				: $"global::{Namespace}.{RenderTypeName}";
-			return TypeHelpers.IsAttribute(TypeName)
-				? $"[{TypeHelpers.GetTypeName(result)}]"
-				: result;
+			var result = IsGlobalNamespace ? RenderTypeName : $"global::{Namespace}.{RenderTypeName}";
+			return TypeHelpers.IsAttribute(TypeName) ? $"[{TypeHelpers.GetTypeName(result)}]" : result;
 		}
 	}
 
@@ -210,9 +200,7 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 			if (SpecialType != SpecialType.None)
 				return Keyword!;
 
-			var typeName = TypeHelpers.IsAttribute(TypeName)
-				? TypeHelpers.GetTypeName(TypeName)
-				: TypeName;
+			var typeName = TypeHelpers.IsAttribute(TypeName) ? TypeHelpers.GetTypeName(TypeName) : TypeName;
 
 			if (GenericArity == 0)
 				return typeName;
@@ -249,11 +237,7 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 			? null
 			: other.ContainingNamespace.ToDisplayString();
 
-		if (
-			TypeName != other.Name
-			|| Namespace != otherNamespace
-			|| SpecialType != other.SpecialType
-		)
+		if (TypeName != other.Name || Namespace != otherNamespace || SpecialType != other.SpecialType)
 			return false;
 
 		if (other is not INamedTypeSymbol namedType)
@@ -279,9 +263,7 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 	public bool Equals(TypeValueObject other)
 	{
 		var typeArgumentCount = TypeArguments.IsDefaultOrEmpty ? 0 : TypeArguments.Length;
-		var otherTypeArgumentCount = other.TypeArguments.IsDefaultOrEmpty
-			? 0
-			: other.TypeArguments.Length;
+		var otherTypeArgumentCount = other.TypeArguments.IsDefaultOrEmpty ? 0 : other.TypeArguments.Length;
 
 		if (
 			TypeName != other.TypeName
@@ -328,8 +310,7 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 	/// <summary>
 	/// Implicitly converts a <see cref="TypeValueObject"/> to its rendered full name.
 	/// </summary>
-	public static implicit operator string(TypeValueObject typeValueObject) =>
-		typeValueObject.RenderFullName;
+	public static implicit operator string(TypeValueObject typeValueObject) => typeValueObject.RenderFullName;
 
 	/// <summary>
 	/// Returns a string representing a static property combined with this type, suitable for use in generated code.
@@ -355,9 +336,7 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 			throw new ArgumentNullException(nameof(typeArguments));
 
 		// If the type has no generic arity, we can treat the provided type arguments as concrete types.
-		return MakeGeneric(
-			typeArguments.Select(static argument => new TypeValueObject(argument, null)).ToArray()
-		);
+		return MakeGeneric(typeArguments.Select(static argument => new TypeValueObject(argument, null)).ToArray());
 	}
 
 	/// <summary>
@@ -383,10 +362,7 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 	{
 		if (string.IsNullOrWhiteSpace(propertyName))
 		{
-			throw new ArgumentException(
-				"Property name cannot be null, empty, or whitespace.",
-				nameof(propertyName)
-			);
+			throw new ArgumentException("Property name cannot be null, empty, or whitespace.", nameof(propertyName));
 		}
 
 		// Property name is valid...
@@ -402,10 +378,7 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 			throw new ArgumentNullException(nameof(typeArguments));
 
 		if (typeArguments.Length == 0)
-			throw new ArgumentException(
-				"At least one type argument must be provided.",
-				nameof(typeArguments)
-			);
+			throw new ArgumentException("At least one type argument must be provided.", nameof(typeArguments));
 
 		if (GenericArity > 0 && typeArguments.Length != GenericArity)
 		{
@@ -417,9 +390,7 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 
 		if (SpecialType != SpecialType.None)
 		{
-			throw new InvalidOperationException(
-				$"Cannot create a generic type from the special type '{SpecialType}'."
-			);
+			throw new InvalidOperationException($"Cannot create a generic type from the special type '{SpecialType}'.");
 		}
 
 		// If the type has no generic arity, we can treat the provided type arguments as concrete types.
@@ -439,10 +410,7 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 			throw new ArgumentNullException(nameof(typeArguments));
 
 		if (typeArguments.Length == 0)
-			throw new ArgumentException(
-				"At least one type argument must be provided.",
-				nameof(typeArguments)
-			);
+			throw new ArgumentException("At least one type argument must be provided.", nameof(typeArguments));
 
 		if (GenericArity > 0 && typeArguments.Length != GenericArity)
 			throw new ArgumentException(
@@ -452,9 +420,7 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 
 		if (SpecialType != SpecialType.None)
 		{
-			throw new InvalidOperationException(
-				$"Cannot create a generic type from the special type '{SpecialType}'."
-			);
+			throw new InvalidOperationException($"Cannot create a generic type from the special type '{SpecialType}'.");
 		}
 
 		// If the type has no generic arity, we can treat the provided type arguments as concrete types.

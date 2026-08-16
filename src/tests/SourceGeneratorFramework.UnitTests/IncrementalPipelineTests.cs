@@ -67,10 +67,7 @@ public class IncrementalPipelineTests2
 	{
 		public void Initialize(IncrementalGeneratorInitializationContext context)
 		{
-			var isDisabled = IncrementalPipeline.IsDisabledValueProvider(
-				context,
-				"DisableTestGenerator"
-			);
+			var isDisabled = IncrementalPipeline.IsDisabledValueProvider(context, "DisableTestGenerator");
 			var targets = IncrementalPipeline.ForAttributeWithMetadataName(
 				context,
 				new TypeValueObject("TestAttribute", "Test"),
@@ -79,8 +76,7 @@ public class IncrementalPipelineTests2
 					var symbol = ctx.SemanticModel.GetDeclaredSymbol(ctx.TargetNode, ct);
 					return new TargetInfo(symbol?.Name ?? "Unknown");
 				},
-				predicate: static (node, _) =>
-					node is Microsoft.CodeAnalysis.CSharp.Syntax.ClassDeclarationSyntax
+				predicate: static (node, _) => node is Microsoft.CodeAnalysis.CSharp.Syntax.ClassDeclarationSyntax
 			);
 
 			var inputs = isDisabled
@@ -88,17 +84,12 @@ public class IncrementalPipelineTests2
 					context.CompilationProvider.Select(
 						static (compilation, _) => compilation.AssemblyName ?? "Unknown"
 					),
-					static (disabled, assemblyName, _) =>
-						new GenerationInputs(disabled, assemblyName),
+					static (disabled, assemblyName, _) => new GenerationInputs(disabled, assemblyName),
 					"CreateGenerationInputs"
 				)
 				.CollectWith(
 					targets,
-					static (state, collectedTargets, _) =>
-						state with
-						{
-							Targets = collectedTargets,
-						},
+					static (state, collectedTargets, _) => state with { Targets = collectedTargets },
 					"AddGenerationTargets"
 				);
 
@@ -212,8 +203,7 @@ public class IncrementalPipelineTests2
 				context,
 				"GenerationContextTestGenerator",
 				"1.0.0",
-				static (compilation, name, version, _) =>
-					new GenerationContext(compilation, name, version)
+				static (compilation, name, version, _) => new GenerationContext(compilation, name, version)
 			);
 
 			context.RegisterSourceOutput(

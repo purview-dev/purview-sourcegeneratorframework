@@ -85,7 +85,5 @@ public record class DriverRunResult(
 	/// <param name="filePathSuffix">The suffix to match.</param>
 	/// <returns>The matching syntax tree, or <see langword="null"/> if none is found.</returns>
 	public SyntaxTree? GetGeneratedTree(string filePathSuffix) =>
-		GeneratedTrees.FirstOrDefault(tree =>
-			tree.FilePath.EndsWith(filePathSuffix, StringComparison.Ordinal)
-		);
+		GeneratedTrees.FirstOrDefault(tree => tree.FilePath.EndsWith(filePathSuffix, StringComparison.Ordinal));
 }
