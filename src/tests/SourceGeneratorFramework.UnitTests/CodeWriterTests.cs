@@ -22,6 +22,7 @@ public class CodeWriterTests
 		await Assert.That(typeof(MethodDeclarationOptions).IsValueType).IsTrue();
 		await Assert.That(typeof(PropertyDeclarationOptions).IsValueType).IsTrue();
 		await Assert.That(typeof(FieldDeclarationOptions).IsValueType).IsTrue();
+		await Assert.That(typeof(EnumFieldDeclarationOptions).IsValueType).IsTrue();
 		await Assert.That(typeof(ConstructorDeclarationOptions).IsValueType).IsTrue();
 	}
 
@@ -681,6 +682,136 @@ public class CodeWriterTests
 	}
 
 	[Test]
+	public async Task WriteAttributeClass_WithDefaults_WritesAttributeUsageAndSystemAttributeBase()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+
+		// Act
+		writer.WriteAttributeClass(
+			new TypeDeclarationOptions("RegistryAttribute")
+			{
+				Accessibility = TypeDeclarationAccessibility.Public,
+				IsPartial = false,
+			},
+			AttributeTargets.Class,
+			body => body.WriteLine("public string? Name { get; init; }")
+		);
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				GeneratedAttributes()
+					+ "[global::System.AttributeUsageAttribute(global::System.AttributeTargets.Class, Inherited = false, AllowMultiple = false)]\n"
+					+ "public sealed class RegistryAttribute : global::System.Attribute\n"
+					+ "{\n"
+					+ "\tpublic string? Name { get; init; }\n"
+					+ "}\n"
+			);
+	}
+
+	[Test]
+	public async Task WriteAttributeClass_WithOptions_WritesCombinedTargetsFlagsAttributesAndCustomBase()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+
+		// Act
+		writer.WriteAttributeClass(
+			new TypeDeclarationOptions("KnownTypeAttribute")
+			{
+				Accessibility = TypeDeclarationAccessibility.Internal,
+				IsPartial = false,
+				BaseType = Type("CustomAttributeBase"),
+				Attributes = [new("Obsolete")],
+			},
+			AttributeTargets.Class | AttributeTargets.Property,
+			_ => { },
+			inherited: true,
+			allowMultiple: true
+		);
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				GeneratedAttributes()
+					+ "[global::System.AttributeUsageAttribute(global::System.AttributeTargets.Class | global::System.AttributeTargets.Property, Inherited = true, AllowMultiple = true)]\n"
+					+ "[Obsolete]\n"
+					+ "internal sealed class KnownTypeAttribute : CustomAttributeBase\n"
+					+ "{\n"
+					+ "}\n"
+			);
+	}
+
+	[Test]
+	public async Task WriteAttributeClass_GivenNoTargets_ThrowsWithoutWriting()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		await Assert
+			.That(() => writer.WriteAttributeClass(new("InvalidAttribute"), 0, _ => { }))
+			.Throws<ArgumentOutOfRangeException>();
+		await Assert.That(writer.ToString()).IsEmpty();
+	}
+
+	[Test]
+	public async Task WriteEnum_WithStructuredFields_WritesSummariesAttributesAndValues()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new TypeDeclarationOptions("Status") { Accessibility = TypeDeclarationAccessibility.Public };
+
+		// Act
+		writer.WriteEnum(
+			declaration,
+			new EnumFieldDeclarationOptions("None", 0)
+			{
+				XmlSummary = ["No status has been selected."],
+				Attributes = [new("Obsolete")],
+			},
+			new EnumFieldDeclarationOptions("Ready", (object)"1 << 0"),
+			new EnumFieldDeclarationOptions("Unknown")
+		);
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				GeneratedAttributes(includeCoverageExclusion: false)
+					+ "public enum Status\n"
+					+ "{\n"
+					+ "\t/// <summary>No status has been selected.</summary>\n"
+					+ "\t[Obsolete]\n"
+					+ "\tNone = 0,\n"
+					+ "\tReady = 1 << 0,\n"
+					+ "\tUnknown,\n"
+					+ "}\n"
+			);
+	}
+
+	[Test]
+	[Arguments(null)]
+	[Arguments("")]
+	[Arguments("   ")]
+	public async Task EnumFieldDeclarationOptions_GivenMissingName_Throws(string? fieldName)
+	{
+		await Assert.That(() => new EnumFieldDeclarationOptions(fieldName!)).Throws<ArgumentException>();
+	}
+
+	[Test]
+	public async Task WriteEnumField_GivenDefaultOptions_ThrowsWithoutWriting()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+
+		// Act / Assert
+		await Assert.That(() => writer.WriteEnumField(default)).Throws<ArgumentException>();
+		await Assert.That(writer.ToString()).IsEmpty();
+	}
+
+	[Test]
 	public async Task WriteDelegate_WithGenericConstraints_WritesCompleteDeclaration()
 	{
 		// Arrange
@@ -943,6 +1074,34 @@ public class CodeWriterTests
 					+ "{\n"
 					+ "}\n"
 			);
+	}
+
+	[Test]
+	public async Task AttributeTypeValueObject_GivenDeclarationContexts_RendersUnderlyingType()
+	{
+		// Arrange
+		var attributeType = new TypeValueObject("RegistryAttribute", "Example");
+		var writer = CodeWriterFactory.ForTests();
+
+		// Act
+		writer.WriteAttributeClass(
+			new TypeDeclarationOptions(attributeType) { IsPartial = false },
+			AttributeTargets.Class,
+			body =>
+			{
+				body.XmlSummary($"Creates a {CodeWriter.XmlSee(attributeType)} instance.");
+				body.WriteConstructor(new ConstructorDeclarationOptions(attributeType), _ => { });
+				body.WriteProperty(new PropertyDeclarationOptions("Parent", attributeType));
+			}
+		);
+
+		// Assert
+		var result = writer.ToString();
+		await Assert.That(result).Contains("class RegistryAttribute : global::System.Attribute");
+		await Assert.That(result).Contains("<see cref=\"global::Example.RegistryAttribute\" />");
+		await Assert.That(result).Contains("RegistryAttribute()");
+		await Assert.That(result).Contains("global::Example.RegistryAttribute Parent");
+		await Assert.That(result).DoesNotContain("[global::Example.Registry]");
 	}
 
 	[Test]

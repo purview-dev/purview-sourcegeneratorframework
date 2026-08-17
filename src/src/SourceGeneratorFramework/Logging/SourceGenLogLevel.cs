@@ -3,7 +3,7 @@ namespace Purview.SourceGeneratorFramework.Logging;
 /// <summary>
 /// Defines the severity of a log message emitted by a source generator.
 /// </summary>
-public enum OutputType
+public enum SourceGenLogLevel
 {
 	/// <summary>
 	/// Diagnostic message.
@@ -26,7 +26,7 @@ public enum OutputType
 	Warning,
 
 	/// <summary>
-	/// Error message.
+	/// Fatal message.
 	/// </summary>
-	Error,
+	Fatal,
 }

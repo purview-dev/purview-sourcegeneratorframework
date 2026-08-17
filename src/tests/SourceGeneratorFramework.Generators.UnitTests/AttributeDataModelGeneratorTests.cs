@@ -46,6 +46,16 @@ public class AttributeDataModelGeneratorTests
 		await Assert.That(generated).Contains("readonly partial record struct RequiredAttributeData");
 		await Assert.That(generated).Contains("bool Exists");
 		await Assert.That(generated).Contains("bool AllowEmptyStrings");
+		await Assert
+			.That(generated)
+			.Contains(
+				"global::System.Collections.Generic.IEnumerable<(RequiredAttributeData Instance, global::Microsoft.CodeAnalysis.AttributeData Attribute)> AllAttributeData("
+			);
+		await Assert.That(generated).Contains("yield return (instance, attributes[i]);");
+		await Assert.That(generated).Contains("global::Microsoft.CodeAnalysis.ISymbol symbol)");
+		await Assert.That(generated).Contains("return AllAttributeData(symbol.GetAttributes());");
+		await Assert.That(generated).Contains("return FromAttributeData(symbol.GetAttributes());");
+		await Assert.That(generated).Contains("return FromAttributeData(symbol.GetAttributes(), out attribute);");
 		await Assert.That(generated).Contains("global::Test.ValidationAttributeData ValidationAttribute");
 		await Assert
 			.That(generated)
@@ -116,7 +126,7 @@ public class AttributeDataModelGeneratorTests
 
 				[Generate(typeof(StringLengthAttribute))]
 				public readonly partial record struct StringLengthAttributeData(
-					[Argument("maximumLength", DefaultValue = int.MaxValue)] int MaximumLength,
+					[Argument("maximumLength", int.MaxValue)] int MaximumLength,
 					int MinimumLength,
 					[NestedModel] ValidationAttributeData ValidationAttribute
 				);
@@ -160,7 +170,7 @@ public class AttributeDataModelGeneratorTests
 				public readonly partial record struct HostKitAttributeData(
 					[Argument("name")] string? Name,
 					string? ExtensionMethodName,
-					[Argument("generateOptions")] [Property(DefaultValue = true)] bool GenerateOptions
+					[Argument("generateOptions")] [Property(true)] bool GenerateOptions
 				);
 
 				public class HostKitAttribute : System.Attribute
@@ -386,6 +396,66 @@ public class AttributeDataModelGeneratorTests
 			.Contains(
 				"attributeData.TryGetConstructorArgument<global::System.Collections.Immutable.ImmutableArray<global::Microsoft.CodeAnalysis.TypedConstant>>(0, out var values)"
 			);
+	}
+
+	[Test]
+	public async Task Generate_TypedConstantWithStringDefault_ReportsUnsupportedDefaultDiagnostic(
+		CancellationToken cancellationToken
+	)
+	{
+		var source = """
+			using Microsoft.CodeAnalysis;
+			using Purview.SourceGeneratorFramework.Generators;
+
+			namespace Test
+			{
+				[Generate("TestAttribute")]
+				public readonly partial record struct TestAttributeData(
+					[Argument(0, "Test.Mode.Inherit")]
+					[Property("Test.Mode.Inherit", Name = "Mode")]
+					TypedConstant Mode
+				);
+			}
+			""";
+
+		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
+		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+
+		await Assert.That(result.Result.Diagnostics).Contains(d => d.Id == "ADM0005");
+	}
+
+	[Test]
+	public async Task Generate_PlainStructWithPrimaryConstructor_PreservesDeclarationKind(
+		CancellationToken cancellationToken
+	)
+	{
+		var source = """
+			using Purview.SourceGeneratorFramework.Generators;
+
+			namespace Test;
+
+			[Generate("Test.KnownTypeAttribute")]
+			readonly partial struct KnownTypesAttributeData(
+				[Property("Test.RegistryType.Inherit", IsEnum = true)]
+				string Type
+			);
+			""";
+
+		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
+		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+
+		var generated = await GetGeneratedStringAsync(
+			result,
+			"KnownTypesAttributeData.AttributeDataModel.g.cs",
+			cancellationToken
+		);
+
+		await Assert.That(result.CompilationDiagnostics).DoesNotContain(d => d.Id == "CS0261");
+		await Assert.That(result.CompilationDiagnostics).DoesNotContain(d => d.Id == "CS7036");
+		await Assert.That(generated).IsNotNull();
+		await Assert.That(generated).Contains("readonly partial struct KnownTypesAttributeData");
+		await Assert.That(generated).DoesNotContain("record struct KnownTypesAttributeData");
+		await Assert.That(generated).Contains(": this(Type)");
 	}
 
 	[Test]
@@ -684,7 +754,7 @@ public class AttributeDataModelGeneratorTests
 						string? Name,
 					string? ExtensionMethodName,
 					[Property]
-					[Argument("generateOptions", DefaultValue = true)]
+					[Argument("generateOptions", true)]
 						bool GenerateOptions
 				);
 

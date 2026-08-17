@@ -78,6 +78,9 @@ public readonly record struct TypeReferenceOptions
 			: (this with { ArrayRanks = ArrayRanks.IsDefault ? [rank] : [.. ArrayRanks, rank] });
 	}
 
+	/// <summary>Returns this type as a pointer type.</summary>
+	public TypeReferenceOptions MakePointer() => this with { IsPointer = true };
+
 	public static implicit operator TypeReferenceOptions(TypeValueObject type) =>
 		type == TypeValueObject.Empty ? Empty : new(type);
 

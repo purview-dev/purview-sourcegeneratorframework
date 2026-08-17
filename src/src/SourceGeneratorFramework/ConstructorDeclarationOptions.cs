@@ -19,6 +19,11 @@ public readonly record struct ConstructorDeclarationOptions
 		TypeName = typeName;
 	}
 
+	/// <summary>Initializes a constructor declaration from its containing type.</summary>
+	/// <param name="type">The containing type. Only its unqualified declaration name is used.</param>
+	public ConstructorDeclarationOptions(TypeValueObject type)
+		: this(type.TypeName) { }
+
 	/// <summary>Gets the containing type name without generic parameters.</summary>
 	public string TypeName { get; }
 

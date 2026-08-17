@@ -4,15 +4,14 @@
 		<AssemblyName>$(RootNamespace)</AssemblyName>
 	</PropertyGroup>
 
-	<ItemGroup Label="Template/ Source Files">
-		<Compile Remove="Templates\**\*.cs" />
-		<EmbeddedResource Include="Templates\**\*.cs" />
-	</ItemGroup>
-
 	<ItemGroup>
 		<Compile
 			Include="..\SourceGeneratorFramework\CodeWriter.cs"
 			Link="Extensions\Purview\SourceGeneratorFramework\CodeWriter.cs"
+		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\XmlCommentWriter.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\XmlCommentWriter.cs"
 		/>
 		<Compile
 			Include="..\SourceGeneratorFramework\CodeWriterScopeValidationException.cs"
@@ -78,8 +77,8 @@
 			Link="Extensions\Purview\SourceGeneratorFramework\Helpers\TypeHelpers.cs"
 		/>
 		<Compile
-			Include="..\SourceGeneratorFramework\Helpers\EmbeddedResources.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Helpers\EmbeddedResources.cs"
+			Include="..\SourceGeneratorFramework\Helpers\EmbeddedResourceHelper.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Helpers\EmbeddedResourceHelper.cs"
 		/>
 		<Compile
 			Include="..\SourceGeneratorFramework\Helpers\IncrementalPipeline.cs"
@@ -91,16 +90,21 @@
 		/>
 		<!-- Logging -->
 		<Compile
-			Include="..\SourceGeneratorFramework\Logging\GenerationLogger.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Logging\GenerationLogger.cs"
+			Include="..\SourceGeneratorFramework\Logging\ISupportsSourceGenLogging.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Logging\ISupportsSourceGenLogging.cs"
+		/>
+
+		<Compile
+			Include="..\SourceGeneratorFramework\Logging\ISourceGenLogger.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Logging\ISourceGenLogger.cs"
 		/>
 		<Compile
-			Include="..\SourceGeneratorFramework\Logging\ILogSupport.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Logging\ILogSupport.cs"
+			Include="..\SourceGeneratorFramework\Logging\ISourceGenLoggerExtensions.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Logging\ISourceGenLoggerExtensions.cs"
 		/>
 		<Compile
-			Include="..\SourceGeneratorFramework\Logging\OutputType.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Logging\OutputType.cs"
+			Include="..\SourceGeneratorFramework\Logging\SourceGenLogLevel.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Logging\SourceGenLogLevel.cs"
 		/>
 		<!-- Extensions/ Polyfills -->
 		<Compile

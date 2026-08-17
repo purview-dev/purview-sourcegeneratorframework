@@ -10,13 +10,13 @@ public readonly record struct AttributeDeclarationOptions
 
 	/// <summary>Creates an attribute declaration from a structured type value.</summary>
 	/// <remarks>
-	/// <see cref="TypeValueObject.RenderFullName"/> represents attributes with their surrounding
-	/// square brackets. This constructor retains the rendered attribute name while removing those
+	/// <see cref="TypeValueObject.RenderAttributeName"/> includes surrounding square brackets. This
+	/// constructor retains the rendered attribute name while removing those
 	/// delimiters because the code writer supplies them.
 	/// </remarks>
 	public AttributeDeclarationOptions(TypeValueObject type)
 	{
-		var renderedName = type.RenderFullName;
+		var renderedName = type.RenderAttributeName;
 		TypeName =
 			renderedName.Length >= 2 && renderedName[0] == '[' && renderedName[renderedName.Length - 1] == ']'
 				? renderedName.Substring(1, renderedName.Length - 2)

@@ -203,7 +203,8 @@ public class IncrementalPipelineTests2
 				context,
 				"GenerationContextTestGenerator",
 				"1.0.0",
-				static (compilation, name, version, _) => new GenerationContext(compilation, name, version)
+				null,
+				static (compilation, settings, logger, _) => new GenerationContext(compilation, settings, logger)
 			);
 
 			context.RegisterSourceOutput(

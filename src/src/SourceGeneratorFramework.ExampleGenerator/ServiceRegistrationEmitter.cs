@@ -41,25 +41,13 @@ static class ServiceRegistrationEmitter
 			}
 		);
 
-		writer.WriteClass(
+		writer.WriteAttributeClass(
 			new TypeDeclarationOptions(ServiceRegistrationGeneratorTypeLibrary.GenerateServiceAttribute)
 			{
 				Accessibility = TypeDeclarationAccessibility.Public,
 				IsPartial = false,
-				BaseType = PurviewTypeLibrary.System.Attribute,
-				Attributes =
-				[
-					new AttributeDeclarationOptions("global::System.AttributeUsageAttribute")
-					{
-						Arguments =
-						[
-							new AttributeArgumentOptions("global::System.AttributeTargets.Class"),
-							new AttributeArgumentOptions(false) { Name = "Inherited" },
-							new AttributeArgumentOptions(false) { Name = "AllowMultiple" },
-						],
-					},
-				],
 			},
+			AttributeTargets.Class,
 			cw =>
 			{
 				cw.WriteConstructor(
@@ -108,7 +96,7 @@ static class ServiceRegistrationEmitter
 	public static void Execute(
 		SourceProductionContext spc,
 		ServiceRegistrationGenerationModel model,
-		GenerationLogger? logger
+		ISourceGenLogger? logger
 	)
 	{
 		if (model.IsDisabled)

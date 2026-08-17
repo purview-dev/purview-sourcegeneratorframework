@@ -116,9 +116,9 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 
 	static void ConfigureLogging(TGenerator generator, SourceGeneratorTestOptions options, List<LogEntry> logEntries)
 	{
-		if (generator is ILogSupport logSupport)
+		if (generator is ISupportsSourceGenLogging logSupport)
 		{
-			logSupport.SetLogOutput(
+			logSupport.SetOutput(
 				(message, type) =>
 				{
 					options.TestOutput.WriteLine($"[{type}] {message}");

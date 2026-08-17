@@ -4,6 +4,8 @@ sealed record AttributeDataModelTarget(
 	string? Namespace,
 	string StructName,
 	TypeDeclarationAccessibility? Accessibility,
+	bool IsRecord,
+	bool IsReadOnly,
 	TypeValueObject TargetAttribute,
 	bool MatchByInheritance,
 	bool AutoDiscover,

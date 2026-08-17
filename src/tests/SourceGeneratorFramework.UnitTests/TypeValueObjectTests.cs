@@ -52,21 +52,45 @@ public partial class TypeValueObjectTests
 	}
 
 	[Test]
-	public async Task MakeGenericXml_ProducesCurlyBracketTypeName()
+	public async Task DeclarationShapeHelpers_ReturnStructuredTypeReferences()
 	{
-		var type = new TypeValueObject("MyType", "MyNamespace");
+		var type = new TypeValueObject("Widget", "Example");
 
-		var generic = type.MakeGenericXml("string", "int");
-
-		await Assert.That(generic.RenderFullName).IsEqualTo("global::MyNamespace.MyType{string, int}");
+		await Assert.That(type.AsTypeReference().Name).IsEqualTo("global::Example.Widget");
+		await Assert.That(type.MakeNullable().IsNullable).IsTrue();
+		await Assert.That(type.MakeArray(2).ArrayRanks).IsEquivalentTo([2]);
+		await Assert.That(type.MakePointer().IsPointer).IsTrue();
 	}
 
 	[Test]
-	public async Task AttributeType_RendersAsAttribute()
+	public async Task StaticMember_ReturnsFullyQualifiedExpression()
+	{
+		var type = new TypeValueObject("Severity", "Example");
+
+		var result = type.StaticMember("Inherit");
+
+		await Assert.That(result).IsEqualTo("global::Example.Severity.Inherit");
+	}
+
+	[Test]
+	[Arguments(null)]
+	[Arguments("")]
+	[Arguments("   ")]
+	public async Task StaticMember_GivenMissingName_Throws(string? memberName)
+	{
+		var type = new TypeValueObject("Severity", "Example");
+
+		await Assert.That(() => type.StaticMember(memberName!)).Throws<ArgumentException>();
+	}
+
+	[Test]
+	public async Task AttributeType_RendersAsTypeAndProvidesExplicitAttributeSyntax()
 	{
 		var type = new TypeValueObject("MyAttribute", "MyNamespace");
 
-		await Assert.That(type.RenderFullName).IsEqualTo("[global::MyNamespace.My]");
+		await Assert.That(type.RenderFullName).IsEqualTo("global::MyNamespace.MyAttribute");
+		await Assert.That(type.RenderTypeName).IsEqualTo("MyAttribute");
+		await Assert.That(type.RenderAttributeName).IsEqualTo("[global::MyNamespace.My]");
 	}
 
 	[Test]

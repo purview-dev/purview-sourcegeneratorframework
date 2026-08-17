@@ -25,17 +25,16 @@ public partial class ServiceRegistrationGenerator : IIncrementalGenerator
 			ServiceRegistrationGeneratorPropertyLibrary.DisableServiceRegistrationGenerator
 		);
 
-		var emitServiceInfo = IncrementalPipeline.IsDisabledValueProvider(
+		var emitServiceInfo = IncrementalPipeline.PropertyValueProvider(
 			context,
-			ServiceRegistrationGeneratorPropertyLibrary.EmitServiceRegistrationInfo
+			ServiceRegistrationGeneratorPropertyLibrary.EmitServiceRegistrationInfo,
+			value => bool.TryParse(value, out var result) && result
 		);
 
-		var generationContext = IncrementalPipeline.GenerationContextValueProvider(
+		var generationContext = IncrementalPipeline.DefaultGenerationContextValueProvider(
 			context,
 			GeneratorName,
 			GeneratorVersion,
-			(compilation, validateScopes, _, _, _) =>
-				new GenerationContext(compilation, GeneratorName, GeneratorVersion, validateScopes),
 			_logger
 		);
 

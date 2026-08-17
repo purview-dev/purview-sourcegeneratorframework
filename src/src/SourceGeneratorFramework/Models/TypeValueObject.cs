@@ -176,7 +176,7 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 	public string MetadataFullName => IsGlobalNamespace ? MetadataName : $"{Namespace}.{MetadataName}";
 
 	/// <summary>
-	/// Gets the fully-qualified global name for use in generated code, rendered as an attribute when applicable.
+	/// Gets the fully-qualified global type name for use in generated code.
 	/// </summary>
 	public string RenderFullName
 	{
@@ -185,13 +185,13 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 			if (SpecialType != SpecialType.None)
 				return Keyword!;
 
-			var result = IsGlobalNamespace ? RenderTypeName : $"global::{Namespace}.{RenderTypeName}";
-			return TypeHelpers.IsAttribute(TypeName) ? $"[{TypeHelpers.GetTypeName(result)}]" : result;
+			// If the type is in the global namespace, we can render it without the "global::" prefix.
+			return IsGlobalNamespace ? RenderTypeName : $"global::{Namespace}.{RenderTypeName}";
 		}
 	}
 
 	/// <summary>
-	/// Gets the type name suitable for use in generated code, trimming the 'Attribute' suffix when applicable.
+	/// Gets the type name suitable for use in generated code.
 	/// </summary>
 	public string RenderTypeName
 	{
@@ -200,18 +200,22 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 			if (SpecialType != SpecialType.None)
 				return Keyword!;
 
-			var typeName = TypeHelpers.IsAttribute(TypeName) ? TypeHelpers.GetTypeName(TypeName) : TypeName;
-
 			if (GenericArity == 0)
-				return typeName;
+				return TypeName;
 
 			if (TypeArguments.IsDefaultOrEmpty)
-				return $"{typeName}<{new string(',', GenericArity - 1)}>";
+				return $"{TypeName}<{new string(',', GenericArity - 1)}>";
 
 			// If the type has concrete type arguments, render them in angle brackets.
-			return $"{typeName}<{string.Join(", ", TypeArguments.Select(static argument => argument.RenderFullName))}>";
+			return $"{TypeName}<{string.Join(", ", TypeArguments.Select(static argument => argument.RenderFullName))}>";
 		}
 	}
+
+	/// <summary>
+	/// Gets the fully-qualified name rendered as a C# attribute application, including brackets and
+	/// the optional omission of the <c>Attribute</c> suffix.
+	/// </summary>
+	public string RenderAttributeName => $"[{TypeHelpers.GetTypeName(RenderFullName)}]";
 
 	/// <summary>
 	/// Gets a value indicating whether the type is in the global namespace.
@@ -312,20 +316,17 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 	/// </summary>
 	public static implicit operator string(TypeValueObject typeValueObject) => typeValueObject.RenderFullName;
 
-	/// <summary>
-	/// Returns a string representing a static property combined with this type, suitable for use in generated code.
-	/// </summary>
-	/// <param name="typeValueObject">The type value object.</param>
-	/// <param name="propertyName">The name of the property.</param>
-	/// <returns>A string representing the fully qualified property name.</returns>
-	public static string operator +(TypeValueObject typeValueObject, string propertyName) =>
-		typeValueObject.Property(propertyName);
+	/// <summary>Creates structured declaration syntax for this type.</summary>
+	public TypeReferenceOptions AsTypeReference() => new(this);
 
-	/// <summary>
-	/// Returns a string representing the nullable form of this type, suitable for use in generated code.
-	/// </summary>
-	/// <returns>A string representing the nullable form of this type.</returns>
-	public string Nullable() => RenderFullName + "?";
+	/// <summary>Creates a nullable structured type reference.</summary>
+	public TypeReferenceOptions MakeNullable() => AsTypeReference().Nullable();
+
+	/// <summary>Creates an array structured type reference with the specified rank.</summary>
+	public TypeReferenceOptions MakeArray(int rank = 1) => AsTypeReference().MakeArray(rank);
+
+	/// <summary>Creates a pointer structured type reference.</summary>
+	public TypeReferenceOptions MakePointer() => AsTypeReference().MakePointer();
 
 	/// <summary>
 	/// Creates a generic variant of this type using the standard angle-bracket syntax.
@@ -337,36 +338,6 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 
 		// If the type has no generic arity, we can treat the provided type arguments as concrete types.
 		return MakeGeneric(typeArguments.Select(static argument => new TypeValueObject(argument, null)).ToArray());
-	}
-
-	/// <summary>
-	/// Returns a string representing a static property combined with this type, suitable for use in generated code.
-	/// </summary>
-	/// <param name="propertyName">The name of the property.</param>
-	/// <returns>A string representing the fully qualified property name.</returns>
-	/// <example>
-	/// <para>
-	/// For example, if the <see cref="TypeValueObject"/> represents <c>System.String</c> and the property name is <c>Empty</c>, this method will return <c>string.Empty</c>.
-	/// </para>
-	/// <para>
-	/// Called as:
-	/// <list type="bullet">
-	/// <item><c>KnownLangTypes.Get(SpecialType.System_String).ValueObject.Property("Empty")</c></item>
-	/// <item><c>new TypeValueObject(SpecialType.System_String).Property("Empty")</c></item>
-	/// <item><c>new TypeValueObject(typeof(string)).Property("Empty")</c></item>
-	/// <item><c>TypeValueObject.Create&lt;string&gt;().Property("Empty")</c></item>
-	/// </list>
-	/// </para>
-	/// </example>
-	public string Property(string propertyName)
-	{
-		if (string.IsNullOrWhiteSpace(propertyName))
-		{
-			throw new ArgumentException("Property name cannot be null, empty, or whitespace.", nameof(propertyName));
-		}
-
-		// Property name is valid...
-		return $"{RenderFullName}.{propertyName}";
 	}
 
 	/// <summary>
@@ -399,32 +370,6 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 			GenericArity = GenericArity == 0 ? typeArguments.Length : GenericArity,
 			TypeArguments = [.. typeArguments],
 		};
-	}
-
-	/// <summary>
-	/// Creates a generic variant of this type using curly-bracket syntax (for XML documentation).
-	/// </summary>
-	public TypeValueObject MakeGenericXml(params string[] typeArguments)
-	{
-		if (typeArguments == null)
-			throw new ArgumentNullException(nameof(typeArguments));
-
-		if (typeArguments.Length == 0)
-			throw new ArgumentException("At least one type argument must be provided.", nameof(typeArguments));
-
-		if (GenericArity > 0 && typeArguments.Length != GenericArity)
-			throw new ArgumentException(
-				$"Type '{MetadataFullName}' requires {GenericArity} type arguments, but {typeArguments.Length} were supplied.",
-				nameof(typeArguments)
-			);
-
-		if (SpecialType != SpecialType.None)
-		{
-			throw new InvalidOperationException($"Cannot create a generic type from the special type '{SpecialType}'.");
-		}
-
-		// If the type has no generic arity, we can treat the provided type arguments as concrete types.
-		return new($"{TypeName}{{{string.Join(", ", typeArguments)}}}", Namespace);
 	}
 
 	/// <summary>

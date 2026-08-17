@@ -127,50 +127,37 @@ public static class IncrementalPipeline
 	public static IncrementalValueProvider<bool> IsDisabledValueProvider(
 		IncrementalGeneratorInitializationContext context,
 		string propertyName
+	) => PropertyValueProvider(context, propertyName, value => bool.TryParse(value, out var isDisabled) && isDisabled);
+
+	/// <summary>
+	/// Creates a value provider that reads an MSBuild property.
+	/// </summary>
+	public static IncrementalValueProvider<T> PropertyValueProvider<T>(
+		IncrementalGeneratorInitializationContext context,
+		string propertyName,
+		Func<string?, T> converter
 	)
 	{
 		if (string.IsNullOrWhiteSpace(propertyName))
 			throw new ArgumentException("Property name cannot be null or whitespace.", nameof(propertyName));
+		if (converter == null)
+			throw new ArgumentNullException(nameof(converter));
 
+		var msbuildPropertyValue = propertyName;
 		if (!propertyName.StartsWith(BuildProperty, StringComparison.Ordinal))
-			propertyName = BuildProperty + propertyName;
+			msbuildPropertyValue = BuildProperty + propertyName;
 
 		// All valid...
 		return context
 			.AnalyzerConfigOptionsProvider.Select(
 				(options, _) =>
 				{
-					options.GlobalOptions.TryGetValue(propertyName, out var value);
-					return bool.TryParse(value, out var isDisabled) && isDisabled;
+					options.GlobalOptions.TryGetValue(msbuildPropertyValue, out var value);
+
+					return converter(value);
 				}
 			)
-			.WithTrackingName($"IsDisabled_{propertyName}");
-	}
-
-	/// <summary>
-	/// Creates a value provider that builds a generation context from the compilation.
-	/// </summary>
-	public static IncrementalValueProvider<TContext> GenerationContextValueProvider<TContext>(
-		IncrementalGeneratorInitializationContext context,
-		string generatorName,
-		string generatorVersion,
-		Func<Compilation, string, string, CancellationToken, TContext> factory,
-		GenerationLogger? logger = null
-	)
-		where TContext : notnull, GenerationContext
-	{
-		if (factory is null)
-			throw new ArgumentNullException(nameof(factory));
-
-		// Wrap the factory to include the CodeWriter scope-validation build property.
-		return GenerationContextValueProvider(
-			context,
-			generatorName,
-			generatorVersion,
-			(compilation, _, name, version, cancellationToken) =>
-				factory(compilation, name, version, cancellationToken),
-			logger
-		);
+			.WithTrackingName($"GetMSBuildPropertyValue_{propertyName}");
 	}
 
 	/// <summary>
@@ -181,15 +168,16 @@ public static class IncrementalPipeline
 		IncrementalGeneratorInitializationContext context,
 		string generatorName,
 		string generatorVersion,
-		Func<Compilation, bool, string, string, CancellationToken, TContext> factory,
-		GenerationLogger? logger = null
+		ISourceGenLogger? logger,
+		Func<Compilation, GenerationSettings, ISourceGenLogger?, CancellationToken, TContext> factory
 	)
 		where TContext : notnull, GenerationContext
 	{
 		if (factory is null)
 			throw new ArgumentNullException(nameof(factory));
 
-		// Wrap the factory to include the CodeWriter scope-validation build property.
+		var baseSettings = new GenerationSettings(generatorName, generatorVersion);
+
 		return context
 			.CompilationProvider.Combine(CodeWriterScopeValidationValueProvider(context))
 			.Select(
@@ -201,15 +189,15 @@ public static class IncrementalPipeline
 						$"Creating generation context ({nameof(TContext)}) for compilation '{input.Left.AssemblyName}'."
 					);
 
-					var generationContext = factory(
+					return factory(
 						input.Left,
-						input.Right,
-						generatorName,
-						generatorVersion,
+						baseSettings with
+						{
+							ValidateCodeWriterScopes = input.Right,
+						},
+						logger,
 						cancellationToken
 					);
-					generationContext.ConfigureCodeWriterScopeValidation(input.Right);
-					return generationContext;
 				}
 			)
 			.WithTrackingName($"GetGenerationContext_{typeof(TContext).Name}");
@@ -222,16 +210,15 @@ public static class IncrementalPipeline
 		IncrementalGeneratorInitializationContext context,
 		string generatorName,
 		string generatorVersion,
-		GenerationLogger? logger = null
+		ISourceGenLogger? logger = null
 	)
 	{
 		return GenerationContextValueProvider(
 			context,
 			generatorName,
 			generatorVersion,
-			static (compilation, validateScopes, name, version, _) =>
-				new GenerationContext(compilation, name, version, validateScopes),
-			logger
+			logger,
+			static (compilation, settings, logger, _) => new GenerationContext(compilation, settings, logger)
 		);
 	}
 

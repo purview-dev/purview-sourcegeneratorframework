@@ -61,7 +61,7 @@ public static class DriverRunResultExtensions
 		if (result == null)
 			throw new ArgumentNullException(nameof(result));
 
-		var errors = result.LogEntries.Where(e => e.Type == OutputType.Error).Select(e => e.Message).ToList();
+		var errors = result.LogEntries.Where(e => e.Type == SourceGenLogLevel.Fatal).Select(e => e.Message).ToList();
 
 		if (errors.Count > 0)
 		{

@@ -1,15 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFrameworks></TargetFrameworks>
-		<TargetFramework>netstandard2.0</TargetFramework>
-
-		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
-		<DisableSourceLink>true</DisableSourceLink>
-		<CompilerGeneratedFilesOutputPath>Generated</CompilerGeneratedFilesOutputPath>
 		<IsRoslynComponent>true</IsRoslynComponent>
-		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
-		<ExcludePurviewTelemetry>true</ExcludePurviewTelemetry>
-
 		<AssemblyName>$(RootNamespace)</AssemblyName>
 	</PropertyGroup>
 

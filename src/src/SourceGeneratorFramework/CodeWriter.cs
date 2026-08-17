@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Text;
 
 namespace Purview.SourceGeneratorFramework;
@@ -706,6 +707,70 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>
+	/// Writes an attribute class with an <see cref="AttributeUsageAttribute"/> declaration.
+	/// </summary>
+	/// <param name="declaration">
+	/// The class declaration options. When no base type is specified, <see cref="Attribute"/> is
+	/// used. Set <see cref="TypeDeclarationOptions.BaseType"/> to derive from a custom attribute
+	/// base class.
+	/// </param>
+	/// <param name="targets">The declarations on which the generated attribute may be applied.</param>
+	/// <param name="bodyWriter">The action that writes the body of the attribute class.</param>
+	/// <param name="inherited">Whether derived classes and overriding members inherit the attribute.</param>
+	/// <param name="allowMultiple">Whether more than one instance may be specified on one declaration.</param>
+	/// <returns>The current writer.</returns>
+	public CodeWriter WriteAttributeClass(
+		TypeDeclarationOptions declaration,
+		AttributeTargets targets,
+		Action<CodeWriter> bodyWriter,
+		bool inherited = false,
+		bool allowMultiple = false
+	)
+	{
+		if (declaration is null)
+			throw new ArgumentNullException(nameof(declaration));
+		if (bodyWriter is null)
+			throw new ArgumentNullException(nameof(bodyWriter));
+		if (targets == 0 || (targets & ~AttributeTargets.All) != 0)
+			throw new ArgumentOutOfRangeException(nameof(targets), targets, "Invalid attribute targets.");
+
+		AttributeDeclarationOptions attributeUsage = new("global::System.AttributeUsageAttribute")
+		{
+			Arguments =
+			[
+				new(RenderAttributeTargets(targets)),
+				new(inherited, "Inherited", isPropertyAssignment: true),
+				new(allowMultiple, "AllowMultiple", isPropertyAssignment: true),
+			],
+		};
+
+		return WriteClass(
+			declaration with
+			{
+				BaseType = declaration.BaseType ?? new("global::System.Attribute"),
+				Attributes = declaration.Attributes.Insert(0, attributeUsage),
+			},
+			bodyWriter
+		);
+	}
+
+	static string RenderAttributeTargets(AttributeTargets targets)
+	{
+		if (targets == AttributeTargets.All)
+			return "global::System.AttributeTargets.All";
+
+		var names = targets.ToString().Split(',');
+		var builder = new StringBuilder();
+		for (var index = 0; index < names.Length; index++)
+		{
+			if (index != 0)
+				builder.Append(" | ");
+			builder.Append("global::System.AttributeTargets.").Append(names[index].Trim());
+		}
+		return builder.ToString();
+	}
+
+	/// <summary>
 	/// Writes a struct declaration from structured options and returns its body scope.
 	/// </summary>
 	/// <param name="declaration">The struct declaration options.</param>
@@ -819,9 +884,69 @@ public sealed class CodeWriter
 	{
 		if (bodyWriter is null)
 			throw new ArgumentNullException(nameof(bodyWriter));
+
 		using (WriteEnumScope(declaration))
 			bodyWriter(this);
+
 		return this;
+	}
+
+	/// <summary>Writes an enum declaration with structured field declarations.</summary>
+	/// <param name="declaration">The enum declaration options.</param>
+	/// <param name="fields">The fields to write in declaration order.</param>
+	/// <returns>The current writer.</returns>
+	public CodeWriter WriteEnum(TypeDeclarationOptions declaration, params EnumFieldDeclarationOptions[] fields)
+	{
+		if (fields is null)
+			throw new ArgumentNullException(nameof(fields));
+
+		// Validate each field before writing the enum to avoid partial output on error.
+		for (var index = 0; index < fields.Length; index++)
+			ValidateEnumFieldDeclaration(fields[index]);
+
+		return WriteEnum(
+			declaration,
+			body =>
+			{
+				for (var index = 0; index < fields.Length; index++)
+					body.WriteEnumField(fields[index]);
+			}
+		);
+	}
+
+	/// <summary>Writes a field in an enum declaration.</summary>
+	/// <param name="declaration">The enum field declaration options.</param>
+	/// <returns>The current writer.</returns>
+	public CodeWriter WriteEnumField(EnumFieldDeclarationOptions declaration)
+	{
+		ValidateEnumFieldDeclaration(declaration);
+		if (!declaration.XmlSummary.IsDefaultOrEmpty)
+			WriteXmlSummary(declaration.XmlSummary);
+		WriteAttributes(declaration.Attributes);
+		Write(declaration.FieldName);
+		if (declaration.FieldValue is not null)
+		{
+			Write(" = ");
+			Write(
+				declaration.FieldValue as string
+					?? Convert.ToString(declaration.FieldValue, CultureInfo.InvariantCulture)
+			);
+		}
+		return WriteLine(",");
+	}
+
+	void WriteXmlSummary(ImmutableArray<string> summary)
+	{
+		if (summary.Length == 1)
+		{
+			Write("/// <summary>").Write(summary[0]).WriteLine("</summary>");
+			return;
+		}
+
+		WriteLine("/// <summary>");
+		for (var index = 0; index < summary.Length; index++)
+			Write("/// ").WriteLine(summary[index]);
+		WriteLine("/// </summary>");
 	}
 
 	/// <summary>Writes a complete delegate declaration.</summary>
@@ -1962,6 +2087,12 @@ public sealed class CodeWriter
 			throw new ArgumentException("A field cannot be both readonly and volatile.", nameof(declaration));
 		if (declaration.IsConst && declaration.Initializer is null)
 			throw new ArgumentException("A const field requires an initializer.", nameof(declaration));
+	}
+
+	static void ValidateEnumFieldDeclaration(EnumFieldDeclarationOptions declaration)
+	{
+		ValidateRequired(declaration.FieldName, "Enum field name", nameof(declaration));
+		ValidateAttributes(declaration.Attributes, nameof(declaration));
 	}
 
 	static void ValidateMemberModifiers(

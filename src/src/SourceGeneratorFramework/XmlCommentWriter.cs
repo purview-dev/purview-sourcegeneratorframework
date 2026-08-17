@@ -377,74 +377,74 @@ public static class XmlCommentWriter
 
 			return builder.ToString();
 		}
+
+		/// <summary> Returns an inline XML reference to a type or member.</summary>
+		public static string XmlSee(string cref, string? description = null)
+		{
+			if (string.IsNullOrWhiteSpace(cref))
+				throw new ArgumentException("The XML cref cannot be null or empty.", nameof(cref));
+
+			//	If no description is provided, return a self-closing <see /> tag. Otherwise, return a <see> block with the provided description.
+			return string.IsNullOrWhiteSpace(description)
+				? BuildSelfClosingXmlTag("see", ("cref", cref))
+				: BuildXmlTag("see", ("cref", cref)) + XmlText(description!) + "</see>";
+		}
+
+		/// <summary>Returns an inline XML reference to a parameter.</summary>
+		public static string XmlParamRef(string parameterName) =>
+			BuildSelfClosingXmlTag("paramref", ("name", parameterName));
+
+		/// <summary>Returns an inline XML reference to a type parameter.</summary>
+		public static string XmlTypeParamRef(string typeParameterName) =>
+			BuildSelfClosingXmlTag("typeparamref", ("name", typeParameterName));
+
+		/// <summary>Returns inline code suitable for use in the middle of documentation text.</summary>
+		public static string XmlInlineCode(string content) => $"<c>{XmlText(content)}</c>";
+
+		/// <summary>Escapes plain text for safe composition with XML documentation elements.</summary>
+		public static string XmlText(string content) =>
+			EscapeXml(content ?? throw new ArgumentNullException(nameof(content)));
+
+		/// <summary>Returns an XML line break for use inside documentation text.</summary>
+		public static string XmlLineBreak() => "<br />";
+
+		/// <summary>Returns an XML list item containing a description.</summary>
+		public static string XmlListItem(string description) => $"<item>{XmlText(description)}</item>";
+
+		/// <summary>Returns an XML list item containing a term and its description.</summary>
+		public static string XmlListItem(string term, string description) =>
+			$"<item><term>{XmlText(term)}</term><description>{XmlText(description)}</description></item>";
+
+		/// <summary>Returns an XML list header containing a term and its description.</summary>
+		public static string XmlListHeader(string term, string description) =>
+			$"<listheader><term>{XmlText(term)}</term><description>{XmlText(description)}</description></listheader>";
+
+		/// <summary>Returns an XML list header containing a term and its description.</summary>
+		public static string XmlListHeader(string description) => $"<listheader>{XmlText(description)}</listheader>";
+
+		/// <summary>Returns an XML list term.</summary>
+		public static string XmlTerm(string content) => $"<term>{XmlText(content)}</term>";
+
+		/// <summary>Returns an XML list description.</summary>
+		public static string XmlDescription(string content) => $"<description>{XmlText(content)}</description>";
+
+		/// <summary>Returns an arbitrary inline XML element.</summary>
+		public static string XmlInlineElement(string tag, string content) =>
+			BuildXmlTag(tag) + XmlText(content) + $"</{tag}>";
+
+		/// <summary>Returns a self-closing XML element with optional attributes.</summary>
+		public static string BuildSelfClosingXmlTag(string tag, params (string Name, object Value)[]? attributes)
+		{
+			var openTag = BuildXmlTag(tag, attributes);
+			return openTag.Remove(openTag.Length - 1) + " />";
+		}
+
+		static string EscapeXml(string value) =>
+			value
+				.Replace("&", "&amp;")
+				.Replace("<", "&lt;")
+				.Replace(">", "&gt;")
+				.Replace("\"", "&quot;")
+				.Replace("'", "&apos;");
 	}
-
-	/// <summary> Returns an inline XML reference to a type or member.</summary>
-	public static string XmlSee(string cref, string? description = null)
-	{
-		if (string.IsNullOrWhiteSpace(cref))
-			throw new ArgumentException("The XML cref cannot be null or empty.", nameof(cref));
-
-		//	If no description is provided, return a self-closing <see /> tag. Otherwise, return a <see> block with the provided description.
-		return string.IsNullOrWhiteSpace(description)
-			? BuildSelfClosingXmlTag("see", ("cref", cref))
-			: BuildXmlTag("see", ("cref", cref)) + XmlText(description!) + "</see>";
-	}
-
-	/// <summary>Returns an inline XML reference to a parameter.</summary>
-	public static string XmlParamRef(string parameterName) =>
-		BuildSelfClosingXmlTag("paramref", ("name", parameterName));
-
-	/// <summary>Returns an inline XML reference to a type parameter.</summary>
-	public static string XmlTypeParamRef(string typeParameterName) =>
-		BuildSelfClosingXmlTag("typeparamref", ("name", typeParameterName));
-
-	/// <summary>Returns inline code suitable for use in the middle of documentation text.</summary>
-	public static string XmlInlineCode(string content) => $"<c>{XmlText(content)}</c>";
-
-	/// <summary>Escapes plain text for safe composition with XML documentation elements.</summary>
-	public static string XmlText(string content) =>
-		EscapeXml(content ?? throw new ArgumentNullException(nameof(content)));
-
-	/// <summary>Returns an XML line break for use inside documentation text.</summary>
-	public static string XmlLineBreak() => "<br />";
-
-	/// <summary>Returns an XML list item containing a description.</summary>
-	public static string XmlListItem(string description) => $"<item>{XmlText(description)}</item>";
-
-	/// <summary>Returns an XML list item containing a term and its description.</summary>
-	public static string XmlListItem(string term, string description) =>
-		$"<item><term>{XmlText(term)}</term><description>{XmlText(description)}</description></item>";
-
-	/// <summary>Returns an XML list header containing a term and its description.</summary>
-	public static string XmlListHeader(string term, string description) =>
-		$"<listheader><term>{XmlText(term)}</term><description>{XmlText(description)}</description></listheader>";
-
-	/// <summary>Returns an XML list header containing a term and its description.</summary>
-	public static string XmlListHeader(string description) => $"<listheader>{XmlText(description)}</listheader>";
-
-	/// <summary>Returns an XML list term.</summary>
-	public static string XmlTerm(string content) => $"<term>{XmlText(content)}</term>";
-
-	/// <summary>Returns an XML list description.</summary>
-	public static string XmlDescription(string content) => $"<description>{XmlText(content)}</description>";
-
-	/// <summary>Returns an arbitrary inline XML element.</summary>
-	public static string XmlInlineElement(string tag, string content) =>
-		BuildXmlTag(tag) + XmlText(content) + $"</{tag}>";
-
-	/// <summary>Returns a self-closing XML element with optional attributes.</summary>
-	public static string BuildSelfClosingXmlTag(string tag, params (string Name, object Value)[]? attributes)
-	{
-		var openTag = BuildXmlTag(tag, attributes);
-		return openTag.Remove(openTag.Length - 1) + " />";
-	}
-
-	static string EscapeXml(string value) =>
-		value
-			.Replace("&", "&amp;")
-			.Replace("<", "&lt;")
-			.Replace(">", "&gt;")
-			.Replace("\"", "&quot;")
-			.Replace("'", "&apos;");
 }

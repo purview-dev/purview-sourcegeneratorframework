@@ -8,17 +8,15 @@ namespace Purview.SourceGeneratorFramework.Generators.Model;
 
 static class AttributeDataModelLibrary
 {
-	static readonly TypeValueObject SystemType = new(typeof(Type));
-
 	public static IncrementalValuesProvider<GeneratorResult<AttributeDataModelTarget>> GetTargets(
 		IncrementalGeneratorInitializationContext context,
-		GenerationLogger? logger
+		ISourceGenLogger? logger
 	)
 	{
 		return IncrementalPipeline
 			.ForAttributeWithMetadataName(
 				context,
-				GeneratorTypeLibrary.GenerateAttribute,
+				GeneratorTypeLibrary.Attirbutes.GenerateAttribute,
 				(ctx, ct) =>
 				{
 					var symbol = ctx.SemanticModel.GetDeclaredSymbol(ctx.TargetNode, ct);
@@ -32,12 +30,12 @@ static class AttributeDataModelLibrary
 
 	static GeneratorResult<AttributeDataModelTarget> BuildTarget(
 		INamedTypeSymbol structSymbol,
-		GenerationLogger? logger,
+		ISourceGenLogger? logger,
 		CancellationToken cancellationToken
 	)
 	{
 		var diagnostics = ImmutableArray.CreateBuilder<DiagnosticInfo>();
-		var generateAttribute = GetAttribute(structSymbol, GeneratorTypeLibrary.GenerateAttribute);
+		var generateAttribute = GetAttribute(structSymbol, GeneratorTypeLibrary.Attirbutes.GenerateAttribute);
 		if (generateAttribute is null)
 			return GeneratorResult<AttributeDataModelTarget>.Empty;
 
@@ -80,8 +78,16 @@ static class AttributeDataModelLibrary
 			return GeneratorResult<AttributeDataModelTarget>.Fail([.. diagnostics]);
 		}
 
-		var matchByInheritance = GetNamedArgument(generateAttribute, "MatchByInheritance", false);
-		var autoDiscover = GetNamedArgument(generateAttribute, "AutoDiscover", false);
+		var matchByInheritance = GetNamedArgument(
+			generateAttribute,
+			"MatchByInheritance",
+			GetConstructorArgument(generateAttribute, 1, false)
+		);
+		var autoDiscover = GetNamedArgument(
+			generateAttribute,
+			"AutoDiscover",
+			GetConstructorArgument(generateAttribute, 2, false)
+		);
 
 		if (autoDiscover && targetAttributeType is null)
 		{
@@ -121,6 +127,8 @@ static class AttributeDataModelLibrary
 				: structSymbol.ContainingNamespace.ToDisplayString(),
 			StructName: structSymbol.Name,
 			Accessibility: structSymbol.DeclaredAccessibility.ToTypeDeclarationAccessibility(),
+			IsRecord: structSymbol.IsRecord,
+			IsReadOnly: structSymbol.IsReadOnly,
 			TargetAttribute: targetAttribute,
 			MatchByInheritance: matchByInheritance,
 			AutoDiscover: autoDiscover,
@@ -137,7 +145,7 @@ static class AttributeDataModelLibrary
 		INamedTypeSymbol structSymbol,
 		HashSet<string> excludedNames,
 		ImmutableArray<DiagnosticInfo>.Builder diagnostics,
-		GenerationLogger? logger,
+		ISourceGenLogger? logger,
 		CancellationToken cancellationToken
 	)
 	{
@@ -245,7 +253,7 @@ static class AttributeDataModelLibrary
 	static ParameterAttributeInfo ReadParameterAttributes(
 		IParameterSymbol parameter,
 		string propertyName,
-		GenerationLogger? logger
+		ISourceGenLogger? logger
 	)
 	{
 		var sources = ImmutableArray.CreateBuilder<PropertySource>();
@@ -254,7 +262,7 @@ static class AttributeDataModelLibrary
 		object? defaultValue;
 		bool hasDefaultValue;
 
-		var excludeAttribute = GetAttribute(parameter, GeneratorTypeLibrary.ExcludeAttribute);
+		var excludeAttribute = GetAttribute(parameter, GeneratorTypeLibrary.Attirbutes.ExcludeAttribute);
 		if (excludeAttribute is not null)
 		{
 			isExcluded = true;
@@ -286,13 +294,17 @@ static class AttributeDataModelLibrary
 
 		var hasExclusive = isExcluded || isNestedModel || isTypeArgument;
 
-		var ctorAttribute = GetAttribute(parameter, GeneratorTypeLibrary.ArgumentAttribute);
+		var ctorAttribute = GetAttribute(parameter, GeneratorTypeLibrary.Attirbutes.ArgumentAttribute);
 		var isEnum = false;
 		if (ctorAttribute is not null && !hasExclusive)
 		{
 			var ctorName = GetCtorPropertyName(ctorAttribute);
 			var ctorIndex = GetCtorPropertyIndex(ctorAttribute);
-			var ctorDefaultValue = GetNamedArgument(ctorAttribute, "DefaultValue", (object?)null);
+			var ctorDefaultValue = GetNamedArgument(
+				ctorAttribute,
+				"DefaultValue",
+				GetConstructorArgument(ctorAttribute, 1, (object?)null)
+			);
 			isEnum = GetNamedArgument(ctorAttribute, "IsEnum", false);
 
 			if (ctorName is not null)
@@ -315,15 +327,19 @@ static class AttributeDataModelLibrary
 		else if (ctorAttribute is not null)
 		{
 			logger?.Debug(
-				$"Parameter '{propertyName}' has conflicting attributes; [{GeneratorTypeLibrary.ArgumentAttribute.RenderTypeName}] is ignored."
+				$"Parameter '{propertyName}' has conflicting attributes; [{GeneratorTypeLibrary.Attirbutes.ArgumentAttribute.RenderTypeName}] is ignored."
 			);
 		}
 
-		var namedAttribute = GetAttribute(parameter, GeneratorTypeLibrary.PropertyAttribute);
+		var namedAttribute = GetAttribute(parameter, GeneratorTypeLibrary.Attirbutes.PropertyAttribute);
 		if (namedAttribute is not null && !hasExclusive)
 		{
 			var namedName = GetNamedArgument(namedAttribute, "Name", (string?)null);
-			var namedDefaultValue = GetNamedArgument(namedAttribute, "DefaultValue", (object?)null);
+			var namedDefaultValue = GetNamedArgument(
+				namedAttribute,
+				"DefaultValue",
+				GetConstructorArgument(namedAttribute, 0, (object?)null)
+			);
 			isEnum = isEnum || GetNamedArgument(namedAttribute, "IsEnum", false);
 
 			sources.Add(new PropertySource(AttributePropertySource.NamedArgument, namedName ?? propertyName, -1));
@@ -338,7 +354,7 @@ static class AttributeDataModelLibrary
 		else if (namedAttribute is not null)
 		{
 			logger?.Debug(
-				$"Parameter '{propertyName}' has conflicting attributes; [{GeneratorTypeLibrary.PropertyAttribute.RenderTypeName}] is ignored."
+				$"Parameter '{propertyName}' has conflicting attributes; [{GeneratorTypeLibrary.Attirbutes.PropertyAttribute.RenderTypeName}] is ignored."
 			);
 		}
 
@@ -372,17 +388,17 @@ static class AttributeDataModelLibrary
 		IParameterSymbol parameter,
 		string propertyName,
 		bool isExcluded,
-		GenerationLogger? logger
+		ISourceGenLogger? logger
 	)
 	{
-		var nestedModelAttribute = GetAttribute(parameter, GeneratorTypeLibrary.NestedModelAttribute);
+		var nestedModelAttribute = GetAttribute(parameter, GeneratorTypeLibrary.Attirbutes.NestedModelAttribute);
 		if (nestedModelAttribute is null)
 			return (false, [], null, false);
 
 		if (isExcluded)
 		{
 			logger?.Debug(
-				$"Parameter '{propertyName}' has both [{GeneratorTypeLibrary.ExcludeAttribute.RenderTypeName}] and [{GeneratorTypeLibrary.NestedModelAttribute.RenderTypeName}]; excluding takes precedence."
+				$"Parameter '{propertyName}' has both [{GeneratorTypeLibrary.Attirbutes.ExcludeAttribute.RenderTypeName}] and [{GeneratorTypeLibrary.Attirbutes.NestedModelAttribute.RenderTypeName}]; excluding takes precedence."
 			);
 			return (false, [], null, false);
 		}
@@ -404,17 +420,20 @@ static class AttributeDataModelLibrary
 		IParameterSymbol parameter,
 		string propertyName,
 		bool isExcluded,
-		GenerationLogger? logger
+		ISourceGenLogger? logger
 	)
 	{
-		var typeArgumentAttribute = GetAttribute(parameter, GeneratorTypeLibrary.GenericTypeArgumentAttribute);
+		var typeArgumentAttribute = GetAttribute(
+			parameter,
+			GeneratorTypeLibrary.Attirbutes.GenericTypeArgumentAttribute
+		);
 		if (typeArgumentAttribute is null)
 			return (false, [], null, false);
 
 		if (isExcluded)
 		{
 			logger?.Debug(
-				$"Parameter '{propertyName}' has both [{GeneratorTypeLibrary.ExcludeAttribute.RenderTypeName}] and [{GeneratorTypeLibrary.GenericTypeArgumentAttribute.RenderTypeName}]; excluding takes precedence."
+				$"Parameter '{propertyName}' has both [{GeneratorTypeLibrary.Attirbutes.ExcludeAttribute.RenderTypeName}] and [{GeneratorTypeLibrary.Attirbutes.GenericTypeArgumentAttribute.RenderTypeName}]; excluding takes precedence."
 			);
 			return (false, [], null, false);
 		}
@@ -461,7 +480,7 @@ static class AttributeDataModelLibrary
 		ImmutableArray<AttributeDataModelProperty> explicitProperties,
 		HashSet<string> excludedNames,
 		ImmutableArray<DiagnosticInfo>.Builder diagnostics,
-		GenerationLogger? logger,
+		ISourceGenLogger? logger,
 		CancellationToken cancellationToken
 	)
 	{
@@ -660,6 +679,11 @@ static class AttributeDataModelLibrary
 
 		if (value is string s)
 		{
+			// TypedConstant instances can only be supplied by Roslyn. Its constructors are
+			// internal, so a textual attribute-model default cannot be converted into one.
+			if (IsTypedConstantType(typeSymbol))
+				return false;
+
 			expression = $"\"{EscapeString(s)}\"";
 			return true;
 		}
@@ -691,6 +715,10 @@ static class AttributeDataModelLibrary
 
 		return false;
 	}
+
+	static bool IsTypedConstantType(ITypeSymbol typeSymbol) =>
+		typeSymbol.Name == "TypedConstant"
+		&& typeSymbol.ContainingNamespace.ToDisplayString() == "Microsoft.CodeAnalysis";
 
 	static string EscapeString(string value)
 	{
@@ -745,7 +773,7 @@ static class AttributeDataModelLibrary
 		return (typeName, isNonNullableReferenceType);
 	}
 
-	static bool IsSystemType(ITypeSymbol typeSymbol) => SystemType.Equals(typeSymbol);
+	static bool IsSystemType(ITypeSymbol typeSymbol) => PurviewTypeLibrary.System.Type.Equals(typeSymbol);
 
 	static bool IsTypeSymbolType(ITypeSymbol typeSymbol)
 	{
@@ -769,7 +797,7 @@ static class AttributeDataModelLibrary
 	{
 		return typeSymbol is not INamedTypeSymbol namedType || namedType.TypeKind != TypeKind.Struct
 			? false
-			: GetAttribute(namedType, GeneratorTypeLibrary.GenerateAttribute) is not null;
+			: GetAttribute(namedType, GeneratorTypeLibrary.Attirbutes.GenerateAttribute) is not null;
 	}
 
 	static AttributeData? GetAttribute(ISymbol symbol, TypeValueObject attributeType)
@@ -818,6 +846,27 @@ static class AttributeDataModelLibrary
 			}
 		}
 		return defaultValue;
+	}
+
+	static T? GetConstructorArgument<T>(AttributeData attributeData, int index, T? defaultValue)
+	{
+		if (index < 0 || index >= attributeData.ConstructorArguments.Length)
+			return defaultValue;
+
+		var value = attributeData.ConstructorArguments[index].Value;
+		if (value is T typedValue)
+			return typedValue;
+		if (value is null)
+			return defaultValue;
+
+		try
+		{
+			return (T?)Convert.ChangeType(value, typeof(T), CultureInfo.InvariantCulture);
+		}
+		catch
+		{
+			return defaultValue;
+		}
 	}
 
 	static string ToPascalCase(string value)

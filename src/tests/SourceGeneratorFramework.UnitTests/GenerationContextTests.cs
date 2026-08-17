@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Purview.SourceGeneratorFramework.Logging;
 using Purview.SourceGeneratorFramework.Models;
 
 namespace Purview.SourceGeneratorFramework;
@@ -16,7 +17,13 @@ public class GenerationContextTests
 		);
 	}
 
-	sealed record TestContext(Compilation Compilation) : GenerationContext(Compilation, "TestGenerator", "1.0.0");
+	sealed class TestContext(Compilation compilation)
+		: GenerationContext(compilation, new GenerationSettings("TestGenerator", "1.0.0"));
+
+	sealed class TestLogger : ISourceGenLogger
+	{
+		public void Log(SourceGenLogLevel level, int indentation, string message, params object[] args) { }
+	}
 
 	[Test]
 	public async Task GetTypeByMetadataName_KnownType_ReturnsSymbol()
@@ -59,21 +66,23 @@ public class GenerationContextTests
 	{
 		// Arrange
 		var compilation = CreateCompilation();
-		var context = new GenerationContext(compilation, "TestGenerator", "1.0.0", validateCodeWriterScopes: true);
+		var context = new GenerationContext(
+			compilation,
+			new GenerationSettings("TestGenerator", "1.0.0", validateCodeWriterScopes: true)
+		);
 
 		// Act
 		var writer = context.CreateCodeWriter();
 
 		// Assert
-		await Assert.That(context.CodeWriter.ThrowOnUnclosedScopes).IsTrue();
 		await Assert.That(writer.ThrowOnUnclosedScopes).IsTrue();
-		await Assert.That(ReferenceEquals(writer, context.CodeWriter)).IsTrue();
+		await Assert.That(ReferenceEquals(writer, context.CreateCodeWriter())).IsFalse();
 	}
 
 	[Test]
 	public async Task CreateCodeWriter_GivenGeneratorIdentity_PropagatesIdentity()
 	{
-		var context = new GenerationContext(CreateCompilation(), "HostKitGenerator", "2.3.4");
+		var context = new GenerationContext(CreateCompilation(), new GenerationSettings("HostKitGenerator", "2.3.4"));
 
 		var writer = context.CreateCodeWriter();
 
@@ -82,22 +91,22 @@ public class GenerationContextTests
 	}
 
 	[Test]
-	public async Task ConfigureCodeWriterScopeValidation_GivenFactoryDefault_UpdatesOwnedWriter()
+	public async Task Constructor_GivenLogger_ExposesLogger()
 	{
 		// Arrange
-		var compilation = CreateCompilation();
-		var context = new TestContext(compilation);
+		var logger = new TestLogger();
+		var context = new GenerationContext(
+			CreateCompilation(),
+			new GenerationSettings("TestGenerator", "1.0.0"),
+			logger
+		);
 
-		// Act
-		context.ConfigureCodeWriterScopeValidation(enabled: true);
-
-		// Assert
-		await Assert.That(context.ValidateCodeWriterScopes).IsTrue();
-		await Assert.That(context.CodeWriter.ThrowOnUnclosedScopes).IsTrue();
+		// Act / Assert
+		await Assert.That(context.Logger).IsSameReferenceAs(logger);
 	}
 
 	[Test]
-	public async Task Equality_IgnoresCompilationAndWriter()
+	public async Task Contexts_GivenDifferentCompilations_AreDistinctReferences()
 	{
 		var first = CreateCompilation();
 		var second = CSharpCompilation.Create(
@@ -106,23 +115,21 @@ public class GenerationContextTests
 			references: [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)]
 		);
 
-		var contextA = new GenerationContext(first, "TestGenerator", "1.0.0");
-		var contextB = new GenerationContext(second, "TestGenerator", "1.0.0");
+		var settings = new GenerationSettings("TestGenerator", "1.0.0");
+		var contextA = new GenerationContext(first, settings);
+		var contextB = new GenerationContext(second, settings);
 
-		await Assert.That(contextA).IsEqualTo(contextB);
-		await Assert.That(contextA.GetHashCode()).IsEqualTo(contextB.GetHashCode());
+		await Assert.That(contextA).IsNotEqualTo(contextB);
 	}
 
 	[Test]
-	public async Task Equality_DifferentiatesIdentityAndValidation()
+	public async Task GenerationSettings_UsesValueEquality()
 	{
-		var compilation = CreateCompilation();
+		var settingsA = new GenerationSettings("A", "1.0.0");
+		var settingsB = new GenerationSettings("A", "1.0.0");
+		var settingsC = settingsA with { ValidateCodeWriterScopes = true };
 
-		var contextA = new GenerationContext(compilation, "A", "1.0.0");
-		var contextB = new GenerationContext(compilation, "B", "1.0.0");
-		var contextC = new GenerationContext(compilation, "A", "1.0.0", validateCodeWriterScopes: true);
-
-		await Assert.That(contextA).IsNotEqualTo(contextB);
-		await Assert.That(contextA).IsNotEqualTo(contextC);
+		await Assert.That(settingsA).IsEqualTo(settingsB);
+		await Assert.That(settingsA).IsNotEqualTo(settingsC);
 	}
 }

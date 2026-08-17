@@ -4,12 +4,22 @@ using Purview.SourceGeneratorFramework.Logging;
 namespace Purview.SourceGeneratorFramework.Generators;
 
 [Generator]
-public sealed partial class LoggingSupportGenerator : IIncrementalGenerator, ILogSupport
+public sealed partial class LoggingSupportGenerator : IIncrementalGenerator, ISupportsSourceGenLogging
 {
-	GenerationLogger? _logger;
+	ISourceGenLogger? _logger;
 
 	public void Initialize(IncrementalGeneratorInitializationContext context)
 	{
+		context.RegisterPostInitializationOutput(context =>
+		{
+			_logger?.Info("Generating logging support source code:");
+			foreach (var (hintName, source) in SourceEmitter.LoggingEmit())
+			{
+				_logger?.Info($"- {hintName}", 1);
+				context.AddSource(hintName, source);
+			}
+		});
+
 		var isDisabled = IncrementalPipeline.IsDisabledValueProvider(
 			context,
 			PropertyLibrary.DisableLoggingSourceGenerator
@@ -41,7 +51,7 @@ public sealed partial class LoggingSupportGenerator : IIncrementalGenerator, ILo
 	static void GenerateLogSupport(
 		SourceProductionContext context,
 		TypeValueObject sourceGenType,
-		GenerationLogger? logger
+		ISourceGenLogger? logger
 	)
 	{
 		logger?.Info(
@@ -55,26 +65,26 @@ public sealed partial class LoggingSupportGenerator : IIncrementalGenerator, ILo
 			var classWriter = writer.WriteClassScope(
 				new TypeDeclarationOptions(sourceGenType)
 				{
-					Interfaces = [new TypeReferenceOptions(GeneratorTypeLibrary.ILogSupport)],
+					Interfaces = [new TypeReferenceOptions(GeneratorTypeLibrary.Logging.ISupportsSourceGenLogging)],
 				}
 			)
 		)
 		{
-			writer.Write(GeneratorTypeLibrary.GenerationLogger).WriteLine("? _logger;").NewLine();
+			writer.Write(GeneratorTypeLibrary.Logging.ISourceGenLogger).WriteLine("? _logger;").NewLine();
 
 			writer
 				.Write("void")
 				.Write(' ')
-				.Write(GeneratorTypeLibrary.ILogSupport)
+				.Write(GeneratorTypeLibrary.Logging.ISupportsSourceGenLogging)
 				.Write('.')
-				.Write(nameof(ILogSupport.SetLogOutput))
+				.Write(nameof(ISupportsSourceGenLogging.SetOutput))
 				.Write('(')
 				.Write("global::System.Action<string, ")
-				.Write(GeneratorTypeLibrary.OutputType)
+				.Write(GeneratorTypeLibrary.Logging.SourceGenLogLevel)
 				.WriteLine("> action) =>")
 				.Indent()
 				.Write("_logger = new ")
-				.Write(GeneratorTypeLibrary.GenerationLogger)
+				.Write(GeneratorTypeLibrary.Logging.SourceGenLogger)
 				.WriteLine("(action);")
 				.Unindent();
 		}
@@ -82,5 +92,6 @@ public sealed partial class LoggingSupportGenerator : IIncrementalGenerator, ILo
 		context.AddSource($"{sourceGenType.TypeName}.LogSupport.g.cs", writer);
 	}
 
-	void ILogSupport.SetLogOutput(Action<string, OutputType> action) => _logger = new(action);
+	void ISupportsSourceGenLogging.SetOutput(Action<string, SourceGenLogLevel> action) =>
+		_logger = new SourceGenLogger(action);
 }

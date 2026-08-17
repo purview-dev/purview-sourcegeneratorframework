@@ -42,7 +42,7 @@ public record class DriverRunResult(
 			.GetDiagnostics()
 			.Where(d => d.Severity == DiagnosticSeverity.Error)
 			.ToList();
-		var logErrors = LogEntries.Where(e => e.Type == OutputType.Error).ToList();
+		var logErrors = LogEntries.Where(e => e.Type == SourceGenLogLevel.Fatal).ToList();
 		var compilationErrorKeys = compilationErrors.Select(GetDiagnosticKey).ToHashSet();
 		var emitErrors = CompilationDiagnostics
 			.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)

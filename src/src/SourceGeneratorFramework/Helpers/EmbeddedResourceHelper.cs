@@ -5,7 +5,7 @@ namespace Purview.SourceGeneratorFramework.Helpers;
 /// <summary>
 /// Provides helpers for loading embedded resources from an assembly.
 /// </summary>
-public static class EmbeddedResources
+public static class EmbeddedResourceHelper
 {
 	/// <summary>
 	/// Loads the specified embedded resource as a string.

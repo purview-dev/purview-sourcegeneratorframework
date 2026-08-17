@@ -38,13 +38,16 @@ static class SourceGenLibrary
 
 		var interfaces = typeSymbol.AllInterfaces;
 		var isGenerator = interfaces.Any(static i =>
-			GeneratorTypeLibrary.IIncrementalGenerator.Equals(i) || GeneratorTypeLibrary.ISourceGenerator.Equals(i)
+			GeneratorTypeLibrary.CodeAnalysis.IIncrementalGenerator.Equals(i)
+			|| GeneratorTypeLibrary.CodeAnalysis.ISourceGenerator.Equals(i)
 		);
 
 		if (!isGenerator)
 			return default;
 
-		var hasLogSupport = interfaces.Any(static i => GeneratorTypeLibrary.ILogSupport.Equals(i));
+		var hasLogSupport = interfaces.Any(static i =>
+			GeneratorTypeLibrary.Logging.ISupportsSourceGenLogging.Equals(i)
+		);
 		if (hasLogSupport)
 			return default;
 
