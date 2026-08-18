@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Text;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Purview.SourceGeneratorFramework.Logging;
 
 namespace Purview.SourceGeneratorFramework.Generators.Model;
@@ -132,6 +133,11 @@ static class AttributeDataModelLibrary
 			TargetAttribute: targetAttribute,
 			MatchByInheritance: matchByInheritance,
 			AutoDiscover: autoDiscover,
+			PrimaryConstructorArguments: GetPrimaryConstructorArguments(
+				structSymbol,
+				explicitProperties,
+				cancellationToken
+			),
 			Properties: new EquatableArray<AttributeDataModelProperty>(mergedProperties),
 			Diagnostics: new EquatableArray<DiagnosticInfo>(diagnostics.ToImmutable())
 		);
@@ -139,6 +145,31 @@ static class AttributeDataModelLibrary
 		return diagnostics.Count > 0
 			? GeneratorResult<AttributeDataModelTarget>.Fail([.. diagnostics])
 			: GeneratorResult<AttributeDataModelTarget>.Ok(target);
+	}
+
+	static EquatableArray<string> GetPrimaryConstructorArguments(
+		INamedTypeSymbol structSymbol,
+		ImmutableArray<AttributeDataModelProperty> explicitProperties,
+		CancellationToken cancellationToken
+	)
+	{
+		var arguments =
+			structSymbol
+				.DeclaringSyntaxReferences.Select(reference => reference.GetSyntax(cancellationToken))
+				.OfType<TypeDeclarationSyntax>()
+				.Select(static declaration => declaration.ParameterList)
+				.FirstOrDefault(static parameterList => parameterList is not null)
+				?.Parameters.Select(parameter =>
+				{
+					var propertyName = ToPascalCase(parameter.Identifier.ValueText);
+					return explicitProperties.Any(property => property.PropertyName == propertyName)
+						? propertyName
+						: $"default({parameter.Type})";
+				})
+				.ToImmutableArray()
+			?? [];
+
+		return new(arguments);
 	}
 
 	static ImmutableArray<AttributeDataModelProperty> ReadExplicitProperties(

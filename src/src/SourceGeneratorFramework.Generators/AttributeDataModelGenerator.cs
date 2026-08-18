@@ -142,12 +142,9 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 
 	static string? GetPrimaryConstructorInitializer(AttributeDataModelTarget target)
 	{
-		var arguments = target
-			.Properties.Where(static property => property.IsExplicit)
-			.Select(static property => property.PropertyName)
-			.ToArray();
-
-		return arguments.Length == 0 ? null : $"this({string.Join(", ", arguments)})";
+		return target.PrimaryConstructorArguments.IsEmpty
+			? null
+			: $"this({string.Join(", ", target.PrimaryConstructorArguments)})";
 	}
 
 	static void WriteTargetAttributeField(CodeWriter writer, AttributeDataModelTarget target)
@@ -573,7 +570,7 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 		var typeName = "global::Microsoft.CodeAnalysis.TypedConstant";
 		var tempName = $"__{variableName}Tc";
 
-		writer.WriteLine($"{typeName}? {tempName} = default;");
+		writer.WriteLine($"{typeName} {tempName} = default;");
 
 		void WriteFallback(int index)
 		{
@@ -600,7 +597,7 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 
 		WriteFallback(0);
 
-		writer.WriteLine($"var {variableName} = {tempName}.ToEnumString({defaultValueExpression});");
+		writer.WriteLine($"var {variableName} = {tempName}.ToEnumString() ?? {defaultValueExpression};");
 	}
 
 	static string GetSingleSourceExtractionExpression(PropertySource source, string variableName, string typeName)

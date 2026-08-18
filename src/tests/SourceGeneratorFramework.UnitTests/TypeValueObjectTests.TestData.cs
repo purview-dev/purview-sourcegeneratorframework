@@ -61,7 +61,7 @@ partial class TypeValueObjectTests
 			cancellationToken: TestContext.Current?.Execution.CancellationToken ?? default
 		);
 
-		var references = SourceGeneratorHelpers.ResolveReferences(options);
+		var references = SourceGeneratorHelpers.ResolveReferences(options, typeof(TypeValueObjectTests).Assembly);
 		var compilation = SourceGeneratorHelpers.CreateCompilation([syntax], references, options);
 
 		//var model = compilation.GetSemanticModel(syntax);

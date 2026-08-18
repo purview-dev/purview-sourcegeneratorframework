@@ -65,14 +65,13 @@ static class ServiceRegistrationEmitter
 							},
 						],
 					},
-					_ => { }
+					body => body.WriteLine("Lifetime = lifetime;")
 				);
 
 				cw.WriteProperty(
 					new PropertyDeclarationOptions("Lifetime", ServiceRegistrationGeneratorTypeLibrary.ServiceLifetime)
 					{
 						Accessibility = TypeDeclarationAccessibility.Public,
-						Initializer = "lifetime",
 					}
 				);
 

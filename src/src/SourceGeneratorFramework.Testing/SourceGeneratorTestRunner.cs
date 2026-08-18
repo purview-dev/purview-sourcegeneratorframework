@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Reflection;
 using Microsoft.CodeAnalysis;
@@ -33,9 +34,9 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		CancellationToken cancellationToken = default
 	)
 	{
-		options ??= new();
+		options ??= new SourceGeneratorTestOptions();
 
-		List<LogEntry> logEntries = [];
+		ConcurrentBag<LogEntry> logEntries = [];
 
 		var syntaxTrees = sources
 			.Select(source =>
@@ -47,7 +48,7 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 				)
 			)
 			.ToImmutableArray();
-		var references = SourceGeneratorHelpers.ResolveReferences(options);
+		var references = SourceGeneratorHelpers.ResolveReferences(options, typeof(TGenerator).Assembly);
 		var compilation = SourceGeneratorHelpers.CreateCompilation(syntaxTrees, references, options);
 		TGenerator generator = new();
 		var loggingSessionId = options.EnableLogging ? Guid.NewGuid().ToString("N") : null;
@@ -63,22 +64,20 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		var result = driver.GetRunResult();
 
 		Assembly? assembly = null;
-		Diagnostic[] compilationDiagnostics = [];
+		ImmutableArray<Diagnostic> compilationDiagnostics = [];
 		if (options.CompileToAssembly)
 		{
 			(assembly, compilationDiagnostics) = await CompileToAssemblyAsync(outputCompilation, cancellationToken);
 		}
 
-		var nonAttributeTrees = ExcludeGeneratedAttributes(result, options.ExcludeGeneratedAttributes);
+		var excludedGeneratedSource = ExcludeGeneratedSources(result, options.ExcludeGeneratedSourceHintNames);
 
 		return new(
 			result,
-			outputCompilation,
-			assembly,
-			compilationDiagnostics,
+			new(outputCompilation, assembly, compilationDiagnostics),
 			result.GeneratedTrees,
-			nonAttributeTrees,
-			logEntries
+			excludedGeneratedSource,
+			[.. logEntries]
 		);
 	}
 
@@ -134,7 +133,7 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 	static LoggingRegistrations? ConfigureLogging(
 		string? loggingSessionId,
 		SourceGeneratorTestOptions options,
-		List<LogEntry> logEntries
+		ConcurrentBag<LogEntry> logEntries
 	)
 	{
 		if (loggingSessionId is null)
@@ -144,8 +143,8 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		{
 			var type = (SourceGenLogLevel)level;
 			options.TestOutput.WriteLine($"[{type}] {message}");
-			lock (logEntries)
-				logEntries.Add(new LogEntry(type, message));
+
+			logEntries.Add(new(type, message));
 		};
 
 		List<IDisposable> registrations = [SourceGenLogging.RegisterSinkCore(loggingSessionId, sink)];
@@ -166,7 +165,7 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 				registrations.Add(registration);
 		}
 
-		return new LoggingRegistrations(registrations);
+		return new(registrations);
 	}
 
 	sealed class LoggingRegistrations(List<IDisposable> registrations) : IDisposable
@@ -184,7 +183,7 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		}
 	}
 
-	static async Task<(Assembly?, Diagnostic[])> CompileToAssemblyAsync(
+	static async Task<(Assembly?, ImmutableArray<Diagnostic>)> CompileToAssemblyAsync(
 		Compilation compilation,
 		CancellationToken cancellationToken
 	)
@@ -193,25 +192,28 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		var emitResult = compilation.Emit(assemblyStream, cancellationToken: cancellationToken);
 
 		if (!emitResult.Success)
-			return (null, emitResult.Diagnostics.ToArray());
+			return (null, emitResult.Diagnostics);
 
 		assemblyStream.Position = 0;
-		return (Assembly.Load(assemblyStream.ToArray()), emitResult.Diagnostics.ToArray());
+		return (Assembly.Load(assemblyStream.ToArray()), emitResult.Diagnostics);
 	}
 
-	static IEnumerable<SyntaxTree> ExcludeGeneratedAttributes(
+	static ImmutableArray<SyntaxTree> ExcludeGeneratedSources(
 		GeneratorDriverRunResult result,
 		ImmutableArray<string> exclude
 	)
 	{
 		return exclude.IsEmpty
 			? result.GeneratedTrees
-			: result.GeneratedTrees.Where(tree =>
-				!exclude.Any(attr =>
-					tree.FilePath.EndsWith(attr, StringComparison.Ordinal)
-					|| tree.FilePath.EndsWith(attr + ".g.cs", StringComparison.Ordinal)
-					|| tree.FilePath.EndsWith(attr + ".cs", StringComparison.Ordinal)
-				)
-			);
+			:
+			[
+				.. result.GeneratedTrees.Where(tree =>
+					!exclude.Any(attr =>
+						tree.FilePath.EndsWith(attr, StringComparison.Ordinal)
+						|| tree.FilePath.EndsWith(attr + ".g.cs", StringComparison.Ordinal)
+						|| tree.FilePath.EndsWith(attr + ".cs", StringComparison.Ordinal)
+					)
+				),
+			];
 	}
 }

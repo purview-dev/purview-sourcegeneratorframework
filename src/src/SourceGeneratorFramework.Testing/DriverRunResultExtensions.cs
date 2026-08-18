@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Microsoft.CodeAnalysis;
 using Purview.SourceGeneratorFramework.Logging;
 
@@ -6,6 +7,7 @@ namespace Purview.SourceGeneratorFramework.Testing;
 /// <summary>
 /// Provides assertion and inspection helpers for <see cref="DriverRunResult"/>.
 /// </summary>
+[EditorBrowsable(EditorBrowsableState.Never)]
 public static class DriverRunResultExtensions
 {
 	/// <summary>
@@ -16,7 +18,7 @@ public static class DriverRunResultExtensions
 		if (result == null)
 			throw new ArgumentNullException(nameof(result));
 
-		var exceptions = result.Result.Results.Select(r => r.Exception).Where(e => e != null).ToList();
+		var exceptions = result.DriverResult.Results.Select(r => r.Exception).Where(e => e != null).ToList();
 
 		if (exceptions.Count > 0)
 		{
@@ -38,7 +40,7 @@ public static class DriverRunResultExtensions
 			throw new ArgumentNullException(nameof(result));
 
 		var errors = result
-			.OutputCompilation.GetDiagnostics()
+			.CompilationResult.Compilation.GetDiagnostics()
 			.Where(d => d.Severity == DiagnosticSeverity.Error)
 			.ToList();
 
@@ -80,7 +82,7 @@ public static class DriverRunResultExtensions
 		if (result == null)
 			throw new ArgumentNullException(nameof(result));
 
-		var actual = result.NonAttributeSyntaxTrees.Count();
+		var actual = result.PrimarySyntaxTrees.Length;
 		if (actual != count)
 		{
 			throw new InvalidOperationException($"Expected {count} generated sources but found {actual}.");
@@ -99,7 +101,7 @@ public static class DriverRunResultExtensions
 			throw new ArgumentNullException(nameof(result));
 
 		var tree =
-			result.NonAttributeSyntaxTrees.SingleOrDefault()
+			result.PrimarySyntaxTrees.SingleOrDefault()
 			?? throw new InvalidOperationException("Expected a single generated source but found none.");
 
 		return tree.GetText().ToString();

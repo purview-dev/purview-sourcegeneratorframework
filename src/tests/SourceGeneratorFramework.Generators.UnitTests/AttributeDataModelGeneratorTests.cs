@@ -297,7 +297,7 @@ public class AttributeDataModelGeneratorTests : TUnitSourceGeneratorTestBase<Att
 
 		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
-		await Assert.That(result.Result.Diagnostics).Contains(d => d.Id == "ADM0004");
+		await Assert.That(result.DriverResult.Diagnostics).Contains(d => d.Id == "ADM0004");
 	}
 
 	[Test]
@@ -349,7 +349,7 @@ public class AttributeDataModelGeneratorTests : TUnitSourceGeneratorTestBase<Att
 
 		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
-		await Assert.That(result.Result.Diagnostics).Contains(d => d.Id == "ADM0007");
+		await Assert.That(result.DriverResult.Diagnostics).Contains(d => d.Id == "ADM0007");
 	}
 
 	[Test]
@@ -418,7 +418,7 @@ public class AttributeDataModelGeneratorTests : TUnitSourceGeneratorTestBase<Att
 
 		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
-		await Assert.That(result.Result.Diagnostics).Contains(d => d.Id == "ADM0005");
+		await Assert.That(result.DriverResult.Diagnostics).Contains(d => d.Id == "ADM0005");
 	}
 
 	[Test]
@@ -446,8 +446,8 @@ public class AttributeDataModelGeneratorTests : TUnitSourceGeneratorTestBase<Att
 			cancellationToken
 		);
 
-		await Assert.That(result.CompilationDiagnostics).DoesNotContain(d => d.Id == "CS0261");
-		await Assert.That(result.CompilationDiagnostics).DoesNotContain(d => d.Id == "CS7036");
+		await Assert.That(result.CompilationResult.Diagnostics).DoesNotContain(d => d.Id == "CS0261");
+		await Assert.That(result.CompilationResult.Diagnostics).DoesNotContain(d => d.Id == "CS7036");
 		await Assert.That(generated).IsNotNull();
 		await Assert.That(generated).Contains("readonly partial struct KnownTypesAttributeData");
 		await Assert.That(generated).DoesNotContain("record struct KnownTypesAttributeData");
@@ -849,7 +849,7 @@ public class AttributeDataModelGeneratorTests : TUnitSourceGeneratorTestBase<Att
 
 		await Assert.That(generated).IsNotNull();
 		await Assert.That(generated).Contains("string? Value");
-		await Assert.That(generated).Contains("var value = __valueTc.ToEnumString(\"Test.MyEnum.B\");");
+		await Assert.That(generated).Contains("var value = __valueTc.ToEnumString() ?? \"Test.MyEnum.B\";");
 	}
 
 	static async Task<string?> GetGeneratedStringAsync(

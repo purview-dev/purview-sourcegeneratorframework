@@ -9,6 +9,7 @@ sealed record AttributeDataModelTarget(
 	TypeValueObject TargetAttribute,
 	bool MatchByInheritance,
 	bool AutoDiscover,
+	EquatableArray<string> PrimaryConstructorArguments,
 	EquatableArray<AttributeDataModelProperty> Properties,
 	EquatableArray<DiagnosticInfo> Diagnostics
 )

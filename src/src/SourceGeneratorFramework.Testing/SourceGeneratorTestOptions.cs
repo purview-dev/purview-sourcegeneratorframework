@@ -7,8 +7,72 @@ namespace Purview.SourceGeneratorFramework.Testing;
 /// <summary>
 /// Options that configure a source generator test run.
 /// </summary>
-public sealed record SourceGeneratorTestOptions
+public record SourceGeneratorTestOptions
 {
+	/// <summary>
+	/// Gets or sets the template copied by newly constructed source generator test options, including
+	/// options records derived from this type.
+	/// </summary>
+	/// <remarks>
+	/// Configure this once during test-assembly initialization, before tests execute in parallel.
+	/// Existing options instances are snapshots and are not changed when this property is updated.
+	/// </remarks>
+	public static SourceGeneratorTestOptions Default
+	{
+		get;
+		set => field = value ?? throw new ArgumentNullException(nameof(value), "Default options cannot be null.");
+	} = new(true);
+
+	/// <summary>
+	/// Initializes a new instance by copying the current <see cref="Default"/> options.
+	/// </summary>
+	/// <remarks>Derived records implicitly call this constructor unless they select another base constructor.</remarks>
+	public SourceGeneratorTestOptions()
+		: this(Default) { }
+
+	// Bootstraps Default using the property initializers without recursively reading Default.
+	SourceGeneratorTestOptions(bool _) { }
+
+	/// <summary>Initializes an options snapshot by copying another instance.</summary>
+	/// <param name="source">The options to copy.</param>
+	/// <remarks>
+	/// <para>
+	/// This is also the record copy constructor. Mutable collections are copied so options snapshots
+	/// can be customized independently.
+	/// </para>
+	/// <para>
+	/// <b>Notes: </b> the <see cref="State"/> property is not copied, as it is intented to be a per-test-run state bag. If you need to copy the state, do so explicitly after constructing the new options instance.
+	/// </para>
+	/// </remarks>
+	protected SourceGeneratorTestOptions(SourceGeneratorTestOptions source)
+	{
+		if (source is null)
+			throw new ArgumentNullException(nameof(source));
+
+		IncludeDefaultNamespaces = source.IncludeDefaultNamespaces;
+		DefaultNamespaces = source.DefaultNamespaces;
+		AdditionalNamespaces = source.AdditionalNamespaces;
+		AdditionalAssemblyTypes = source.AdditionalAssemblyTypes;
+		AdditionalReferences = source.AdditionalReferences;
+		PreprocessReferences = source.PreprocessReferences;
+		ThrowOnGenerationException = source.ThrowOnGenerationException;
+		CompileToAssembly = source.CompileToAssembly;
+		ValidateCodeWriterScopes = source.ValidateCodeWriterScopes;
+		EnableLogging = source.EnableLogging;
+		ThrowOnLogError = source.ThrowOnLogError;
+		DisableSourceGeneratorPropertyName = source.DisableSourceGeneratorPropertyName;
+		DisableSourceGeneratorValue = source.DisableSourceGeneratorValue;
+
+		AnalyzerConfigOptions = [with(source.AnalyzerConfigOptions)];
+
+		TestOutput = source.TestOutput;
+		CompilationAssemblyName = source.CompilationAssemblyName;
+		OutputKind = source.OutputKind;
+		LanguageVersion = source.LanguageVersion;
+		ExcludeGeneratedSourceHintNames = source.ExcludeGeneratedSourceHintNames;
+		AdditionalText = source.AdditionalText;
+	}
+
 	/// <summary>
 	/// Gets a value indicating whether the default namespaces should be prepended to the source.
 	/// </summary>
@@ -41,7 +105,7 @@ public sealed record SourceGeneratorTestOptions
 	public Action<ImmutableArray<MetadataReference>>? PreprocessReferences { get; init; }
 
 	/// <summary>
-	/// Gets a value indicating whether generation exceptions should cause <see cref="DriverRunResult.EnsureValid"/> to throw.
+	/// Gets a value indicating whether generation automatically calls <see cref="DriverRunResult.EnsureValid"/>, which throws on errors.
 	/// </summary>
 	public bool ThrowOnGenerationException { get; init; } = true;
 
@@ -105,9 +169,11 @@ public sealed record SourceGeneratorTestOptions
 	public LanguageVersion LanguageVersion { get; init; } = LanguageVersion.Preview;
 
 	/// <summary>
-	/// Gets generated attribute file names to exclude from the non-attribute syntax tree collection.
+	/// Gets generated hint names to exclude from the syntax tree collection. These
+	/// are usually marker attributes or other generated content added during
+	/// <see cref="IncrementalGeneratorInitializationContext.RegisterPostInitializationOutput(Action{IncrementalGeneratorPostInitializationContext})"/>.
 	/// </summary>
-	public ImmutableArray<string> ExcludeGeneratedAttributes { get; init; } = [];
+	public ImmutableArray<string> ExcludeGeneratedSourceHintNames { get; init; } = [];
 
 	/// <summary>
 	/// Gets additional text files to include in the test compilation.
@@ -115,7 +181,7 @@ public sealed record SourceGeneratorTestOptions
 	public ImmutableArray<AdditionalText> AdditionalText { get; init; } = [];
 
 	/// <summary>
-	/// Gets a state object that can be used to pass arbitrary data to the test runner. Useful for the <see cref="SourceGeneratorTestBase{TGenerator}.OnBeforeRun(IEnumerable{string}, SourceGeneratorTestOptions, CancellationToken)"/>
+	/// Gets a state object that can be used to pass arbitrary data to the test runner. Useful for the <see cref="SourceGeneratorTestBase{TGenerator, SourceGeneratorTestOptions}.OnBeforeRun(IEnumerable{string}, SourceGeneratorTestOptions, CancellationToken)"/>
 	/// </summary>
 	public object? State { get; init; }
 }

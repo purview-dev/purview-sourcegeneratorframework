@@ -5,14 +5,47 @@ namespace Purview.SourceGeneratorFramework.Testing;
 /// <summary>
 /// Framework-agnostic base class for source generator tests.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="SourceGeneratorTestBase{TGenerator}"/> class.
-/// </remarks>
+/// <typeparam name="TGenerator">The type of the source generator.</typeparam>
 /// <param name="testOutput">The test output receiver.</param>
 public abstract class SourceGeneratorTestBase<TGenerator>(ITestOutput testOutput)
+	: SourceGeneratorTestBase<TGenerator, SourceGeneratorTestOptions>(testOutput)
+	where TGenerator : class, IIncrementalGenerator, new();
+
+/// <summary>
+/// Framework-agnostic base class for source generator tests.
+/// </summary>
+/// <param name="testOutput">The test output receiver.</param>
+/// <typeparam name="TGenerator">The type of the source generator.</typeparam>
+/// <typeparam name="TOptions">The type of the test options.</typeparam>
+public abstract class SourceGeneratorTestBase<TGenerator, TOptions>(ITestOutput testOutput)
 	where TGenerator : class, IIncrementalGenerator, new()
+	where TOptions : SourceGeneratorTestOptions, new()
 {
 	readonly SourceGeneratorTestRunner<TGenerator> _runner = new();
+
+	/// <summary>
+	/// Runs the generator against the supplied source and options.
+	/// </summary>
+	/// <param name="source">The source code to generate.</param>
+	/// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+	/// <returns>The result of the generator run.</returns>
+	protected Task<DriverRunResult> GenerateAsync(string source, CancellationToken cancellationToken = default) =>
+		GenerateAsync(source, null!, cancellationToken);
+
+	/// <summary>
+	/// Runs the generator against the supplied sources and options.
+	/// </summary>
+	/// <param name="sources">The source code files to generate.</param>
+	/// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+	/// <returns>The result of the generator run.</returns>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage(
+		"Performance",
+		"CA1849:Call async methods when in an async method"
+	)]
+	protected async Task<DriverRunResult> GenerateAsync(
+		IEnumerable<string> sources,
+		CancellationToken cancellationToken = default
+	) => await GenerateAsync(sources, null!, cancellationToken);
 
 	/// <summary>
 	/// Runs the generator against the supplied source and options.
@@ -21,11 +54,11 @@ public abstract class SourceGeneratorTestBase<TGenerator>(ITestOutput testOutput
 	/// <param name="options">The options to use for the generation.</param>
 	/// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
 	/// <returns>The result of the generator run.</returns>
-	protected Task<DriverRunResult> GenerateAsync(
+	protected async Task<DriverRunResult> GenerateAsync(
 		string source,
-		SourceGeneratorTestOptions? options = null,
+		TOptions options,
 		CancellationToken cancellationToken = default
-	) => GenerateAsync([source], options, cancellationToken);
+	) => await GenerateAsync([source], options, cancellationToken);
 
 	/// <summary>
 	/// Runs the generator against the supplied sources and options.
@@ -40,7 +73,7 @@ public abstract class SourceGeneratorTestBase<TGenerator>(ITestOutput testOutput
 	)]
 	protected async Task<DriverRunResult> GenerateAsync(
 		IEnumerable<string> sources,
-		SourceGeneratorTestOptions? options = null,
+		TOptions options,
 		CancellationToken cancellationToken = default
 	)
 	{
@@ -54,6 +87,8 @@ public abstract class SourceGeneratorTestBase<TGenerator>(ITestOutput testOutput
 		await OnBeforeRunAsync(sources, options, cancellationToken);
 
 		var result = await _runner.RunAsync(sources, options, cancellationToken);
+		if (options.ThrowOnGenerationException)
+			result.EnsureValid();
 
 		OnAfterRun(result, sources, options, cancellationToken);
 		await OnAfterRunAsync(result, sources, options, cancellationToken);
@@ -71,7 +106,7 @@ public abstract class SourceGeneratorTestBase<TGenerator>(ITestOutput testOutput
 	protected virtual void OnAfterRun(
 		DriverRunResult result,
 		IEnumerable<string> sources,
-		SourceGeneratorTestOptions options,
+		TOptions options,
 		CancellationToken cancellationToken
 	)
 	{
@@ -88,7 +123,7 @@ public abstract class SourceGeneratorTestBase<TGenerator>(ITestOutput testOutput
 	protected virtual Task OnAfterRunAsync(
 		DriverRunResult result,
 		IEnumerable<string> sources,
-		SourceGeneratorTestOptions options,
+		TOptions options,
 		CancellationToken cancellationToken
 	) => Task.CompletedTask;
 
@@ -100,7 +135,7 @@ public abstract class SourceGeneratorTestBase<TGenerator>(ITestOutput testOutput
 	/// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
 	protected virtual void OnBeforeRun(
 		IEnumerable<string> sources,
-		SourceGeneratorTestOptions options,
+		TOptions options,
 		CancellationToken cancellationToken
 	)
 	{
@@ -115,7 +150,7 @@ public abstract class SourceGeneratorTestBase<TGenerator>(ITestOutput testOutput
 	/// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
 	protected virtual Task OnBeforeRunAsync(
 		IEnumerable<string> sources,
-		SourceGeneratorTestOptions options,
+		TOptions options,
 		CancellationToken cancellationToken
 	) => Task.CompletedTask;
 }

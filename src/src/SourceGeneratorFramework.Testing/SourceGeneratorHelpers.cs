@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
@@ -24,10 +25,30 @@ static class SourceGeneratorHelpers
 		);
 	}
 
-	public static ImmutableArray<MetadataReference> ResolveReferences(SourceGeneratorTestOptions options)
+	public static ImmutableArray<MetadataReference> ResolveReferences(
+		SourceGeneratorTestOptions options,
+		Assembly generatorAssembly
+	)
 	{
+		if (generatorAssembly is null)
+			throw new ArgumentNullException(nameof(generatorAssembly));
+
+		var generatorAssemblyPath = generatorAssembly.GetType(
+			"Purview.SourceGeneratorFramework.Models.TypeValueObject",
+			throwOnError: false
+		)
+			is null
+			? null
+			: generatorAssembly.Location;
 		var builder = ImmutableArray.CreateBuilder<MetadataReference>();
-		builder.AddRange(TrustedAssemblies.Select(static p => MetadataReference.CreateFromFile(p)));
+		builder.AddRange(
+			TrustedAssemblies
+				.Where(path =>
+					generatorAssemblyPath is null
+					|| !string.Equals(path, generatorAssemblyPath, StringComparison.OrdinalIgnoreCase)
+				)
+				.Select(static path => MetadataReference.CreateFromFile(path))
+		);
 		builder.AddRange(
 			options.AdditionalAssemblyTypes.Select(static a => MetadataReference.CreateFromFile(a.Assembly.Location))
 		);

@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Reflection;
 using Microsoft.CodeAnalysis;
@@ -9,28 +10,21 @@ namespace Purview.SourceGeneratorFramework.Testing;
 /// <summary>
 /// The result of a source generator test run.
 /// </summary>
-public record class DriverRunResult(
-	GeneratorDriverRunResult Result,
-	Compilation OutputCompilation,
-	Assembly? Assembly,
-	IEnumerable<Diagnostic> CompilationDiagnostics,
-	IEnumerable<SyntaxTree> GeneratedTrees,
-	IEnumerable<SyntaxTree> NonAttributeSyntaxTrees,
-	IReadOnlyList<LogEntry> LogEntries
+public sealed record class DriverRunResult(
+	GeneratorDriverRunResult DriverResult,
+	CompilationRunResult CompilationResult,
+	ImmutableArray<SyntaxTree> AllSyntaxTrees,
+	ImmutableArray<SyntaxTree> PrimarySyntaxTrees,
+	ImmutableArray<LogEntry> LogEntries
 )
 {
-	/// <summary>
-	/// Gets the generated syntax trees excluding configured attribute files.
-	/// </summary>
-	public IEnumerable<SyntaxTree> SyntaxTrees => NonAttributeSyntaxTrees;
-
 	/// <summary>
 	/// Throws <see cref="DriverRunValidationException"/> containing all generation exceptions,
 	/// compilation errors, emit errors, and generator log errors found in the run.
 	/// </summary>
 	public void EnsureValid()
 	{
-		var generationExceptions = Result
+		var generationExceptions = DriverResult
 			.Results.Where(result => result.Exception is not null)
 			.Select(result => new GeneratorFailure(
 				result.Generator.GetType().FullName ?? result.Generator.GetType().Name,
@@ -38,14 +32,14 @@ public record class DriverRunResult(
 			))
 			.ToList();
 
-		var compilationErrors = OutputCompilation
-			.GetDiagnostics()
+		var compilationErrors = CompilationResult
+			.Compilation.GetDiagnostics()
 			.Where(d => d.Severity == DiagnosticSeverity.Error)
 			.ToList();
 		var logErrors = LogEntries.Where(e => e.Type == SourceGenLogLevel.Fatal).ToList();
 		var compilationErrorKeys = compilationErrors.Select(GetDiagnosticKey).ToHashSet();
-		var emitErrors = CompilationDiagnostics
-			.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+		var emitErrors = CompilationResult
+			.Diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
 			.Where(diagnostic => !compilationErrorKeys.Contains(GetDiagnosticKey(diagnostic)))
 			.ToList();
 
@@ -62,8 +56,8 @@ public record class DriverRunResult(
 			compilationErrors,
 			emitErrors,
 			logErrors,
-			GeneratedTrees,
-			OutputCompilation.SyntaxTrees
+			AllSyntaxTrees,
+			CompilationResult.Compilation.SyntaxTrees
 		);
 	}
 
@@ -74,28 +68,44 @@ public record class DriverRunResult(
 	/// Gets the source text of a generated tree with the specified hint name.
 	/// </summary>
 	/// <param name="hintName">The hint name of the generated tree - this can be the whole of end of the hint name.</param>
+	/// <param name="matchMode">The mode to use when matching the hint name.</param>
 	/// <returns>The source text of the generated tree, or <see langword="null"/> if not found.</returns>
 	/// <exception cref="ArgumentException">Thrown if <paramref name="hintName"/> is <see langword="null"/> or whitespace.</exception>
 	/// <remarks>The <paramref name="hintName"/> is matched using <see cref="StringComparison.Ordinal"/>.</remarks>
-	public string? GetSource(string hintName)
+	public string? GetSource(string hintName, HintNameMatchMode matchMode = HintNameMatchMode.Suffix)
 	{
 		if (string.IsNullOrWhiteSpace(hintName))
 			throw new ArgumentException("Value cannot be null or whitespace.", nameof(hintName));
 
+		var postSuffix =
+			matchMode == HintNameMatchMode.Suffix && !hintName.EndsWith(".cs", StringComparison.Ordinal)
+				? ".cs"
+				: string.Empty;
+
+		var predicate = matchMode switch
+		{
+			HintNameMatchMode.Suffix => new Func<string, bool>(s =>
+				s.EndsWith(hintName + postSuffix, StringComparison.Ordinal)
+			),
+			HintNameMatchMode.Partial => new Func<string, bool>(s => s.Contains(hintName, StringComparison.Ordinal)),
+			HintNameMatchMode.Exact => new Func<string, bool>(s => s.Equals(hintName, StringComparison.Ordinal)),
+			_ => throw new ArgumentOutOfRangeException(nameof(matchMode), matchMode, "Invalid match mode."),
+		};
+
 		// Find the generated source with the specified hint name
-		return Result
+		return DriverResult
 			.Results.SelectMany(static r => r.GeneratedSources)
-			.Where(s => s.HintName.EndsWith(hintName, StringComparison.Ordinal))
+			.Where(s => predicate(s.HintName))
 			.Select(static s => s.SourceText.ToString())
 			.SingleOrDefault();
 	}
 
 	/// <summary>
-	/// Gets the source text of the first non-attribute generated tree.
+	/// Gets the source text of the first primary generated tree.
 	/// </summary>
 	public string GetSource()
 	{
-		var tree = NonAttributeSyntaxTrees.FirstOrDefault();
+		var tree = PrimarySyntaxTrees.FirstOrDefault();
 		return tree?.GetText().ToString() ?? string.Empty;
 	}
 
@@ -105,5 +115,39 @@ public record class DriverRunResult(
 	/// <param name="filePathSuffix">The suffix to match.</param>
 	/// <returns>The matching syntax tree, or <see langword="null"/> if none is found.</returns>
 	public SyntaxTree? GetGeneratedTree(string filePathSuffix) =>
-		GeneratedTrees.FirstOrDefault(tree => tree.FilePath.EndsWith(filePathSuffix, StringComparison.Ordinal));
+		AllSyntaxTrees.FirstOrDefault(tree => tree.FilePath.EndsWith(filePathSuffix, StringComparison.Ordinal));
+}
+
+/// <summary>
+/// The result of a compilation run, including the compilation, the resulting assembly (if successful), and any diagnostics produced during compilation.
+/// </summary>
+/// <param name="Compilation">The compilation that was run.</param>
+/// <param name="Assembly">The resulting assembly, or <see langword="null"/> if the compilation failed.</param>
+/// <param name="Diagnostics">The diagnostics produced during the compilation.</param>
+public sealed record class CompilationRunResult(
+	Compilation Compilation,
+	Assembly? Assembly,
+	ImmutableArray<Diagnostic> Diagnostics
+);
+
+/// <summary>
+/// Specifies how to match hint names when retrieving generated source code from a <see cref="DriverRunResult"/>.
+/// </summary>
+public enum HintNameMatchMode
+{
+	/// <summary>
+	/// Match the hint name by suffix.
+	/// </summary>
+	/// <remarks>Note this will automatically check for <c>.cs</c> if it's excluded.</remarks>
+	Suffix,
+
+	/// <summary>
+	/// Match the hint name by partial match.
+	/// </summary>
+	Partial,
+
+	/// <summary>
+	/// Match the hint name exactly.
+	/// </summary>
+	Exact,
 }

@@ -5,6 +5,11 @@ namespace Purview.SourceGeneratorFramework;
 
 public class TestingFrameworkTests
 {
+	sealed record CustomSourceGeneratorTestOptions : SourceGeneratorTestOptions
+	{
+		public string CustomValue { get; init; } = "custom";
+	}
+
 	const string GenerateAttributeSource = """
 		namespace Test
 		{
@@ -243,5 +248,73 @@ namespace Test
 		var tree = result.GetGeneratedTree("CustomOption.g.cs");
 		await Assert.That(tree).IsNotNull();
 		await Assert.That((await tree!.GetTextAsync(cancellationToken)).ToString()).Contains("Value = \"enabled\"");
+	}
+
+	[Test]
+	public async Task RunAsync_ReferencesGeneratorAssemblyThatContainsPublicContracts()
+	{
+		var runner = new SourceGeneratorTestRunner<TestGenerator>();
+
+		var result = await runner.RunAsync("public sealed class Input { }");
+
+		await Assert
+			.That(
+				result.CompilationResult.Compilation.References.Any(reference =>
+					string.Equals(
+						reference.Display,
+						typeof(TestGenerator).Assembly.Location,
+						StringComparison.OrdinalIgnoreCase
+					)
+				)
+			)
+			.IsTrue();
+	}
+
+	[Test]
+	[NotInParallel]
+	public async Task Constructor_DerivedOptions_CopiesConfiguredDefaultWithoutSharingMutableCollections()
+	{
+		var originalDefault = SourceGeneratorTestOptions.Default;
+		var marker = new object();
+		try
+		{
+			SourceGeneratorTestOptions.Default = originalDefault with
+			{
+				State = marker,
+				AnalyzerConfigOptions = new Dictionary<string, string> { ["Shared"] = "default" },
+			};
+
+			var first = new CustomSourceGeneratorTestOptions();
+			var second = new CustomSourceGeneratorTestOptions();
+			first.AnalyzerConfigOptions["OnlyFirst"] = "value";
+
+			await Assert.That(first.AnalyzerConfigOptions["Shared"]).IsEqualTo("default");
+			await Assert.That(second.AnalyzerConfigOptions.ContainsKey("OnlyFirst")).IsFalse();
+			await Assert.That(first.CustomValue).IsEqualTo("custom");
+		}
+		finally
+		{
+			SourceGeneratorTestOptions.Default = originalDefault;
+		}
+	}
+
+	[Test]
+	[NotInParallel]
+	public async Task Constructor_DerivedOptions_DoesNotCopyState()
+	{
+		var originalDefault = SourceGeneratorTestOptions.Default;
+		var marker = new object();
+		try
+		{
+			SourceGeneratorTestOptions.Default = originalDefault with { State = marker };
+
+			var first = new CustomSourceGeneratorTestOptions();
+
+			await Assert.That(first.State).IsNull();
+		}
+		finally
+		{
+			SourceGeneratorTestOptions.Default = originalDefault;
+		}
 	}
 }

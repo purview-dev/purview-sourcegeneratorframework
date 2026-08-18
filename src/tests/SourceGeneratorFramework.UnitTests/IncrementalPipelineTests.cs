@@ -60,7 +60,7 @@ public class IncrementalPipelineTests2
 			}
 		);
 
-		await Assert.That(result.GeneratedTrees.Any()).IsFalse();
+		await Assert.That(result.AllSyntaxTrees.Any()).IsFalse();
 	}
 
 	internal sealed class TestGenerator : IIncrementalGenerator
@@ -128,7 +128,7 @@ public class IncrementalPipelineTests2
 		var tree = result.GetGeneratedTree("MyClass.g.cs");
 		await Assert.That(tree).IsNotNull();
 		await Assert.That(tree!.ToString()).Contains("class MyClass");
-		await Assert.That(result.Result.Diagnostics).IsNotEmpty();
+		await Assert.That(result.DriverResult.Diagnostics).IsNotEmpty();
 	}
 
 	[Test]

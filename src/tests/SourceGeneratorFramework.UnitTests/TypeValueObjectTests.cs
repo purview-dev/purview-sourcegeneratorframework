@@ -159,7 +159,7 @@ public partial class TypeValueObjectTests
 		);
 		var compilation = SourceGeneratorHelpers.CreateCompilation(
 			[syntax],
-			SourceGeneratorHelpers.ResolveReferences(options),
+			SourceGeneratorHelpers.ResolveReferences(options, typeof(TypeValueObjectTests).Assembly),
 			options
 		);
 		var holder = compilation.GetTypeByMetadataName("Holder");

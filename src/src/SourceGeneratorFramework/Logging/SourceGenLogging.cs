@@ -15,6 +15,8 @@ public static class SourceGenLogging
 			throw new ArgumentException("Logging session ID cannot be null or whitespace.", nameof(sessionId));
 		if (sink is null)
 			throw new ArgumentNullException(nameof(sink));
+
+		// Wrap the sink to convert the SourceGenLogLevel to an int for the internal dictionary.
 		return RegisterSinkCore(sessionId, (message, level) => sink(message, (SourceGenLogLevel)level));
 	}
 

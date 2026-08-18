@@ -17,7 +17,7 @@ public static partial class DiagnosticAssertions
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult<Diagnostic> HasDiagnostic(
-		this DriverRunResult? diagnostic,
+		this DriverRunResult diagnostic,
 		DiagnosticDescriptor expected
 	)
 	{
@@ -29,17 +29,10 @@ public static partial class DiagnosticAssertions
 		if (expected is null)
 			return AssertionResult.Failed($"expected {nameof(DiagnosticDescriptor)} is null");
 
-		var matchingDiagnostic = diagnostic.Result.Diagnostics.FirstOrDefault(d => d.Id == expected.Id);
+		var matchingDiagnostic = diagnostic.DriverResult.Diagnostics.FirstOrDefault(d => d.Id == expected.Id);
 		return matchingDiagnostic is null
 			? (AssertionResult<Diagnostic>)
-				AssertionResult.Failed(
-					$"expected to contain diagnostic with Id {expected.Id}\n\n"
-						+ diagnostic
-							.Result.GeneratedTrees.Select(t => $"  - {t.FilePath}")
-							.Concat(diagnostic.Result.Diagnostics.Select(d => $"  - {d.Id}: {d.Descriptor.Title}"))
-							.DefaultIfEmpty("  - (none)")
-							.Aggregate((a, b) => $"{a}\n{b}")
-				)
+				AssertionResult.Failed($"expected to contain diagnostic with Id {expected.Id}")
 			: AssertionResult<Diagnostic>.Passed(matchingDiagnostic);
 	}
 
@@ -51,7 +44,7 @@ public static partial class DiagnosticAssertions
 	/// <returns>An <see cref="AssertionResult"/> indicating whether the assertion passed or failed.</returns>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
-	public static AssertionResult<Diagnostic> HasDiagnostic(this DriverRunResult? diagnostic, string expected)
+	public static AssertionResult<Diagnostic> HasDiagnostic(this DriverRunResult diagnostic, string expected)
 	{
 		// Don't change the name of the parameter "diagnostic" to "result" because it will break the generated assertion method name.
 		if (diagnostic == null)
@@ -61,16 +54,9 @@ public static partial class DiagnosticAssertions
 		if (expected is null)
 			return AssertionResult.Failed($"expected {nameof(DiagnosticDescriptor)} is null");
 
-		var matchedDiagnotics = diagnostic.Result.Diagnostics.FirstOrDefault(d => d.Id == expected);
+		var matchedDiagnotics = diagnostic.DriverResult.Diagnostics.FirstOrDefault(d => d.Id == expected);
 		return matchedDiagnotics is null
-			? (AssertionResult<Diagnostic>)
-				AssertionResult.Failed(
-					diagnostic
-						.Result.GeneratedTrees.Select(t => $"  - {t.FilePath}")
-						.Concat(diagnostic.Result.Diagnostics.Select(d => $"  - {d.Id}: {d.Descriptor.Title}"))
-						.DefaultIfEmpty("  - (none)")
-						.Aggregate((a, b) => $"{a}\n{b}")
-				)
+			? (AssertionResult<Diagnostic>)AssertionResult.Failed($"expected to contain diagnostic with Id {expected}")
 			: AssertionResult<Diagnostic>.Passed(matchedDiagnotics);
 	}
 
@@ -82,7 +68,7 @@ public static partial class DiagnosticAssertions
 	/// <returns>An <see cref="AssertionResult"/> indicating whether the assertion passed or failed.</returns>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
-	public static AssertionResult DoesNotHaveDiagnostic(this DriverRunResult? result, DiagnosticDescriptor expected)
+	public static AssertionResult DoesNotHaveDiagnostic(this DriverRunResult result, DiagnosticDescriptor expected)
 	{
 		if (result == null)
 			return AssertionResult.Failed($"expected {nameof(DriverRunResult)} is null");
@@ -91,13 +77,8 @@ public static partial class DiagnosticAssertions
 		return expected is null
 			? AssertionResult.Failed($"expected {nameof(DiagnosticDescriptor)} is null")
 			: AssertionResult.FailIf(
-				result.Result.Diagnostics.Any(d => d.Id == expected.Id),
-				$"expected not to contain diagnostic with Id {expected.Id}\n\n"
-					+ result
-						.Result.GeneratedTrees.Select(t => $"  - {t.FilePath}")
-						.Concat(result.Result.Diagnostics.Select(d => $"  - {d.Id}: {d.Descriptor.Title}"))
-						.DefaultIfEmpty("  - (none)")
-						.Aggregate((a, b) => $"{a}\n{b}")
+				result.DriverResult.Diagnostics.Any(d => d.Id == expected.Id),
+				$"expected not to contain diagnostic with Id {expected.Id}"
 			);
 	}
 
@@ -109,7 +90,7 @@ public static partial class DiagnosticAssertions
 	/// <returns>An <see cref="AssertionResult"/> indicating whether the assertion passed or failed.</returns>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
-	public static AssertionResult DoesNotHaveDiagnostic(this DriverRunResult? result, string expected)
+	public static AssertionResult DoesNotHaveDiagnostic(this DriverRunResult result, string expected)
 	{
 		if (result == null)
 			return AssertionResult.Failed($"expected {nameof(DriverRunResult)} is null");
@@ -118,13 +99,8 @@ public static partial class DiagnosticAssertions
 		return expected is null
 			? AssertionResult.Failed($"expected {nameof(DiagnosticDescriptor)} is null")
 			: AssertionResult.FailIf(
-				result.Result.Diagnostics.Any(d => d.Id == expected),
-				$"expected not to contain diagnostic with Id {expected}\n\nGenerated Files:\n"
-					+ result
-						.Result.GeneratedTrees.Select(t => $"  - {t.FilePath}")
-						.Concat(result.Result.Diagnostics.Select(d => $"  - {d.Id}: {d.Descriptor.Title}"))
-						.DefaultIfEmpty("  - (none)")
-						.Aggregate((a, b) => $"{a}\n{b}")
+				result.DriverResult.Diagnostics.Any(d => d.Id == expected),
+				$"expected not to contain diagnostic with Id {expected}"
 			);
 	}
 
@@ -137,7 +113,7 @@ public static partial class DiagnosticAssertions
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult DoesNotHaveDiagnosticThatStartsWith(
-		this DriverRunResult? result,
+		this DriverRunResult result,
 		string startsWithValue
 	)
 	{
@@ -148,13 +124,8 @@ public static partial class DiagnosticAssertions
 		return startsWithValue is null
 			? AssertionResult.Failed($"expected {nameof(DiagnosticDescriptor)} is null")
 			: AssertionResult.FailIf(
-				result.Result.Diagnostics.Any(d => d.Id.StartsWith(startsWithValue, StringComparison.Ordinal)),
-				$"expected not to contain diagnostic with Id starting with {startsWithValue}\n\n"
-					+ result
-						.Result.GeneratedTrees.Select(t => $"  - {t.FilePath}")
-						.Concat(result.Result.Diagnostics.Select(d => $"  - {d.Id}: {d.Descriptor.Title}"))
-						.DefaultIfEmpty("  - (none)")
-						.Aggregate((a, b) => $"{a}\n{b}")
+				result.DriverResult.Diagnostics.Any(d => d.Id.StartsWith(startsWithValue, StringComparison.Ordinal)),
+				$"expected not to contain Diagnostic with Id starting with {startsWithValue}"
 			);
 	}
 
@@ -165,27 +136,15 @@ public static partial class DiagnosticAssertions
 	/// <returns>An <see cref="AssertionResult"/> indicating whether the assertion passed or failed.</returns>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
-	public static AssertionResult HasNoErrorDiagnostics(this DriverRunResult? result)
+	public static AssertionResult HasNoErrorDiagnostics(this DriverRunResult result)
 	{
 		if (result == null)
 			return AssertionResult.Failed($"expected {nameof(DriverRunResult)} is null");
 
 		// Not null... process
 		return AssertionResult.FailIf(
-			result.Result.Diagnostics.Any(static d => d.Severity == DiagnosticSeverity.Error),
-			"expected no error diagnostics to be reported by the generator:\n"
-				+ string.Join(
-					'\n',
-					result
-						.Result.Diagnostics.Where(static d => d.Severity == DiagnosticSeverity.Error)
-						.Select(d => $"  - {d.Id}: {d.Descriptor.Title}")
-				)
-				+ "\n\n"
-				+ result
-					.Result.GeneratedTrees.Select(t => $"  - {t.FilePath}")
-					.Concat(result.Result.Diagnostics.Select(d => $"  - {d.Id}: {d.Descriptor.Title}"))
-					.DefaultIfEmpty("  - (none)")
-					.Aggregate((a, b) => $"{a}\n{b}")
+			result.DriverResult.Diagnostics.Any(static d => d.Severity == DiagnosticSeverity.Error),
+			"expected no error diagnostics to be reported by the generator"
 		);
 	}
 }
