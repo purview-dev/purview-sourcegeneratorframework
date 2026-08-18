@@ -106,11 +106,15 @@ var options = new SourceGeneratorTestOptions
     AdditionalAssemblyTypes = [typeof(SomeExternalType)],
     CompileToAssembly = true,
     EnableLogging = true,
-    AnalyzerConfigOptions = { ["build_property.MyGenerator_Disable"] = "true" }
+    AnalyzerConfigOptions = { ["MyGenerator_Disable"] = "true" }
 };
 
 var result = await runner.RunAsync(source, options);
 ```
+
+Analyzer options are preserved under their supplied keys. Keys without the Roslyn
+`build_property.` prefix are additionally exposed as compiler-visible MSBuild properties, so either
+`MyGenerator_Disable` or `build_property.MyGenerator_Disable` can be used in tests.
 
 See [`SourceGeneratorFramework.Testing.TUnit`](../SourceGeneratorFramework.Testing.TUnit) for a ready-made TUnit integration.
 

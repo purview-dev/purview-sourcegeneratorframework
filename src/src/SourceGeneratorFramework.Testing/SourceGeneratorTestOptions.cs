@@ -110,6 +110,11 @@ public sealed record SourceGeneratorTestOptions
 	public ImmutableArray<string> ExcludeGeneratedAttributes { get; init; } = [];
 
 	/// <summary>
+	/// Gets additional text files to include in the test compilation.
+	/// </summary>
+	public ImmutableArray<AdditionalText> AdditionalText { get; init; } = [];
+
+	/// <summary>
 	/// Gets a state object that can be used to pass arbitrary data to the test runner. Useful for the <see cref="SourceGeneratorTestBase{TGenerator}.OnBeforeRun(IEnumerable{string}, SourceGeneratorTestOptions, CancellationToken)"/>
 	/// </summary>
 	public object? State { get; init; }

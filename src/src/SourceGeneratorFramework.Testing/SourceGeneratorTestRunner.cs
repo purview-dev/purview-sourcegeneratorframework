@@ -101,6 +101,7 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 	{
 		GeneratorDriver driver = CSharpGeneratorDriver.Create(
 			[generator.AsSourceGenerator()],
+			additionalTexts: options.AdditionalText,
 			parseOptions: new(options.LanguageVersion)
 		);
 
@@ -112,6 +113,11 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 				? "true"
 				: "false",
 		};
+		foreach (var (key, value) in options.AnalyzerConfigOptions)
+		{
+			if (!key.StartsWith(IncrementalPipeline.BuildProperty, StringComparison.Ordinal))
+				analyzerOptions.TryAdd(IncrementalPipeline.BuildProperty + key, value);
+		}
 		if (loggingSessionId is not null)
 			analyzerOptions[IncrementalPipeline.BuildProperty + GenerationContext.LoggingSessionIdBuildProperty] =
 				loggingSessionId;

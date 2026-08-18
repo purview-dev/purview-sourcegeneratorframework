@@ -71,6 +71,26 @@ public record class DriverRunResult(
 		$"{diagnostic.Id}|{diagnostic.Location.SourceTree?.FilePath}|{diagnostic.Location.SourceSpan.Start}|{diagnostic.Location.SourceSpan.Length}|{diagnostic.GetMessage(CultureInfo.InvariantCulture)}";
 
 	/// <summary>
+	/// Gets the source text of a generated tree with the specified hint name.
+	/// </summary>
+	/// <param name="hintName">The hint name of the generated tree - this can be the whole of end of the hint name.</param>
+	/// <returns>The source text of the generated tree, or <see langword="null"/> if not found.</returns>
+	/// <exception cref="ArgumentException">Thrown if <paramref name="hintName"/> is <see langword="null"/> or whitespace.</exception>
+	/// <remarks>The <paramref name="hintName"/> is matched using <see cref="StringComparison.Ordinal"/>.</remarks>
+	public string? GetSource(string hintName)
+	{
+		if (string.IsNullOrWhiteSpace(hintName))
+			throw new ArgumentException("Value cannot be null or whitespace.", nameof(hintName));
+
+		// Find the generated source with the specified hint name
+		return Result
+			.Results.SelectMany(static r => r.GeneratedSources)
+			.Where(s => s.HintName.EndsWith(hintName, StringComparison.Ordinal))
+			.Select(static s => s.SourceText.ToString())
+			.SingleOrDefault();
+	}
+
+	/// <summary>
 	/// Gets the source text of the first non-attribute generated tree.
 	/// </summary>
 	public string GetSource()

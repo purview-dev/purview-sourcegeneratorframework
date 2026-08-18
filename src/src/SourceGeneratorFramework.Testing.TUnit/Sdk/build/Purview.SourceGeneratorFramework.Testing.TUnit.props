@@ -1,5 +1,6 @@
 <Project>
 	<ItemGroup>
+		<Using Include="Purview.SourceGeneratorFramework.Testing" />
 		<Using Include="Purview.SourceGeneratorFramework.Testing.TUnit" />
 		<Using Include="Purview.SourceGeneratorFramework.Testing.TUnit.Assertions" />
 	</ItemGroup>

@@ -75,6 +75,13 @@ namespace Test
 					return value;
 				}
 			);
+			var customValue = context.AnalyzerConfigOptionsProvider.Select(
+				static (options, _) =>
+				{
+					options.GlobalOptions.TryGetValue("build_property.CustomOption", out var value);
+					return value;
+				}
+			);
 
 			context.RegisterSourceOutput(
 				validationValue,
@@ -82,6 +89,14 @@ namespace Test
 					output.AddSource(
 						"ScopeValidation.g.cs",
 						$"internal static class ScopeValidation {{ internal const string Value = \"{value}\"; }}"
+					)
+			);
+			context.RegisterSourceOutput(
+				customValue,
+				static (output, value) =>
+					output.AddSource(
+						"CustomOption.g.cs",
+						$"internal static class CustomOption {{ internal const string Value = \"{value}\"; }}"
 					)
 			);
 		}
@@ -213,5 +228,20 @@ namespace Test
 		// Assert
 		await Assert.That(options.ValidateCodeWriterScopes).IsTrue();
 		await Assert.That(result.GetSource()).Contains("Value = \"true\"");
+	}
+
+	[Test]
+	public async Task RunAsync_UnprefixedAnalyzerOption_IsAlsoExposedAsBuildProperty(
+		CancellationToken cancellationToken
+	)
+	{
+		var runner = new SourceGeneratorTestRunner<OptionsGenerator>();
+		var options = new SourceGeneratorTestOptions { AnalyzerConfigOptions = { ["CustomOption"] = "enabled" } };
+
+		var result = await runner.RunAsync("public sealed class Input { }", options, cancellationToken);
+
+		var tree = result.GetGeneratedTree("CustomOption.g.cs");
+		await Assert.That(tree).IsNotNull();
+		await Assert.That((await tree!.GetTextAsync(cancellationToken)).ToString()).Contains("Value = \"enabled\"");
 	}
 }
