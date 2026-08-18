@@ -4,11 +4,6 @@ namespace Purview.SourceGeneratorFramework.Generators.Model;
 
 static partial class SourceEmitter
 {
-	public static IEnumerable<(string HintName, SourceText Source)> LoggingEmit()
-	{
-		yield return (GetHintName(nameof(SourceGenLogger)), SourceGenLogger());
-	}
-
 	public static IEnumerable<(string HintName, SourceText Source)> AttributeDataEmit()
 	{
 		yield return (GetHintName(nameof(GenerateAttribute)), GenerateAttribute());

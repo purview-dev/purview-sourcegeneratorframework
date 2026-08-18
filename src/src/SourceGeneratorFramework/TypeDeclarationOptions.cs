@@ -310,10 +310,11 @@ public sealed record TypeDeclarationOptions
 
 	/// <summary>
 	/// Gets whether to emit <see cref="EmbeddedAttribute"/> on the type.
-	/// This is intended only for generator-emitted marker attribute types and defaults to
-	/// <see langword="false"/>.
+	/// When <see langword="null"/>, <c>WriteAttributeClass</c> enables it and other type-writing
+	/// APIs leave it disabled. Set this explicitly to <see langword="false"/> to opt a generated
+	/// attribute out of embedding.
 	/// </summary>
-	public bool IncludeEmbeddedAttribute { get; init; }
+	public bool? IncludeEmbeddedAttribute { get; init; }
 
 	/// <summary>
 	/// Gets whether to process any generated attributes, such as <see cref="System.CodeDom.Compiler.GeneratedCodeAttribute"/> and <see cref="System.Runtime.CompilerServices.CompilerGeneratedAttribute"/>.

@@ -61,6 +61,9 @@ public sealed record SourceGeneratorTestOptions
 	/// </remarks>
 	public bool ValidateCodeWriterScopes { get; init; } = true;
 
+	/// <summary>Gets whether framework source-generator logging is captured for this test run.</summary>
+	public bool EnableLogging { get; init; } = true;
+
 	/// <summary>
 	/// Gets a value indicating whether generator log errors should cause <see cref="DriverRunResult.EnsureValid"/> to throw.
 	/// </summary>

@@ -10,7 +10,7 @@ dotnet add package Purview.SourceGeneratorFramework.Testing
 
 ## What's included
 
-- **`SourceGeneratorTestRunner<TGenerator>`** — compiles a snippet of C# source, runs the generator, and returns a `DriverRunResult` with generated syntax trees, the output compilation, and captured log entries.
+- **`SourceGeneratorTestRunner<TGenerator>`** — compiles a snippet of C# source, runs the generator, automatically registers an isolated framework logging sink, and returns a `DriverRunResult` with generated syntax trees, the output compilation, and captured log entries.
 - **`SourceGeneratorTestBase<TGenerator>`** — abstract base class that accepts an `ITestOutput` instance for framework-specific logging integration.
 - **`SourceGeneratorTestOptions`** — options for configuring references, namespaces, analyzer-config values, output kind, and whether to emit the output compilation to an assembly.
 - **`DriverRunResult`** — wrapper around `GeneratorDriverRunResult` that exposes generated trees, the output compilation, emitted assembly, and log entries.
@@ -105,6 +105,7 @@ var options = new SourceGeneratorTestOptions
     AdditionalNamespaces = ["MyNamespace"],
     AdditionalAssemblyTypes = [typeof(SomeExternalType)],
     CompileToAssembly = true,
+    EnableLogging = true,
     AnalyzerConfigOptions = { ["build_property.MyGenerator_Disable"] = "true" }
 };
 

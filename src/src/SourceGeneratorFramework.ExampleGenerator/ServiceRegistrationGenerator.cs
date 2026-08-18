@@ -20,11 +20,6 @@ public partial class ServiceRegistrationGenerator : IIncrementalGenerator
 			ServiceRegistrationEmitter.EmitAttributeAndEnum(spc, GeneratorName, GeneratorVersion)
 		);
 
-		var isDisabled = IncrementalPipeline.IsDisabledValueProvider(
-			context,
-			ServiceRegistrationGeneratorPropertyLibrary.DisableServiceRegistrationGenerator
-		);
-
 		var emitServiceInfo = IncrementalPipeline.PropertyValueProvider(
 			context,
 			ServiceRegistrationGeneratorPropertyLibrary.EmitServiceRegistrationInfo,
@@ -35,7 +30,7 @@ public partial class ServiceRegistrationGenerator : IIncrementalGenerator
 			context,
 			GeneratorName,
 			GeneratorVersion,
-			_logger
+			ServiceRegistrationGeneratorPropertyLibrary.DisableServiceRegistrationGenerator
 		);
 
 		var targets = IncrementalPipeline.ForAttributeWithMetadataName(
@@ -50,10 +45,9 @@ public partial class ServiceRegistrationGenerator : IIncrementalGenerator
 				(ctx, targetsArray, _) =>
 					new ServiceRegistrationGenerationModel(ctx, new EquatableArray<ServiceTarget>(targetsArray))
 			)
-			.CombineWith(isDisabled, (m, disabled, _) => m with { IsDisabled = disabled })
 			.CombineWith(emitServiceInfo, (m, emit, _) => m with { EmitServiceInfo = emit });
 
-		context.RegisterSourceOutput(model, (spc, m) => ServiceRegistrationEmitter.Execute(spc, m, _logger));
+		context.RegisterSourceOutput(model, static (spc, m) => ServiceRegistrationEmitter.Execute(spc, m));
 	}
 
 	static ServiceTarget CreateServiceTarget(GeneratorAttributeSyntaxContext ctx, CancellationToken ct)
@@ -101,6 +95,5 @@ readonly record struct ServiceTarget(string TypeName, string ClassName, string N
 readonly record struct ServiceRegistrationGenerationModel(
 	GenerationContext Context,
 	EquatableArray<ServiceTarget> Targets,
-	bool IsDisabled = false,
 	bool EmitServiceInfo = false
 );

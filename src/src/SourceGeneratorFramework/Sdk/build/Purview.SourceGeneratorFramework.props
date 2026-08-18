@@ -3,20 +3,26 @@
 		<PurviewSourceGeneratorFrameworkValidateCodeWriterScopes
 			Condition="'$(PurviewSourceGeneratorFrameworkValidateCodeWriterScopes)' == ''"
 			>false</PurviewSourceGeneratorFrameworkValidateCodeWriterScopes>
+		<PurviewSourceGeneratorFrameworkEnableLogging
+			Condition="'$(PurviewSourceGeneratorFrameworkEnableLogging)' == ''"
+			>false</PurviewSourceGeneratorFrameworkEnableLogging>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<CompilerVisibleProperty Include="PurviewSourceGeneratorFrameworkValidateCodeWriterScopes">
 			<Description>Throws when generated source is materialized while CodeWriter scopes remain undisposed.</Description>
 		</CompilerVisibleProperty>
+		<CompilerVisibleProperty Include="PurviewSourceGeneratorFrameworkEnableLogging">
+			<Description>Enables framework source-generator logging when a matching sink is registered.</Description>
+		</CompilerVisibleProperty>
+		<CompilerVisibleProperty Include="PurviewSourceGeneratorFrameworkLoggingSessionId">
+			<Description>Identifies the registered sink for an isolated source-generator logging session.</Description>
+		</CompilerVisibleProperty>
 
 		<Using Include="Purview.SourceGeneratorFramework" />
 		<Using Include="Purview.SourceGeneratorFramework.Helpers" />
 		<Using Include="Purview.SourceGeneratorFramework.Models" />
-		<Using
-			Condition="$(DisablePurviewLoggingSourceGenerator) != 'true'"
-			Include="Purview.SourceGeneratorFramework.Logging"
-		/>
+		<Using Include="Purview.SourceGeneratorFramework.Logging" />
 		<Using
 			Condition="$(DisablePurviewAttributeDataSourceGenerator) != 'true'"
 			Include="Purview.SourceGeneratorFramework.Generators"

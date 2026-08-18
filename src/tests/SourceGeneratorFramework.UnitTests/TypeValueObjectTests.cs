@@ -24,6 +24,22 @@ public partial class TypeValueObjectTests
 	}
 
 	[Test]
+	public async Task TypeReferenceOptions_ComplexType_RendersAsCSharpSyntax()
+	{
+		var type = new TypeReferenceOptions("global::System.Collections.Generic.List")
+			.MakeGeneric(new TypeReferenceOptions("global::ZodSharp.Core.ValidationError"))
+			.MakeArray()
+			.Nullable();
+
+		string implicitValue = type;
+
+		await Assert
+			.That(implicitValue)
+			.IsEqualTo("global::System.Collections.Generic.List<global::ZodSharp.Core.ValidationError>[]?");
+		await Assert.That($"ref {type} errors").IsEqualTo($"ref {implicitValue} errors");
+	}
+
+	[Test]
 	public async Task Constructor_WithNamespace_RendersGlobalFullName()
 	{
 		var type = new TypeValueObject("MyType", "MyNamespace");

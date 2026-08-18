@@ -1,5 +1,3 @@
-using Purview.SourceGeneratorFramework.Logging;
-
 namespace Purview.SourceGeneratorFramework.Generators.Model;
 
 static class GeneratorTypeLibrary
@@ -27,23 +25,6 @@ static class GeneratorTypeLibrary
 			nameof(GenericTypeArgumentAttribute),
 			GeneratorsNamespace
 		);
-	}
-
-	public static class Logging
-	{
-		public static readonly TypeValueObject ISupportsSourceGenLogging =
-			TypeValueObject.Create<ISupportsSourceGenLogging>();
-
-		// Don't use the in-assembly SourceGenLogger type here because
-		// we'll generate ours in a different namespace.
-		public static readonly TypeValueObject SourceGenLogger = new(
-			nameof(SourceGenLogger),
-			typeof(ISupportsSourceGenLogging).Namespace
-		);
-
-		public static readonly TypeValueObject ISourceGenLogger = TypeValueObject.Create<ISourceGenLogger>();
-
-		public static readonly TypeValueObject SourceGenLogLevel = TypeValueObject.Create<SourceGenLogLevel>();
 	}
 
 	public static class System

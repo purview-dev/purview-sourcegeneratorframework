@@ -90,11 +90,6 @@
 		/>
 		<!-- Logging -->
 		<Compile
-			Include="..\SourceGeneratorFramework\Logging\ISupportsSourceGenLogging.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Logging\ISupportsSourceGenLogging.cs"
-		/>
-
-		<Compile
 			Include="..\SourceGeneratorFramework\Logging\ISourceGenLogger.cs"
 			Link="Extensions\Purview\SourceGeneratorFramework\Logging\ISourceGenLogger.cs"
 		/>
@@ -105,6 +100,14 @@
 		<Compile
 			Include="..\SourceGeneratorFramework\Logging\SourceGenLogLevel.cs"
 			Link="Extensions\Purview\SourceGeneratorFramework\Logging\SourceGenLogLevel.cs"
+		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\Logging\SourceGenLogger.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Logging\SourceGenLogger.cs"
+		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\Logging\SourceGenLogging.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Logging\SourceGenLogging.cs"
 		/>
 		<!-- Extensions/ Polyfills -->
 		<Compile

@@ -50,9 +50,10 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		var references = SourceGeneratorHelpers.ResolveReferences(options);
 		var compilation = SourceGeneratorHelpers.CreateCompilation(syntaxTrees, references, options);
 		TGenerator generator = new();
-		ConfigureLogging(generator, options, logEntries);
+		var loggingSessionId = options.EnableLogging ? Guid.NewGuid().ToString("N") : null;
+		using var loggingRegistration = ConfigureLogging(loggingSessionId, options, logEntries);
 
-		var driver = CreateDriver(generator, options);
+		var driver = CreateDriver(generator, options, loggingSessionId);
 		driver = driver.RunGeneratorsAndUpdateCompilation(
 			compilation,
 			out var outputCompilation,
@@ -92,7 +93,11 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		return usings + Environment.NewLine + Environment.NewLine + source;
 	}
 
-	static GeneratorDriver CreateDriver(TGenerator generator, SourceGeneratorTestOptions options)
+	static GeneratorDriver CreateDriver(
+		TGenerator generator,
+		SourceGeneratorTestOptions options,
+		string? loggingSessionId
+	)
 	{
 		GeneratorDriver driver = CSharpGeneratorDriver.Create(
 			[generator.AsSourceGenerator()],
@@ -103,7 +108,13 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		{
 			[IncrementalPipeline.BuildProperty + GenerationContext.ValidateCodeWriterScopesBuildProperty] =
 				options.ValidateCodeWriterScopes ? "true" : "false",
+			[IncrementalPipeline.BuildProperty + GenerationContext.EnableLoggingBuildProperty] = options.EnableLogging
+				? "true"
+				: "false",
 		};
+		if (loggingSessionId is not null)
+			analyzerOptions[IncrementalPipeline.BuildProperty + GenerationContext.LoggingSessionIdBuildProperty] =
+				loggingSessionId;
 		if (options.DisableSourceGeneratorPropertyName is not null && options.DisableSourceGeneratorValue is not null)
 			analyzerOptions[IncrementalPipeline.BuildProperty + options.DisableSourceGeneratorPropertyName] =
 				options.DisableSourceGeneratorValue.Value.ToString();
@@ -114,18 +125,56 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		return driver;
 	}
 
-	static void ConfigureLogging(TGenerator generator, SourceGeneratorTestOptions options, List<LogEntry> logEntries)
+	static LoggingRegistrations? ConfigureLogging(
+		string? loggingSessionId,
+		SourceGeneratorTestOptions options,
+		List<LogEntry> logEntries
+	)
 	{
-		if (generator is ISupportsSourceGenLogging logSupport)
+		if (loggingSessionId is null)
+			return null;
+
+		Action<string, int> sink = (message, level) =>
 		{
-			logSupport.SetOutput(
-				(message, type) =>
-				{
-					options.TestOutput.WriteLine($"[{type}] {message}");
-					logEntries.Add(new LogEntry(type, message));
-				}
+			var type = (SourceGenLogLevel)level;
+			options.TestOutput.WriteLine($"[{type}] {message}");
+			lock (logEntries)
+				logEntries.Add(new LogEntry(type, message));
+		};
+
+		List<IDisposable> registrations = [SourceGenLogging.RegisterSinkCore(loggingSessionId, sink)];
+
+		// Self-contained generators may embed the framework logging types. Register the test sink
+		// explicitly with that private copy rather than relying on process-wide shared state.
+		var embeddedLoggingType = typeof(TGenerator).Assembly.GetType(
+			"Purview.SourceGeneratorFramework.Logging.SourceGenLogging",
+			throwOnError: false
+		);
+		if (embeddedLoggingType is not null && embeddedLoggingType != typeof(SourceGenLogging))
+		{
+			var registerSink = embeddedLoggingType.GetMethod(
+				"RegisterSinkCore",
+				BindingFlags.Static | BindingFlags.NonPublic
 			);
-			return;
+			if (registerSink?.Invoke(null, [loggingSessionId, sink]) is IDisposable registration)
+				registrations.Add(registration);
+		}
+
+		return new LoggingRegistrations(registrations);
+	}
+
+	sealed class LoggingRegistrations(List<IDisposable> registrations) : IDisposable
+	{
+		List<IDisposable>? _registrations = registrations;
+
+		public void Dispose()
+		{
+			var registrationsToDispose = Interlocked.Exchange(ref _registrations, null);
+			if (registrationsToDispose is null)
+				return;
+
+			for (var index = registrationsToDispose.Count - 1; index >= 0; index--)
+				registrationsToDispose[index].Dispose();
 		}
 	}
 

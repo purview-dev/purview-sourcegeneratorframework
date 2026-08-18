@@ -93,21 +93,17 @@ static class ServiceRegistrationEmitter
 	/// <summary>
 	/// Emits the <c>ServiceCollectionExtensions</c> class and, optionally, the <c>ServiceInfo</c> class.
 	/// </summary>
-	public static void Execute(
-		SourceProductionContext spc,
-		ServiceRegistrationGenerationModel model,
-		ISourceGenLogger? logger
-	)
+	public static void Execute(SourceProductionContext spc, ServiceRegistrationGenerationModel model)
 	{
-		if (model.IsDisabled)
+		if (model.Context.Settings.IsSourceGeneratorDisabled)
 		{
-			logger?.Info("ServiceRegistrationGenerator is disabled.");
+			model.Context.Info("ServiceRegistrationGenerator is disabled.");
 			return;
 		}
 
 		if (model.Targets.IsEmpty)
 		{
-			logger?.Info("No service targets found.");
+			model.Context.Info("No service targets found.");
 			return;
 		}
 

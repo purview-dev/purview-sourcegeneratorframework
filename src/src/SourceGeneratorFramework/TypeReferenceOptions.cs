@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Text;
 using Microsoft.CodeAnalysis;
 
 namespace Purview.SourceGeneratorFramework;
@@ -81,6 +82,46 @@ public readonly record struct TypeReferenceOptions
 	/// <summary>Returns this type as a pointer type.</summary>
 	public TypeReferenceOptions MakePointer() => this with { IsPointer = true };
 
+	/// <summary>Gets the type rendered as valid C# type syntax.</summary>
+	public string RenderTypeName
+	{
+		get
+		{
+			if (IsEmpty)
+				return string.Empty;
+
+			StringBuilder builder = new(Name);
+			if (!GenericArguments.IsDefaultOrEmpty)
+			{
+				builder.Append('<');
+				for (var index = 0; index < GenericArguments.Length; index++)
+				{
+					if (index > 0)
+						builder.Append(", ");
+					builder.Append(GenericArguments[index].RenderTypeName);
+				}
+				builder.Append('>');
+			}
+			else if (GenericArity > 0)
+			{
+				builder.Append('<').Append(',', GenericArity - 1).Append('>');
+			}
+
+			for (var index = 0; !ArrayRanks.IsDefaultOrEmpty && index < ArrayRanks.Length; index++)
+				builder.Append('[').Append(',', ArrayRanks[index] - 1).Append(']');
+
+			if (IsPointer)
+				builder.Append('*');
+			if (IsNullable)
+				builder.Append('?');
+
+			return builder.ToString();
+		}
+	}
+
+	/// <summary>Returns the type rendered as valid C# type syntax.</summary>
+	public override string ToString() => RenderTypeName;
+
 	public static implicit operator TypeReferenceOptions(TypeValueObject type) =>
 		type == TypeValueObject.Empty ? Empty : new(type);
 
@@ -94,6 +135,9 @@ public readonly record struct TypeReferenceOptions
 	public static implicit operator TypeReferenceOptions?(string? type) => type == null ? null : new(type);
 
 	public static implicit operator TypeReferenceOptions(string type) => new(type);
+
+	/// <summary>Implicitly converts a structured type reference to rendered C# type syntax.</summary>
+	public static implicit operator string(TypeReferenceOptions type) => type.RenderTypeName;
 
 	/// <summary>
 	/// Represents the absence of a type reference. Code renderers and emitters ignore this value.

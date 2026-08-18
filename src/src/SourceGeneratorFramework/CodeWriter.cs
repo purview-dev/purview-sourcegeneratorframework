@@ -749,6 +749,7 @@ public sealed class CodeWriter
 			{
 				BaseType = declaration.BaseType ?? new("global::System.Attribute"),
 				Attributes = declaration.Attributes.Insert(0, attributeUsage),
+				IncludeEmbeddedAttribute = declaration.IncludeEmbeddedAttribute ?? true,
 			},
 			bodyWriter
 		);
@@ -979,7 +980,7 @@ public sealed class CodeWriter
 						or TypeDeclarationKind.Struct
 						or TypeDeclarationKind.RecordClass
 						or TypeDeclarationKind.RecordStruct,
-				includeEmbeddedAttribute: declaration.IncludeEmbeddedAttribute
+				includeEmbeddedAttribute: declaration.IncludeEmbeddedAttribute == true
 			);
 		}
 

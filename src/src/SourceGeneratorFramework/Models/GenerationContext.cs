@@ -27,6 +27,12 @@ public sealed record GenerationSettings
 
 	/// <summary>Gets whether created code writers validate undisposed scopes.</summary>
 	public bool ValidateCodeWriterScopes { get; init; }
+
+	/// <summary>Gets whether the source generator is disabled by build configuration.</summary>
+	public bool IsSourceGeneratorDisabled { get; init; }
+
+	/// <summary>Gets whether source-generator logging is active for this generation context.</summary>
+	public bool IsLoggingEnabled { get; init; }
 }
 
 /// <summary>
@@ -40,6 +46,12 @@ public class GenerationContext(Compilation compilation, GenerationSettings setti
 	/// <summary>The MSBuild property that controls validation of undisposed code-writer scopes.</summary>
 	public const string ValidateCodeWriterScopesBuildProperty =
 		"PurviewSourceGeneratorFrameworkValidateCodeWriterScopes";
+
+	/// <summary>The MSBuild property that enables source-generator logging.</summary>
+	public const string EnableLoggingBuildProperty = "PurviewSourceGeneratorFrameworkEnableLogging";
+
+	/// <summary>The MSBuild property that identifies the registered logging sink for a generator run.</summary>
+	public const string LoggingSessionIdBuildProperty = "PurviewSourceGeneratorFrameworkLoggingSessionId";
 
 	/// <summary>Gets the assembly name of the compilation being processed.</summary>
 	public string AssemblyName { get; } = compilation.AssemblyName ?? string.Empty;

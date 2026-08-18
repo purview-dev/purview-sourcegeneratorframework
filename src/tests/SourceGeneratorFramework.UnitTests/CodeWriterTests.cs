@@ -702,7 +702,8 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				GeneratedAttributes()
+				"[global::Microsoft.CodeAnalysis.EmbeddedAttribute]\n"
+					+ GeneratedAttributes()
 					+ "[global::System.AttributeUsageAttribute(global::System.AttributeTargets.Class, Inherited = false, AllowMultiple = false)]\n"
 					+ "public sealed class RegistryAttribute : global::System.Attribute\n"
 					+ "{\n"
@@ -736,13 +737,28 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				GeneratedAttributes()
+				"[global::Microsoft.CodeAnalysis.EmbeddedAttribute]\n"
+					+ GeneratedAttributes()
 					+ "[global::System.AttributeUsageAttribute(global::System.AttributeTargets.Class | global::System.AttributeTargets.Property, Inherited = true, AllowMultiple = true)]\n"
 					+ "[Obsolete]\n"
 					+ "internal sealed class KnownTypeAttribute : CustomAttributeBase\n"
 					+ "{\n"
 					+ "}\n"
 			);
+	}
+
+	[Test]
+	public async Task WriteAttributeClass_WithEmbeddedAttributeDisabled_OmitsEmbeddedAttribute()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.WriteAttributeClass(
+			new TypeDeclarationOptions("LocalAttribute") { IsPartial = false, IncludeEmbeddedAttribute = false },
+			AttributeTargets.Class,
+			_ => { }
+		);
+
+		await Assert.That(writer.ToString()).DoesNotContain("[global::Microsoft.CodeAnalysis.EmbeddedAttribute]");
 	}
 
 	[Test]

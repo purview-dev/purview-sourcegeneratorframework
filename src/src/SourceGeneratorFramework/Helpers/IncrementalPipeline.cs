@@ -161,15 +161,15 @@ public static class IncrementalPipeline
 	}
 
 	/// <summary>
-	/// Creates a value provider that builds a generation context from the compilation and the
-	/// CodeWriter scope-validation build property.
+	/// Creates a value provider that builds a generation context from the compilation, framework
+	/// build properties, an optional generator-disable property, and any registered logging sink.
 	/// </summary>
 	public static IncrementalValueProvider<TContext> GenerationContextValueProvider<TContext>(
 		IncrementalGeneratorInitializationContext context,
 		string generatorName,
 		string generatorVersion,
-		ISourceGenLogger? logger,
-		Func<Compilation, GenerationSettings, ISourceGenLogger?, CancellationToken, TContext> factory
+		Func<Compilation, GenerationSettings, ISourceGenLogger?, CancellationToken, TContext> factory,
+		string? disablePropertyName = null
 	)
 		where TContext : notnull, GenerationContext
 	{
@@ -179,21 +179,28 @@ public static class IncrementalPipeline
 		var baseSettings = new GenerationSettings(generatorName, generatorVersion);
 
 		return context
-			.CompilationProvider.Combine(CodeWriterScopeValidationValueProvider(context))
+			.CompilationProvider.Combine(GenerationConfigurationValueProvider(context, disablePropertyName))
 			.Select(
 				(input, cancellationToken) =>
 				{
 					cancellationToken.ThrowIfCancellationRequested();
 
+					var configuration = input.Right;
+					var logger = configuration.IsLoggingEnabled
+						? SourceGenLogging.CreateLogger(configuration.LoggingSessionId)
+						: null;
+
 					logger?.Info(
-						$"Creating generation context ({nameof(TContext)}) for compilation '{input.Left.AssemblyName}'."
+						$"Creating generation context ({typeof(TContext)}) for compilation '{input.Left.AssemblyName}'."
 					);
 
 					return factory(
 						input.Left,
 						baseSettings with
 						{
-							ValidateCodeWriterScopes = input.Right,
+							ValidateCodeWriterScopes = configuration.ValidateCodeWriterScopes,
+							IsSourceGeneratorDisabled = configuration.IsSourceGeneratorDisabled,
+							IsLoggingEnabled = logger is not null,
 						},
 						logger,
 						cancellationToken
@@ -204,39 +211,72 @@ public static class IncrementalPipeline
 	}
 
 	/// <summary>
-	/// Creates a value provider that builds a generation context from the compilation.
+	/// Creates a value provider that builds a default generation context from the compilation and
+	/// resolved framework configuration.
 	/// </summary>
 	public static IncrementalValueProvider<GenerationContext> DefaultGenerationContextValueProvider(
 		IncrementalGeneratorInitializationContext context,
 		string generatorName,
 		string generatorVersion,
-		ISourceGenLogger? logger = null
+		string? disablePropertyName = null
 	)
 	{
 		return GenerationContextValueProvider(
 			context,
 			generatorName,
 			generatorVersion,
-			logger,
-			static (compilation, settings, logger, _) => new GenerationContext(compilation, settings, logger)
+			static (compilation, settings, logger, _) => new GenerationContext(compilation, settings, logger),
+			disablePropertyName
 		);
 	}
 
-	static IncrementalValueProvider<bool> CodeWriterScopeValidationValueProvider(
-		IncrementalGeneratorInitializationContext context
+	static IncrementalValueProvider<GenerationConfiguration> GenerationConfigurationValueProvider(
+		IncrementalGeneratorInitializationContext context,
+		string? disablePropertyName
 	) =>
 		context
 			.AnalyzerConfigOptionsProvider.Select(
-				static (options, _) =>
+				(options, _) =>
 				{
 					options.GlobalOptions.TryGetValue(
 						BuildProperty + GenerationContext.ValidateCodeWriterScopesBuildProperty,
-						out var value
+						out var scopeValidationValue
 					);
-					return bool.TryParse(value, out var enabled) && enabled;
+					options.GlobalOptions.TryGetValue(
+						BuildProperty + GenerationContext.EnableLoggingBuildProperty,
+						out var loggingEnabledValue
+					);
+					options.GlobalOptions.TryGetValue(
+						BuildProperty + GenerationContext.LoggingSessionIdBuildProperty,
+						out var loggingSessionId
+					);
+
+					string? disabledValue = null;
+					if (!string.IsNullOrWhiteSpace(disablePropertyName))
+					{
+						var propertyName = disablePropertyName!.StartsWith(BuildProperty, StringComparison.Ordinal)
+							? disablePropertyName
+							: BuildProperty + disablePropertyName;
+						options.GlobalOptions.TryGetValue(propertyName, out disabledValue);
+					}
+
+					return new GenerationConfiguration(
+						ValidateCodeWriterScopes: bool.TryParse(scopeValidationValue, out var validateScopes)
+							&& validateScopes,
+						IsSourceGeneratorDisabled: bool.TryParse(disabledValue, out var isDisabled) && isDisabled,
+						IsLoggingEnabled: bool.TryParse(loggingEnabledValue, out var loggingEnabled) && loggingEnabled,
+						LoggingSessionId: loggingSessionId
+					);
 				}
 			)
-			.WithTrackingName("GetCodeWriterScopeValidation");
+			.WithTrackingName("GetGenerationConfiguration");
+
+	readonly record struct GenerationConfiguration(
+		bool ValidateCodeWriterScopes,
+		bool IsSourceGeneratorDisabled,
+		bool IsLoggingEnabled,
+		string? LoggingSessionId
+	);
 
 	/// <summary>
 	/// Creates a values provider for syntax nodes annotated with a specific attribute.

@@ -74,7 +74,7 @@ dotnet add package Purview.SourceGeneratorFramework
 
 - **`CodeWriter`** — allocation-conscious helper for building generated C# source files with indentation, namespaces, type declarations, comments, and XML documentation.
 - **`IncrementalPipeline`** — extension methods for composing `IncrementalValueProvider<T>` and `IncrementalValuesProvider<T>` pipelines, including attribute-based discovery, generation context creation, and disable-property checks.
-- **`GenerationContext`** — a base context record that carries the Roslyn `Compilation` (excluded from equality so the context is cache-friendly), owns a configured `CodeWriter`, and can replace it with a fresh writer using the same build-time settings.
+- **`GenerationContext`** — a base execution-services context that carries the Roslyn `Compilation`, immutable generator settings, optional logging, and a factory for independently owned `CodeWriter` instances.
 - **`GeneratorResult<T>`** — a value-or-diagnostics result type for incremental source generator transforms.
 - **`TypeValueObject`**, **`TargetSymbolDescriptor`**, **`EquatableArray<T>`**, **`DiagnosticInfo`** — reusable models for generator inputs and outputs.
 - **`SymbolResolver`**, **`TypeHelpers`**, **`EmbeddedResources`** — helper classes for common symbol and resource tasks.
@@ -197,6 +197,70 @@ IncrementalPipeline.RegisterSourceOutput(
     }
 );
 ```
+
+## Keep CodeWriter out of incremental contexts
+
+Treat `GenerationContext` values as cached incremental-pipeline state and each `CodeWriter` as
+mutable, output-scoped execution state. Create the writer inside the registered source-output
+callback, after the incremental cache boundary:
+
+```csharp
+IncrementalPipeline.RegisterSourceOutput(
+    context,
+    targets,
+    contextProvider,
+    static (spc, target, generationContext) =>
+    {
+        var writer = generationContext.CreateCodeWriter();
+        EmitTarget(generationContext, writer, target);
+        spc.AddSource($"{target.Name}.g.cs", writer.ToString());
+    }
+);
+```
+
+This separation is intentional:
+
+- Roslyn caches the complete value published by an incremental provider. It does not provide a way
+  to exclude one property of that value from caching.
+- `CodeWriter` is mutable. Caching one can retain previously written source when the context is
+  reused for another output or generator run.
+- Source-output callbacks may process independent targets concurrently. Sharing a writer can mix
+  their output and introduce data races.
+- A fresh writer gives each generated source independent scope tracking and deterministic ownership.
+
+These rules also apply to custom contexts: **never add or assign a `CodeWriter` property or field on
+a class derived from `GenerationContext`**. A custom context is still produced by an incremental
+provider and cached as one complete value. Store only compilation-derived services and immutable
+configuration there, and call `CreateCodeWriter()` in the output callback.
+
+When emitter methods need both logging/context services and writing, either pass the context and
+output-scoped writer separately, or compose them into a short-lived output wrapper created inside
+the callback. Such a wrapper must never be returned from an incremental provider:
+
+```csharp
+public sealed class GenerationOutputContext<TContext> : ISourceGenLogger
+    where TContext : GenerationContext
+{
+    public GenerationOutputContext(TContext generation)
+    {
+        Generation = generation;
+        Writer = generation.CreateCodeWriter();
+    }
+
+    public TContext Generation { get; }
+    public CodeWriter Writer { get; }
+
+    public void Log(
+        SourceGenLogLevel level,
+        int indentation,
+        string message,
+        params object[] args) =>
+        Generation.Log(level, indentation, message, args);
+}
+```
+
+The wrapper reduces emitter parameter noise without extending the writer's lifetime into Roslyn's
+incremental cache.
 
 ## Attribute model generation
 
@@ -407,16 +471,23 @@ The default generation-context provider reads the property automatically:
 
 ```csharp
 var contextProvider =
-    IncrementalPipeline.DefaultGenerationContextValueProvider(context);
+    IncrementalPipeline.DefaultGenerationContextValueProvider(
+        context,
+        nameof(MyGenerator),
+        "1.0.0"
+    );
 ```
 
-Create or reset the writer through the generation context so it inherits the setting:
+Create a fresh writer through the generation context so it inherits the setting:
 
 ```csharp
 var writer = generationContext.CreateCodeWriter();
 ```
 
-`GenerationContext.CodeWriter` is initialized through `CreateCodeWriter()` in the context constructor. Calling `CreateCodeWriter()` later creates a fresh writer, assigns it to `GenerationContext.CodeWriter`, and returns that same instance. `CodeWriter.ThrowOnUnclosedScopes` is read-only; configuration is supplied through its constructor.
+`CreateCodeWriter()` returns a new, independently owned instance on every call. The writer is not
+stored on `GenerationContext`; keep it scoped to the source-output operation that owns the generated
+source. `CodeWriter.ThrowOnUnclosedScopes` is read-only, and its configuration is supplied through
+the writer constructor by the context factory.
 
 When validation is enabled, calling `ToString()` or implicitly converting a writer to Roslyn `SourceText` throws a `CodeWriterScopeValidationException` if `OpenScopeCount` is not zero. The dedicated exception allows generator error handlers to rethrow this framework invariant failure instead of reducing it to a generic generator diagnostic:
 
@@ -446,30 +517,41 @@ Scope validation is applied to every context returned by `GenerationContextValue
 contexts do not need to accept or read the build property themselves:
 
 ```csharp
-public sealed record MyGenerationContext : GenerationContext
+public sealed class MyGenerationContext : GenerationContext
 {
-    public MyGenerationContext(Compilation compilation)
-        : base(compilation, "MyGenerator", "1.0.0")
+    public MyGenerationContext(
+        Compilation compilation,
+        GenerationSettings settings,
+        ISourceGenLogger? logger)
+        : base(compilation, settings, logger)
     {
     }
 }
 ```
 
-Use the ordinary context-provider overload. The framework combines the compiler-visible property,
-configures the returned context, and replaces its default writer before publishing it downstream:
+Do not add a `CodeWriter` to `MyGenerationContext`. Custom contexts have the same incremental-cache
+lifetime as the default context, so a writer stored on one can be reused across independent outputs.
+
+Use the ordinary context-provider overload. The framework combines the compiler-visible property
+with the compilation and supplies the resulting immutable settings to the custom context factory:
 
 ```csharp
 var contextProvider = IncrementalPipeline.GenerationContextValueProvider(
     context,
     nameof(MyGenerator),
     "1.0.0",
-    static (compilation, cancellationToken) =>
+    factory: static (compilation, settings, logger, cancellationToken) =>
     {
         cancellationToken.ThrowIfCancellationRequested();
-        return new MyGenerationContext(compilation);
-    }
+        return new MyGenerationContext(compilation, settings, logger);
+    },
+    disablePropertyName: "MyGenerator_Disable"
 );
 ```
+
+The provider resolves scope validation, generator disabling, and test logging from analyzer-config
+properties before invoking the factory. The supplied logger is created internally only when logging
+is enabled and a sink is registered for that run.
 
 ### Generators embedded in another package
 
@@ -516,7 +598,8 @@ new SourceGeneratorTestOptions
 
 ## Disabling a generator at build time
 
-Use `IncrementalPipeline.IsDisabledValueProvider` to read an MSBuild analyzer-config property and skip generation when it is set to `true`:
+Pass the generator's compiler-visible disable property to the context provider. Its resolved value is
+included in `GenerationSettings` automatically:
 
 ```xml
 <PropertyGroup>
@@ -525,8 +608,32 @@ Use `IncrementalPipeline.IsDisabledValueProvider` to read an MSBuild analyzer-co
 ```
 
 ```csharp
-var isDisabled = IncrementalPipeline.IsDisabledValueProvider(context, "MyGenerator_Disable");
+var contextProvider = IncrementalPipeline.DefaultGenerationContextValueProvider(
+    context,
+    nameof(MyGenerator),
+    "1.0.0",
+    disablePropertyName: "MyGenerator_Disable"
+);
+
+// In the output stage:
+if (generationContext.Settings.IsSourceGeneratorDisabled)
+    return;
 ```
+
+`IsDisabledValueProvider` remains available when expensive upstream transforms must be filtered
+before they are combined with the generation context.
+
+## Test logging
+
+Framework logging is disabled in ordinary compiler runs. The testing integration enables it by
+registering an isolated sink and supplying a per-run session ID through analyzer config. Context
+providers create the internal logger automatically; generators do not implement a logging interface
+and no logging-support source is generated.
+
+The sink registry stores callbacks only. It never buffers log entries. If logging is disabled, the
+session ID is missing, or no matching sink is registered, the provider supplies no logger and log
+calls are discarded without storing entries. Test sinks own any entries they choose to capture and
+are removed when the test run completes.
 
 ## Analyzers
 

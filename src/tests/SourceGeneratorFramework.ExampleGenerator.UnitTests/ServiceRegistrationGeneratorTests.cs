@@ -1,11 +1,36 @@
 using Purview.SourceGeneratorFramework.Examples;
 using Purview.SourceGeneratorFramework.Helpers;
 using Purview.SourceGeneratorFramework.Testing;
+using Purview.SourceGeneratorFramework.Testing.TUnit;
 
 namespace Purview.SourceGeneratorFramework.ExampleGenerator;
 
-public class ServiceRegistrationGeneratorTests
+public class ServiceRegistrationGeneratorTests : TUnitSourceGeneratorTestBase<ServiceRegistrationGenerator>
 {
+	[Test]
+	public async Task GenerateAsync_DefaultOptions_CapturesFrameworkLoggingThroughTUnitSink()
+	{
+		var result = await GenerateAsync("public sealed class UnrelatedType { }");
+
+		await Assert.That(result.LogEntries).IsNotEmpty();
+		await Assert
+			.That(
+				result.LogEntries.Any(entry => entry.Message.Contains("generation context", StringComparison.Ordinal))
+			)
+			.IsTrue();
+	}
+
+	[Test]
+	public async Task GenerateAsync_LoggingDisabled_DoesNotCaptureEntriesThroughTUnitSink()
+	{
+		var result = await GenerateAsync(
+			"public sealed class UnrelatedType { }",
+			new SourceGeneratorTestOptions { EnableLogging = false }
+		);
+
+		await Assert.That(result.LogEntries).IsEmpty();
+	}
+
 	[Test]
 	public async Task GenerateService_GeneratesServiceCollectionExtensions()
 	{
@@ -22,8 +47,7 @@ public class ServiceRegistrationGeneratorTests
 			}
 			""";
 
-		var runner = new SourceGeneratorTestRunner<ServiceRegistrationGenerator>();
-		var result = await runner.RunAsync(
+		var result = await GenerateAsync(
 			source,
 			new SourceGeneratorTestOptions
 			{
@@ -67,8 +91,7 @@ public class ServiceRegistrationGeneratorTests
 			}
 			""";
 
-		var runner = new SourceGeneratorTestRunner<ServiceRegistrationGenerator>();
-		var result = await runner.RunAsync(
+		var result = await GenerateAsync(
 			source,
 			new SourceGeneratorTestOptions
 			{
@@ -96,8 +119,7 @@ public class ServiceRegistrationGeneratorTests
 			}
 			""";
 
-		var runner = new SourceGeneratorTestRunner<ServiceRegistrationGenerator>();
-		var result = await runner.RunAsync(
+		var result = await GenerateAsync(
 			source,
 			new SourceGeneratorTestOptions
 			{
@@ -138,8 +160,7 @@ public class ServiceRegistrationGeneratorTests
 			}
 			""";
 
-		var runner = new SourceGeneratorTestRunner<ServiceRegistrationGenerator>();
-		var result = await runner.RunAsync(
+		var result = await GenerateAsync(
 			source,
 			new SourceGeneratorTestOptions
 			{

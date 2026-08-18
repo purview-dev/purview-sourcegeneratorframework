@@ -3,10 +3,11 @@ using System.Diagnostics.CodeAnalysis;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Purview.SourceGeneratorFramework.Testing;
+using Purview.SourceGeneratorFramework.Testing.TUnit;
 
 namespace Purview.SourceGeneratorFramework.Generators;
 
-public class AttributeDataModelGeneratorTests
+public class AttributeDataModelGeneratorTests : TUnitSourceGeneratorTestBase<AttributeDataModelGenerator>
 {
 	[Test]
 	public async Task Generate_RequiredAttributeData_DefaultNamedAndNestedModel(CancellationToken cancellationToken)
@@ -33,8 +34,14 @@ public class AttributeDataModelGeneratorTests
 			}
 			""";
 
-		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
-		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
+
+		await Assert.That(result.LogEntries).IsNotEmpty();
+		await Assert
+			.That(
+				result.LogEntries.Any(entry => entry.Message.Contains("generation context", StringComparison.Ordinal))
+			)
+			.IsTrue();
 
 		var generated = await GetGeneratedStringAsync(
 			result,
@@ -89,8 +96,7 @@ public class AttributeDataModelGeneratorTests
 			}
 			""";
 
-		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
-		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
 		var generated = await GetGeneratedStringAsync(
 			result,
@@ -133,8 +139,7 @@ public class AttributeDataModelGeneratorTests
 			}
 			""";
 
-		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
-		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
 		var generated = await GetGeneratedStringAsync(
 			result,
@@ -182,8 +187,7 @@ public class AttributeDataModelGeneratorTests
 			}
 			""";
 
-		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
-		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
 		var generated = await GetGeneratedStringAsync(
 			result,
@@ -221,8 +225,7 @@ public class AttributeDataModelGeneratorTests
 			}
 			""";
 
-		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
-		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
 		var generated = await GetGeneratedStringAsync(
 			result,
@@ -258,8 +261,7 @@ public class AttributeDataModelGeneratorTests
 			}
 			""";
 
-		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
-		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
 		var generated = await GetGeneratedStringAsync(
 			result,
@@ -293,8 +295,7 @@ public class AttributeDataModelGeneratorTests
 			}
 			""";
 
-		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
-		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
 		await Assert.That(result.Result.Diagnostics).Contains(d => d.Id == "ADM0004");
 	}
@@ -315,8 +316,7 @@ public class AttributeDataModelGeneratorTests
 			}
 			""";
 
-		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
-		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
 		var generated = await GetGeneratedStringAsync(
 			result,
@@ -347,8 +347,7 @@ public class AttributeDataModelGeneratorTests
 			}
 			""";
 
-		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
-		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
 		await Assert.That(result.Result.Diagnostics).Contains(d => d.Id == "ADM0007");
 	}
@@ -375,8 +374,7 @@ public class AttributeDataModelGeneratorTests
 			}
 			""";
 
-		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
-		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
 		var generated = await GetGeneratedStringAsync(
 			result,
@@ -418,8 +416,7 @@ public class AttributeDataModelGeneratorTests
 			}
 			""";
 
-		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
-		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
 		await Assert.That(result.Result.Diagnostics).Contains(d => d.Id == "ADM0005");
 	}
@@ -441,8 +438,7 @@ public class AttributeDataModelGeneratorTests
 			);
 			""";
 
-		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
-		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
 		var generated = await GetGeneratedStringAsync(
 			result,
@@ -474,8 +470,7 @@ public class AttributeDataModelGeneratorTests
 			}
 			""";
 
-		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
-		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
 		var generated = await GetGeneratedStringAsync(
 			result,
@@ -538,8 +533,8 @@ public class AttributeDataModelGeneratorTests
 			}
 			""";
 
-		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
-		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
+
 		result.AssertNoGenerationExceptions().AssertNoLogErrors();
 
 		var generated = await GetGeneratedStringAsync(
@@ -711,9 +706,12 @@ public class AttributeDataModelGeneratorTests
 			}
 			""";
 
-		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
-		var options = new SourceGeneratorTestOptions { CompileToAssembly = false };
-		var result = await runner.RunAsync(source, options, cancellationToken);
+		var result = await GenerateAsync(
+			source,
+			new SourceGeneratorTestOptions { CompileToAssembly = false },
+			cancellationToken: cancellationToken
+		);
+
 		result.AssertNoGenerationExceptions().AssertNoLogErrors();
 
 		var generated = await GetGeneratedStringAsync(
@@ -767,8 +765,7 @@ public class AttributeDataModelGeneratorTests
 			}
 			""";
 
-		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
-		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
 		var generated = await GetGeneratedStringAsync(
 			result,
@@ -804,8 +801,7 @@ public class AttributeDataModelGeneratorTests
 			}
 			""";
 
-		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
-		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
 		var generated = await GetGeneratedStringAsync(
 			result,
@@ -843,8 +839,7 @@ public class AttributeDataModelGeneratorTests
 			}
 			""";
 
-		var runner = new SourceGeneratorTestRunner<AttributeDataModelGenerator>();
-		var result = await runner.RunAsync(source, cancellationToken: cancellationToken);
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
 		var generated = await GetGeneratedStringAsync(
 			result,

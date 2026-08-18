@@ -14,6 +14,7 @@ public static class TypeValueObjectExpressionExtensions
 		if (string.IsNullOrWhiteSpace(memberName))
 			throw new ArgumentException("Member name cannot be null or whitespace.", nameof(memberName));
 
+		// The RenderFullName property already includes the global:: prefix and the namespace, so we can just append the member name.
 		return $"{type.RenderFullName}.{memberName}";
 	}
 }
