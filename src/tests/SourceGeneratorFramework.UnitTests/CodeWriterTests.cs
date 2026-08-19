@@ -951,6 +951,33 @@ public class CodeWriterTests
 	}
 
 	[Test]
+	public async Task WritePartialMethod_GivenPartialMethods_WritesDeclaration()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new MethodDeclarationOptions("CreateAsync", Type("Task").MakeGeneric(Type("T")))
+		{
+			Accessibility = TypeDeclarationAccessibility.Public,
+			IsAsync = true,
+			IsPartial = true,
+			Parameters = [new("value", Type("T")), new("cancellationToken", Type("CancellationToken"))],
+			GenericTypes = [new GenericTypeParameterOptions("T") { Constraints = ["class"] }],
+		};
+
+		// Act
+		writer.WritePartialMethod(declaration);
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				GeneratedAttributes()
+					+ "async partial Task<T> CreateAsync<T>(T value, CancellationToken cancellationToken)\n"
+					+ "where T : class;\n"
+			);
+	}
+
+	[Test]
 	public async Task StructuredDeclarations_GivenAttributes_WritesTypeMemberReturnAndParameterAttributes()
 	{
 		// Arrange

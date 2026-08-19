@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Text;
 
 namespace Purview.SourceGeneratorFramework;
@@ -276,12 +277,11 @@ public static class XmlCommentWriter
 		{
 			if (content is null || content.Length == 0)
 				return writer;
+
 			if (!supportsMultiLine)
 			{
 				if (content.Length > 1)
-				{
 					throw new ArgumentException("Multiple lines are not supported for this XML tag.", nameof(content));
-				}
 			}
 
 			endTag ??= startTag;
@@ -378,7 +378,7 @@ public static class XmlCommentWriter
 			return builder.ToString();
 		}
 
-		/// <summary> Returns an inline XML reference to a type or member.</summary>
+		/// <summary>Returns an inline XML reference to a type or member.</summary>
 		public static string XmlSee(string cref, string? description = null)
 		{
 			if (string.IsNullOrWhiteSpace(cref))
@@ -387,8 +387,11 @@ public static class XmlCommentWriter
 			//	If no description is provided, return a self-closing <see /> tag. Otherwise, return a <see> block with the provided description.
 			return string.IsNullOrWhiteSpace(description)
 				? BuildSelfClosingXmlTag("see", ("cref", cref))
-				: BuildXmlTag("see", ("cref", cref)) + XmlText(description!) + "</see>";
+				: BuildXmlTag("see", ("cref", cref)) + description + "</see>";
 		}
+
+		/// <summary>Returns an inline XML &lt;para&gt; element containing the provided content.</summary>
+		public static string XmlInlinePara(params string[] content) => XmlCore("para", content, false);
 
 		/// <summary>Returns an inline XML reference to a parameter.</summary>
 		public static string XmlParamRef(string parameterName) =>
@@ -399,7 +402,10 @@ public static class XmlCommentWriter
 			BuildSelfClosingXmlTag("typeparamref", ("name", typeParameterName));
 
 		/// <summary>Returns inline code suitable for use in the middle of documentation text.</summary>
-		public static string XmlInlineCode(string content) => $"<c>{XmlText(content)}</c>";
+		public static string XmlInlineCode(string content) => $"<c>{content}</c>";
+
+		/// <summary>Returns inline code suitable for use in the middle of documentation text.</summary>
+		public static string XmlInlineCodeBlock(params string[] content) => XmlCore("code", content, false);
 
 		/// <summary>Escapes plain text for safe composition with XML documentation elements.</summary>
 		public static string XmlText(string content) =>
@@ -409,34 +415,50 @@ public static class XmlCommentWriter
 		public static string XmlLineBreak() => "<br />";
 
 		/// <summary>Returns an XML list item containing a description.</summary>
-		public static string XmlListItem(string description) => $"<item>{XmlText(description)}</item>";
+		public static string XmlListItem(string description) => $"<item>{description}</item>";
 
 		/// <summary>Returns an XML list item containing a term and its description.</summary>
 		public static string XmlListItem(string term, string description) =>
-			$"<item><term>{XmlText(term)}</term><description>{XmlText(description)}</description></item>";
+			$"<item><term>{term}</term><description>{description}</description></item>";
 
 		/// <summary>Returns an XML list header containing a term and its description.</summary>
 		public static string XmlListHeader(string term, string description) =>
-			$"<listheader><term>{XmlText(term)}</term><description>{XmlText(description)}</description></listheader>";
+			$"<listheader><term>{term}</term><description>{description}</description></listheader>";
 
 		/// <summary>Returns an XML list header containing a term and its description.</summary>
-		public static string XmlListHeader(string description) => $"<listheader>{XmlText(description)}</listheader>";
+		public static string XmlListHeader(string description) => $"<listheader>{description}</listheader>";
 
 		/// <summary>Returns an XML list term.</summary>
-		public static string XmlTerm(string content) => $"<term>{XmlText(content)}</term>";
+		public static string XmlTerm(string content) => $"<term>{content}</term>";
 
 		/// <summary>Returns an XML list description.</summary>
-		public static string XmlDescription(string content) => $"<description>{XmlText(content)}</description>";
+		public static string XmlDescription(string content) => $"<description>{content}</description>";
 
 		/// <summary>Returns an arbitrary inline XML element.</summary>
-		public static string XmlInlineElement(string tag, string content) =>
-			BuildXmlTag(tag) + XmlText(content) + $"</{tag}>";
+		public static string XmlInlineElement(string tag, string content) => BuildXmlTag(tag) + content + $"</{tag}>";
 
 		/// <summary>Returns a self-closing XML element with optional attributes.</summary>
 		public static string BuildSelfClosingXmlTag(string tag, params (string Name, object Value)[]? attributes)
 		{
 			var openTag = BuildXmlTag(tag, attributes);
 			return openTag.Remove(openTag.Length - 1) + " />";
+		}
+
+		static string XmlCore(string bareStartTag, string[] content, bool allowSingleLine) =>
+			XmlCore($"<{bareStartTag}>", $"</{bareStartTag}>", content, allowSingleLine);
+
+		[DebuggerStepThrough]
+		static string XmlCore(string tagStart, string tagEnd, string[] content, bool allowSingleLine)
+		{
+			if (content is null || content.Length == 0)
+				throw new ArgumentException("The XML content cannot be null or empty.", nameof(content));
+
+			// If the content is a single line and single-line formatting is allowed, return a compact representation. Otherwise, return a multi-line representation.
+			return allowSingleLine && content.Length == 1
+				? $"{tagStart}{content[0]}{tagEnd}"
+				// Remember the first line with implicitly have  the `///` prefix from the CodeWriter, so
+				// it's only line that doesn't need the prefix. All subsequent lines will have the prefix added.
+				: $"{tagStart}\n/// {string.Join("\n/// ", content)}\n/// {tagEnd}";
 		}
 
 		static string EscapeXml(string value) =>

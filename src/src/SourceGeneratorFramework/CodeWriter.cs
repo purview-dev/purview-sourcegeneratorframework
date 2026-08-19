@@ -438,6 +438,7 @@ public sealed class CodeWriter
 	{
 		if (declaration.ReturnType.IsEmpty)
 			return default;
+
 		ValidateMethodDeclaration(declaration);
 		BeginWrittenItem(WrittenItemKind.Method);
 		if (declaration.IncludeGeneratedAttributes ?? DefaultIncludeGeneratedAttributes)
@@ -463,6 +464,14 @@ public sealed class CodeWriter
 			NewLine();
 		WriteMethodGenericConstraints(declaration.GenericTypes);
 
+		if (declaration.IsPartial)
+		{
+			Write(';').NewLine();
+
+			CompleteWrittenItem(WrittenItemKind.Method, _indentLevel);
+			return default;
+		}
+
 		if (declaration.ExpressionBody is not null)
 		{
 			Write(" => ").Write(declaration.ExpressionBody).WriteLine(";");
@@ -480,6 +489,10 @@ public sealed class CodeWriter
 		NewLine();
 		return OpenBlockScope(WrittenItemKind.Method);
 	}
+
+	/// <summary>Writes a structured partial method declaration.</summary>
+	public CodeWriter WritePartialMethod(MethodDeclarationOptions declaration) =>
+		WriteMethod(declaration with { IsPartial = true, Accessibility = null }, _ => { });
 
 	/// <summary>Writes a structured method and invokes a callback for its body.</summary>
 	public CodeWriter WriteMethod(MethodDeclarationOptions declaration, Action<CodeWriter> writeBody)

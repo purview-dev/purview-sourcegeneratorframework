@@ -77,16 +77,23 @@ public sealed record class DriverRunResult(
 		if (string.IsNullOrWhiteSpace(hintName))
 			throw new ArgumentException("Value cannot be null or whitespace.", nameof(hintName));
 
-		var postSuffix =
-			matchMode == HintNameMatchMode.Suffix && !hintName.EndsWith(".cs", StringComparison.Ordinal)
-				? ".cs"
-				: string.Empty;
-
+		var hasExtension = hintName.EndsWith(".cs", StringComparison.Ordinal);
 		var predicate = matchMode switch
 		{
 			HintNameMatchMode.Suffix => new Func<string, bool>(s =>
-				s.EndsWith(hintName + postSuffix, StringComparison.Ordinal)
-			),
+			{
+				if (!hasExtension)
+				{
+					var postSuffix = ".cs";
+					if (
+						s.EndsWith(hintName + postSuffix, StringComparison.Ordinal)
+						|| s.EndsWith(hintName + ".g" + postSuffix, StringComparison.Ordinal)
+					)
+						return true;
+				}
+
+				return s.EndsWith(hintName, StringComparison.Ordinal);
+			}),
 			HintNameMatchMode.Partial => new Func<string, bool>(s => s.Contains(hintName, StringComparison.Ordinal)),
 			HintNameMatchMode.Exact => new Func<string, bool>(s => s.Equals(hintName, StringComparison.Ordinal)),
 			_ => throw new ArgumentOutOfRangeException(nameof(matchMode), matchMode, "Invalid match mode."),
