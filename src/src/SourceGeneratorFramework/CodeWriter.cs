@@ -1491,11 +1491,11 @@ public sealed class CodeWriter
 	/// <param name="writeArgumentsOnSeparateLines">Whether to force one argument per line.</param>
 	/// <returns>The current writer.</returns>
 	/// <example><code>writer.WriteMethodCall("Copy", [
-	/// 	new("source", Type("Buffer")),
-	/// 	new("destination", Type("Buffer")) { Modifier = ParameterModifier.Out }]);</code></example>
+	/// 	new("source"),
+	/// 	new("destination") { Modifier = ParameterModifier.Out }]);</code></example>
 	public CodeWriter WriteMethodCall(
 		string methodName,
-		IEnumerable<ParameterDeclarationOptions> arguments,
+		IEnumerable<MethodCallArgumentOptions> arguments,
 		string? receiver = null,
 		IEnumerable<TypeReferenceOptions>? genericArguments = null,
 		bool writeArgumentsOnSeparateLines = false
@@ -1514,10 +1514,10 @@ public sealed class CodeWriter
 	/// <param name="genericArguments">Optional generic type arguments.</param>
 	/// <param name="writeArgumentsOnSeparateLines">Whether to force one argument per line.</param>
 	/// <returns>The current writer.</returns>
-	/// <example><code>writer.WriteAwaitedMethodCall("LoadAsync", [new("token", Type("CancellationToken"))], "service");</code></example>
+	/// <example><code>writer.WriteAwaitedMethodCall("LoadAsync", [new("token")], "service");</code></example>
 	public CodeWriter WriteAwaitedMethodCall(
 		string methodName,
-		IEnumerable<ParameterDeclarationOptions> arguments,
+		IEnumerable<MethodCallArgumentOptions> arguments,
 		string? receiver = null,
 		IEnumerable<TypeReferenceOptions>? genericArguments = null,
 		bool writeArgumentsOnSeparateLines = false
@@ -2029,9 +2029,11 @@ public sealed class CodeWriter
 
 	static TypeReferenceOptions GetParameterType(ParameterDeclarationOptions parameter) => parameter.Type;
 
-	static string RenderCallArgument(ParameterDeclarationOptions argument)
+	static string RenderCallArgument(MethodCallArgumentOptions argument)
 	{
-		ValidateRequired(argument.Name, "Argument name", nameof(argument));
+		ValidateRequired(argument.Value, "Argument value", nameof(argument));
+		if (argument.Name is not null)
+			ValidateRequired(argument.Name, "Argument name", nameof(argument));
 		return (
 			argument.Modifier switch
 			{
@@ -2042,7 +2044,7 @@ public sealed class CodeWriter
 				ParameterModifier.RefReadOnly => "ref readonly ",
 				_ => throw new ArgumentOutOfRangeException(nameof(argument)),
 			}
-		) + argument.Name;
+		) + (argument.Name is null ? string.Empty : argument.Name + ": ") + argument.Value;
 	}
 
 	void WriteAttributes(ImmutableArray<AttributeDeclarationOptions> attributes, string? defaultTarget = null)

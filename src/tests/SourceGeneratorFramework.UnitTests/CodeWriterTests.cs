@@ -1617,10 +1617,10 @@ public class CodeWriterTests
 
 		writer.WriteAwaitedMethodCall(
 			"LoadAsync",
-			new ParameterDeclarationOptions[]
+			new MethodCallArgumentOptions[]
 			{
-				new("token", Type("CancellationToken")),
-				new("result", Type("Result")) { Modifier = ParameterModifier.Out },
+				new("token"),
+				new("result") { Modifier = ParameterModifier.Out },
 			},
 			receiver: "service",
 			writeArgumentsOnSeparateLines: true
@@ -1662,10 +1662,10 @@ public class CodeWriterTests
 
 		writer.WriteMethodCall(
 			"AMethodCallWithLotsOfParams",
-			new ParameterDeclarationOptions[]
+			new MethodCallArgumentOptions[]
 			{
-				new("a-long-a-param", Type("string")) { Modifier = ParameterModifier.Ref },
-				new("another-long-param", Type("string")) { Modifier = ParameterModifier.Out },
+				new("a-long-a-param") { Modifier = ParameterModifier.Ref },
+				new("another-long-param") { Modifier = ParameterModifier.Out },
 			},
 			writeArgumentsOnSeparateLines: true
 		);
@@ -1677,6 +1677,19 @@ public class CodeWriterTests
 					+ "\tref a-long-a-param,\n"
 					+ "\tout another-long-param);\n"
 			);
+	}
+
+	[Test]
+	public async Task WriteMethodCall_WithStructuredArgument_WritesNamedArgument()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.WriteMethodCall(
+			"Configure",
+			new MethodCallArgumentOptions[] { new("value") { Name = "option" } }
+		);
+
+		await Assert.That(writer.ToString()).IsEqualTo("Configure(option: value);\n");
 	}
 
 	[Test]
