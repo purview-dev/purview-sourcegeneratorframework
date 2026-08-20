@@ -52,6 +52,12 @@ public readonly record struct TypeReferenceOptions
 	public string Name { get; }
 
 	/// <summary>
+	/// Gets the fully qualified type name without generic arguments, array ranks, or pointer/nullable suffixes.
+	/// </summary>
+	/// <remarks>This is a direct call through to <see cref="TypeValueObject.TypeName"/>.</remarks>
+	public string TypeName => TypeValue.TypeName;
+
+	/// <summary>
 	/// Gets the required semantic type value represented by this reference.
 	/// </summary>
 	/// <remarks>
@@ -194,7 +200,8 @@ public readonly record struct TypeReferenceOptions
 		if (type.IsPointer)
 			return CreateFromRuntimeType(type.GetElementType()).MakePointer();
 
-		return new TypeReferenceOptions(new TypeValueObject(type));
+		// Handle generic type definitions and constructed generic types
+		return new(new TypeValueObject(type));
 	}
 
 	static TypeReferenceOptions CreateFromSymbol(ITypeSymbol type)
@@ -221,9 +228,7 @@ public readonly record struct TypeReferenceOptions
 	}
 
 	static string RenderBaseTypeName(TypeValueObject type) =>
-		type.SpecialType != SpecialType.None
-			? type.Keyword!
-			: type.IsGlobalNamespace
-				? type.TypeName
-				: $"global::{type.Namespace}.{type.TypeName}";
+		type.SpecialType != SpecialType.None ? type.Keyword!
+		: type.IsGlobalNamespace ? type.TypeName
+		: $"global::{type.Namespace}.{type.TypeName}";
 }

@@ -567,7 +567,11 @@ public sealed class CodeWriter
 				nameof(declaration)
 			);
 
-		using (WriteMethodScope(declaration with { ExpressionBody = string.Empty }, writeExpression)) { }
+		using (WriteMethodScope(declaration with { ExpressionBody = string.Empty }, writeExpression))
+		{
+			//
+		}
+
 		return this;
 	}
 
@@ -883,9 +887,7 @@ public sealed class CodeWriter
 		if (targets == 0 || (targets & ~AttributeTargets.All) != 0)
 			throw new ArgumentOutOfRangeException(nameof(targets), targets, "Invalid attribute targets.");
 
-		AttributeDeclarationOptions attributeUsage = new(
-			new TypeValueObject("AttributeUsageAttribute", "System")
-		)
+		AttributeDeclarationOptions attributeUsage = new(new TypeValueObject("AttributeUsageAttribute", "System"))
 		{
 			Arguments =
 			[
@@ -1720,8 +1722,10 @@ public sealed class CodeWriter
 		var callback = expressionWriter;
 		if (callback is not null)
 		{
-			var expressionWriterBuffer = new CodeWriter(GeneratorName, GeneratorVersion);
-			expressionWriterBuffer.DefaultIncludeGeneratedAttributes = DefaultIncludeGeneratedAttributes;
+			var expressionWriterBuffer = new CodeWriter(GeneratorName, GeneratorVersion)
+			{
+				DefaultIncludeGeneratedAttributes = DefaultIncludeGeneratedAttributes,
+			};
 			callback!(expressionWriterBuffer);
 			expression = expressionWriterBuffer.ToString().TrimEnd(NewLineCharacter);
 		}

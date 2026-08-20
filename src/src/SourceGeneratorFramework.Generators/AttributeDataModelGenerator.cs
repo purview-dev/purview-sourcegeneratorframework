@@ -82,7 +82,11 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 		using (target.IsRecord ? writer.WriteRecordStructScope(options) : writer.WriteStructScope(options))
 		{
 			writer.WriteProperty(
-				new("Exists", TypeReference("bool")) { Accessibility = TypeDeclarationAccessibility.Public, HasSetter = false }
+				new("Exists", TypeReference("bool"))
+				{
+					Accessibility = TypeDeclarationAccessibility.Public,
+					HasSetter = false,
+				}
 			);
 
 			foreach (var property in target.Properties)
@@ -254,9 +258,9 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 			IsStatic = true,
 			Parameters =
 			[
-					new(
+				new(
 					"attributes",
-						TypeReference(
+					TypeReference(
 						"global::System.Collections.Immutable.ImmutableArray<global::Microsoft.CodeAnalysis.AttributeData>"
 					)
 				),
@@ -303,13 +307,13 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 			IsStatic = true,
 			Parameters =
 			[
-					new(
+				new(
 					"attributes",
-						TypeReference(
+					TypeReference(
 						"global::System.Collections.Immutable.ImmutableArray<global::Microsoft.CodeAnalysis.AttributeData>"
 					)
 				),
-				new("attribute", TypeReference("global::Microsoft.CodeAnalysis.AttributeData?") )
+				new("attribute", TypeReference("global::Microsoft.CodeAnalysis.AttributeData?"))
 				{
 					Modifier = ParameterModifier.Out,
 				},
@@ -346,11 +350,11 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 	static void WriteFromAttributeDataSymbolWithOutMethod(CodeWriter writer, AttributeDataModelTarget target)
 	{
 		writer.WriteMethod(
-				new MethodDeclarationOptions("FromAttributeData", TypeReference(target.StructName))
-				{
-					Accessibility = TypeDeclarationAccessibility.Public,
-					IsStatic = true,
-					Parameters =
+			new MethodDeclarationOptions("FromAttributeData", TypeReference(target.StructName))
+			{
+				Accessibility = TypeDeclarationAccessibility.Public,
+				IsStatic = true,
+				Parameters =
 				[
 					new("symbol", TypeReference("global::Microsoft.CodeAnalysis.ISymbol")),
 					new("attribute", TypeReference("global::Microsoft.CodeAnalysis.AttributeData?"))
@@ -358,7 +362,7 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 						Modifier = ParameterModifier.Out,
 					},
 				],
-				},
+			},
 			body => body.WriteLine("return FromAttributeData(symbol.GetAttributes(), out attribute);")
 		);
 	}

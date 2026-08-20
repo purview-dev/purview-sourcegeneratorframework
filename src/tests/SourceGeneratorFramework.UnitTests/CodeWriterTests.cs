@@ -32,9 +32,7 @@ public class CodeWriterTests
 	[Arguments("   ")]
 	public async Task TypeReferenceOptions_GivenMissingName_Throws(string? name)
 	{
-		await Assert
-			.That(() => new TypeReferenceOptions(new TypeValueObject(name!, null)))
-			.Throws<ArgumentException>();
+		await Assert.That(() => new TypeReferenceOptions(new TypeValueObject(name!, null))).Throws<ArgumentException>();
 	}
 
 	[Test]
@@ -690,11 +688,15 @@ public class CodeWriterTests
 		var writer = CodeWriterFactory.ForTests();
 
 		// Act
-		writer.WriteAttributeClass(new TypeDeclarationOptions("RegistryAttribute")
-		{
-			Accessibility = TypeDeclarationAccessibility.Public,
-			IsPartial = false,
-		}, AttributeTargets.Class, body => body.WriteLine("public string? Name { get; init; }"));
+		writer.WriteAttributeClass(
+			new TypeDeclarationOptions("RegistryAttribute")
+			{
+				Accessibility = TypeDeclarationAccessibility.Public,
+				IsPartial = false,
+			},
+			AttributeTargets.Class,
+			body => body.WriteLine("public string? Name { get; init; }")
+		);
 
 		// Assert
 		await Assert
@@ -717,13 +719,19 @@ public class CodeWriterTests
 		var writer = CodeWriterFactory.ForTests();
 
 		// Act
-		writer.WriteAttributeClass(new TypeDeclarationOptions("KnownTypeAttribute")
-		{
-			Accessibility = TypeDeclarationAccessibility.Internal,
-			IsPartial = false,
-			BaseType = Type("CustomAttributeBase"),
-			Attributes = [new(new TypeValueObject("Obsolete", null))],
-		}, AttributeTargets.Class | AttributeTargets.Property, _ => { }, inherited: true, allowMultiple: true);
+		writer.WriteAttributeClass(
+			new TypeDeclarationOptions("KnownTypeAttribute")
+			{
+				Accessibility = TypeDeclarationAccessibility.Internal,
+				IsPartial = false,
+				BaseType = Type("CustomAttributeBase"),
+				Attributes = [new(new TypeValueObject("Obsolete", null))],
+			},
+			AttributeTargets.Class | AttributeTargets.Property,
+			_ => { },
+			inherited: true,
+			allowMultiple: true
+		);
 
 		// Assert
 		await Assert
@@ -998,13 +1006,7 @@ public class CodeWriterTests
 				new("value", Type("string").Nullable())
 				{
 					Modifier = ParameterModifier.Out,
-					Attributes =
-					[
-						new(new TypeValueObject("NotNullWhen", null))
-						{
-							Arguments = [new(true)],
-						},
-					],
+					Attributes = [new(new TypeValueObject("NotNullWhen", null)) { Arguments = [new(true)] }],
 				},
 			],
 		};
@@ -1041,10 +1043,7 @@ public class CodeWriterTests
 			.Nullable();
 
 		writer.WriteClass(
-			new TypeDeclarationOptions("C")
-			{
-				Attributes = [new AttributeDeclarationOptions(attributeType)],
-			},
+			new TypeDeclarationOptions("C") { Attributes = [new AttributeDeclarationOptions(attributeType)] },
 			_ => { }
 		);
 
@@ -1208,10 +1207,7 @@ public class CodeWriterTests
 		{
 			Parameters =
 			[
-				new ParameterDeclarationOptions("value", Type("Widget").Nullable())
-				{
-					DefaultValue = "null",
-				},
+				new ParameterDeclarationOptions("value", Type("Widget").Nullable()) { DefaultValue = "null" },
 			],
 			ExpressionBody = "Consume(value)",
 		};

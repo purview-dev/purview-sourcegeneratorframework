@@ -193,7 +193,10 @@ static class ServiceRegistrationEmitter
 						inner =>
 						{
 							inner.WriteProperty(
-								new PropertyDeclarationOptions("Name", TypeValueObject.Create<string>().AsTypeReference())
+								new PropertyDeclarationOptions(
+									"Name",
+									TypeValueObject.Create<string>().AsTypeReference()
+								)
 								{
 									Accessibility = TypeDeclarationAccessibility.Public,
 									IsStatic = true,
@@ -202,7 +205,10 @@ static class ServiceRegistrationEmitter
 							);
 
 							inner.WriteProperty(
-								new PropertyDeclarationOptions("Lifetime", TypeValueObject.Create<string>().AsTypeReference())
+								new PropertyDeclarationOptions(
+									"Lifetime",
+									TypeValueObject.Create<string>().AsTypeReference()
+								)
 								{
 									Accessibility = TypeDeclarationAccessibility.Public,
 									IsStatic = true,

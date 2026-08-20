@@ -95,10 +95,10 @@ public partial class TypeValueObjectTests
 	{
 		var reference = new TypeReferenceOptions(typeof(Dictionary<string, int>[]));
 
+		await Assert.That(reference.Name).IsEqualTo("global::System.Collections.Generic.Dictionary");
 		await Assert
-			.That(reference.Name)
-			.IsEqualTo("global::System.Collections.Generic.Dictionary");
-		await Assert.That(reference.GenericArguments.Select(static argument => argument.RenderTypeName)).IsEquivalentTo(["string", "int"]);
+			.That(reference.GenericArguments.Select(static argument => argument.RenderTypeName))
+			.IsEquivalentTo(["string", "int"]);
 		await Assert.That(reference.ArrayRanks).IsEquivalentTo([1]);
 		await Assert.That(reference.TypeValue).IsNotEqualTo(TypeValueObject.Empty);
 	}
