@@ -249,6 +249,16 @@ public class TypeHelpersTests
 	}
 
 	[Test]
+	public async Task IsArray_Array_ReturnsTrue()
+	{
+		var source = "using System; public class MyClass { public int[] Items; }";
+		var symbol = await GetTypeSymbolAsync(source, "MyClass");
+		var fieldSymbol = symbol.GetMembers("Items").OfType<IFieldSymbol>().First();
+
+		await Assert.That(TypeHelpers.IsArray(fieldSymbol.Type)).IsTrue();
+	}
+
+	[Test]
 	public async Task TryGetElementType_List_ReturnsIntElement()
 	{
 		var source = "using System.Collections.Generic; public class MyClass { public List<int> Items; }";

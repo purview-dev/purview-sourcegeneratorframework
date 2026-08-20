@@ -441,10 +441,13 @@ public sealed class CodeWriter
 
 		ValidateMethodDeclaration(declaration);
 		BeginWrittenItem(WrittenItemKind.Method);
+
 		if (declaration.IncludeGeneratedAttributes ?? DefaultIncludeGeneratedAttributes)
 			WriteGeneratedAttributes(includeCoverageExclusion: true, includeEmbeddedAttribute: false);
+
 		WriteAttributes(declaration.Attributes);
 		WriteAttributes(declaration.ReturnAttributes, defaultTarget: "return");
+
 		WriteMemberModifiers(
 			declaration.Accessibility,
 			declaration.IsStatic,
@@ -453,15 +456,18 @@ public sealed class CodeWriter
 			declaration.IsOverride,
 			declaration.IsSealed
 		);
+
 		WriteIf(declaration.IsAsync, "async ").WriteIf(declaration.IsUnsafe, "unsafe ");
 		WriteIf(declaration.IsPartial, "partial ")
 			.WriteTypeReference(declaration.ReturnType)
 			.Write(' ')
 			.Write(declaration.Name);
+
 		WriteGenericTypeParameters(declaration.GenericTypes);
 		WriteParametersWithHeuristic(declaration.Parameters);
 		if (HasGenericConstraints(declaration.GenericTypes))
 			NewLine();
+
 		WriteMethodGenericConstraints(declaration.GenericTypes);
 
 		if (declaration.IsPartial)
@@ -494,18 +500,37 @@ public sealed class CodeWriter
 	public CodeWriter WritePartialMethod(MethodDeclarationOptions declaration) =>
 		WriteMethod(declaration with { IsPartial = true, Accessibility = null }, _ => { });
 
+	/// <summary>Writes a structured partial method declaration.</summary>
+	public CodeWriter WriteMethodExpression(MethodDeclarationOptions declaration)
+	{
+		if (string.IsNullOrWhiteSpace(declaration.ExpressionBody))
+		{
+			throw new ArgumentException(
+				"An expression-bodied method must have a non-empty expression body.",
+				nameof(declaration)
+			);
+		}
+
+		// The method is not abstract, so we can use the WriteMethod overload that takes a body callback.
+		return WriteMethod(declaration, _ => { });
+	}
+
 	/// <summary>Writes a structured method and invokes a callback for its body.</summary>
 	public CodeWriter WriteMethod(MethodDeclarationOptions declaration, Action<CodeWriter> writeBody)
 	{
 		if (writeBody is null)
 			throw new ArgumentNullException(nameof(writeBody));
 		if (declaration.IsAbstract || declaration.ExpressionBody is not null)
+		{
 			throw new ArgumentException(
 				"A callback body cannot be supplied for an abstract or expression-bodied method.",
 				nameof(declaration)
 			);
+		}
+
 		using (WriteMethodScope(declaration))
 			writeBody(this);
+
 		return this;
 	}
 
@@ -1274,6 +1299,28 @@ public sealed class CodeWriter
 		}
 
 		return Unindent();
+	}
+
+	/// <summary>
+	/// Writes an if statement with a block body and invokes a callback for the body.
+	/// </summary>
+	/// <param name="condition">The condition of the if statement.</param>
+	/// <param name="bodyWriter">The action to invoke for the body of the if statement.</param>
+	/// <returns>The current writer.</returns>
+	/// <exception cref="ArgumentException">Thrown if the condition is null or whitespace.</exception>
+	/// <exception cref="ArgumentNullException">Thrown if the bodyWriter is null.</exception>
+	public CodeWriter WriteIfBlock(string condition, Action<CodeWriter> bodyWriter)
+	{
+		if (string.IsNullOrWhiteSpace(condition))
+			throw new ArgumentException("Condition cannot be null or whitespace.", nameof(condition));
+		if (bodyWriter is null)
+			throw new ArgumentNullException(nameof(bodyWriter));
+
+		Write("if (").Write(condition).WriteLine(")");
+		using (OpenBlockScope())
+			bodyWriter(this);
+
+		return this;
 	}
 
 	/// <summary>

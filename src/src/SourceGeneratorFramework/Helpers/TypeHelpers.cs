@@ -412,6 +412,17 @@ public static class TypeHelpers
 	const string GenericIEnumerableName = "global::System.Collections.Generic.IEnumerable<T>";
 
 	/// <summary>
+	/// Determines whether the type is an array type.
+	/// </summary>
+	/// <param name="typeSymbol">The type symbol to check.</param>
+	/// <returns>True if the type is an array; otherwise, false.</returns>
+	/// <exception cref="ArgumentNullException">Thrown if <paramref name="typeSymbol"/> is null.</exception>
+	public static bool IsArray(ITypeSymbol typeSymbol) =>
+		typeSymbol == null
+			? throw new ArgumentNullException(nameof(typeSymbol))
+			: typeSymbol.TypeKind == TypeKind.Array;
+
+	/// <summary>
 	/// Determines whether the type is a collection-like type (implements <see cref="System.Collections.IEnumerable"/> or <see cref="IEnumerable{T}"/>).
 	/// </summary>
 	public static bool IsCollectionLike(ITypeSymbol typeSymbol)
