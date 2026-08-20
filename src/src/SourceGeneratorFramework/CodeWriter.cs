@@ -123,6 +123,7 @@ public sealed class CodeWriter
 	/// Increases the current indentation level.
 	/// </summary>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.Indent().WriteLine("value");</code></example>
 	public CodeWriter Indent()
 	{
 		_indentLevel++;
@@ -136,6 +137,7 @@ public sealed class CodeWriter
 	/// <exception cref="InvalidOperationException">
 	/// The current indentation level is zero.
 	/// </exception>
+	/// <example><code>writer.Indent().WriteLine("value").Unindent();</code></example>
 	public CodeWriter Unindent()
 	{
 		if (_indentLevel == 0)
@@ -149,6 +151,7 @@ public sealed class CodeWriter
 	/// Appends a deterministic line-feed character.
 	/// </summary>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.Write("first").NewLine().Write("second");</code></example>
 	public CodeWriter NewLine()
 	{
 		_builder.Append(NewLineCharacter);
@@ -160,6 +163,7 @@ public sealed class CodeWriter
 	/// Moves to the start of a new line if content exists on the current line.
 	/// </summary>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.Write("value").EnsureNewLine();</code></example>
 	public CodeWriter EnsureNewLine()
 	{
 		return _atLineStart ? this : NewLine();
@@ -170,6 +174,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="value">The value to write, or <see langword="null"/> to write an empty line.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteLine("return value;");</code></example>
 	public CodeWriter WriteLine(string? value = null)
 	{
 		if (value is null)
@@ -187,6 +192,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="comments">The comment lines.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.Comment("Generated member", "Do not edit.");</code></example>
 	public CodeWriter Comment(params string[] comments)
 	{
 		if (comments is null || comments.Length == 0)
@@ -206,6 +212,7 @@ public sealed class CodeWriter
 	/// Writes the current indentation without writing content.
 	/// </summary>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.Indent().WriteIndent().Write("value");</code></example>
 	public CodeWriter WriteIndent()
 	{
 		if (_indentLevel != 0)
@@ -220,6 +227,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="value">The value to write.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.Write("int value = 1;");</code></example>
 	public CodeWriter Write(string? value)
 	{
 		if (string.IsNullOrEmpty(value))
@@ -235,6 +243,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="value">The character to write.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.Write('{');</code></example>
 	public CodeWriter Write(char value)
 	{
 		WriteIndentIfRequired();
@@ -247,6 +256,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="value">The value to write.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.Append("int value = 1;");</code></example>
 	public CodeWriter Append(string? value) => Write(value);
 
 	/// <summary>
@@ -254,6 +264,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="value">The value to write, or <see langword="null"/> for an empty line.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.AppendLine("return value;");</code></example>
 	public CodeWriter AppendLine(string? value = null) => WriteLine(value);
 
 	/// <summary>
@@ -262,6 +273,7 @@ public sealed class CodeWriter
 	/// <param name="condition">Whether to write the value.</param>
 	/// <param name="value">The value to write.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteIf(includeValue, "value");</code></example>
 	public CodeWriter WriteIf(bool condition, string? value) => condition ? Write(value) : this;
 
 	/// <summary>
@@ -270,6 +282,7 @@ public sealed class CodeWriter
 	/// <param name="condition">Whether to write the line.</param>
 	/// <param name="value">The value to write.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteLineIf(includeValue, "value");</code></example>
 	public CodeWriter WriteLineIf(bool condition, string? value) => condition ? WriteLine(value) : this;
 
 	/// <summary>
@@ -278,6 +291,7 @@ public sealed class CodeWriter
 	/// <param name="value">The value to quote.</param>
 	/// <returns>The current writer.</returns>
 	/// <remarks>This method does not escape characters contained in <paramref name="value"/>.</remarks>
+	/// <example><code>writer.Quote("value"); // "value"</code></example>
 	public CodeWriter Quote(string? value = null)
 	{
 		Write('"');
@@ -290,6 +304,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="value">The value to quote.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.QuoteLine("value"); // "value"</code></example>
 	public CodeWriter QuoteLine(string? value = null) => Quote(value).NewLine();
 
 	/// <summary>
@@ -297,9 +312,15 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="header">Optional content written before the opening brace.</param>
 	/// <returns>A scope that restores indentation and writes the closing token.</returns>
+	/// <example><code>using (writer.OpenBlockScope("if (enabled)")) writer.WriteLine("Run();");
+/// // if (enabled)
+/// // {
+/// // 	Run();
+/// // }</code></example>
 	public BlockScope OpenBlockScope(string? header = null) => OpenDelimitedBlockScope(header, "{", "}");
 
 	/// <summary>Writes a complete block and invokes a callback for its body.</summary>
+	/// <example><code>writer.OpenBlock("if (enabled)", body =&gt; body.WriteLine("Run();"));</code></example>
 	public CodeWriter OpenBlock(string? header, Action<CodeWriter> bodyWriter)
 	{
 		if (bodyWriter is null)
@@ -318,6 +339,11 @@ public sealed class CodeWriter
 	/// <param name="openingToken">The opening token, or <see langword="null"/> for none.</param>
 	/// <param name="closingToken">The closing token, or <see langword="null"/> for none.</param>
 	/// <returns>A scope that restores indentation and writes the closing token.</returns>
+	/// <example><code>using (writer.OpenDelimitedBlockScope("items", "(", ");")) writer.WriteLine("value");
+/// // items
+/// // (
+/// // 	value
+/// // );</code></example>
 	public BlockScope OpenDelimitedBlockScope(string? header, string? openingToken, string? closingToken)
 	{
 		if (header is not null)
@@ -334,6 +360,7 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Writes a complete explicitly delimited block and invokes a callback for its body.</summary>
+	/// <example><code>writer.OpenDelimitedBlock("items", "(", ");", body =&gt; body.WriteLine("value"));</code></example>
 	public CodeWriter OpenDelimitedBlock(
 		string? header,
 		string? openingToken,
@@ -356,6 +383,8 @@ public sealed class CodeWriter
 	/// <param name="openingToken">The opening token, or <see langword="null"/> for none.</param>
 	/// <param name="closingToken">The closing token, or <see langword="null"/> for none.</param>
 	/// <returns>A scope that restores indentation and writes the closing token.</returns>
+	/// <example><code>using (writer.OpenDelimitedBlockWithHeaderScope("Call", w =&gt; w.Write("(value)"), "{", "}"))
+/// 	writer.WriteLine("Run();");</code></example>
 	public BlockScope OpenDelimitedBlockWithHeaderScope(
 		string? header,
 		Action<CodeWriter> writeRemainingHeader,
@@ -380,6 +409,7 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Writes a complete delimited block with a callback-completed header and body.</summary>
+	/// <example><code>writer.OpenDelimitedBlockWithHeader("Call", w =&gt; w.Write("(value)"), "{", "}", body =&gt; body.WriteLine("Run();"));</code></example>
 	public CodeWriter OpenDelimitedBlockWithHeader(
 		string? header,
 		Action<CodeWriter> writeRemainingHeader,
@@ -401,6 +431,7 @@ public sealed class CodeWriter
 	/// <param name="header">Optional content written before the opening token.</param>
 	/// <param name="body">The block body.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteBlock("if (enabled)", body =&gt; body.WriteLine("Run();"));</code></example>
 	public CodeWriter WriteBlock(string? header, Action<CodeWriter> body) =>
 		WriteDelimitedBlock(header, "{", "}", body);
 
@@ -412,6 +443,7 @@ public sealed class CodeWriter
 	/// <param name="closingToken">The closing token, or <see langword="null"/> for none.</param>
 	/// <param name="body">The block body.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteDelimitedBlock("items", "(", ");", body =&gt; body.WriteLine("value"));</code></example>
 	public CodeWriter WriteDelimitedBlock(
 		string? header,
 		string? openingToken,
@@ -434,6 +466,7 @@ public sealed class CodeWriter
 	/// The method body scope, or an empty scope when an abstract or expression-bodied method was
 	/// emitted.
 	/// </returns>
+	/// <example><code>using (writer.WriteMethodScope(new MethodDeclarationOptions("Run"))) writer.WriteLine("return;");</code></example>
 	public BlockScope WriteMethodScope(MethodDeclarationOptions declaration) =>
 		WriteMethodScope(declaration, expressionWriter: null);
 
@@ -502,10 +535,12 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Writes a structured partial method declaration.</summary>
+	/// <example><code>writer.WritePartialMethod(new MethodDeclarationOptions("OnChanged"));</code></example>
 	public CodeWriter WritePartialMethod(MethodDeclarationOptions declaration) =>
 		WriteMethod(declaration with { IsPartial = true, Accessibility = null }, _ => { });
 
 	/// <summary>Writes a structured partial method declaration.</summary>
+	/// <example><code>writer.WriteMethodExpression(new MethodDeclarationOptions("Count", "int") { ExpressionBody = "items.Count" });</code></example>
 	public CodeWriter WriteMethodExpression(MethodDeclarationOptions declaration)
 	{
 		if (string.IsNullOrWhiteSpace(declaration.ExpressionBody))
@@ -521,6 +556,7 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Writes an expression-bodied method using a callback for the expression.</summary>
+	/// <example><code>writer.WriteMethodExpression(new MethodDeclarationOptions("Count", "int"), expression =&gt; expression.Write("items.Count"));</code></example>
 	public CodeWriter WriteMethodExpression(MethodDeclarationOptions declaration, Action<CodeWriter> writeExpression)
 	{
 		if (writeExpression is null)
@@ -536,6 +572,7 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Writes a structured method and invokes a callback for its body.</summary>
+	/// <example><code>writer.WriteMethod(new MethodDeclarationOptions("Run"), body =&gt; body.WriteLine("return;"));</code></example>
 	public CodeWriter WriteMethod(MethodDeclarationOptions declaration, Action<CodeWriter> writeBody)
 	{
 		if (writeBody is null)
@@ -555,6 +592,7 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Writes an auto-property or expression-bodied property.</summary>
+	/// <example><code>writer.WriteProperty(new PropertyDeclarationOptions("Name", "string"));</code></example>
 	public CodeWriter WriteProperty(PropertyDeclarationOptions declaration)
 	{
 		if (declaration.Type.IsEmpty)
@@ -592,6 +630,7 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Writes an expression-bodied property using a callback for the expression.</summary>
+	/// <example><code>writer.WritePropertyExpression(new PropertyDeclarationOptions("Count", "int"), expression =&gt; expression.Write("items.Count"));</code></example>
 	public CodeWriter WritePropertyExpression(
 		PropertyDeclarationOptions declaration,
 		Action<CodeWriter> writeExpression
@@ -623,6 +662,7 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Writes a property with callback-generated accessor bodies.</summary>
+	/// <example><code>writer.WriteProperty(new PropertyDeclarationOptions("Value", "int"), get =&gt; get.WriteLine("return _value;"), null);</code></example>
 	public CodeWriter WriteProperty(
 		PropertyDeclarationOptions declaration,
 		Action<CodeWriter>? writeGetterBody,
@@ -662,6 +702,7 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Writes a field declaration.</summary>
+	/// <example><code>writer.WriteField(new FieldDeclarationOptions("_value", "int"));</code></example>
 	public CodeWriter WriteField(FieldDeclarationOptions declaration)
 	{
 		if (declaration.Type.IsEmpty)
@@ -695,6 +736,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="namespaceName">The namespace to import.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteUsing("System"); // using System;</code></example>
 	public CodeWriter WriteUsing(string namespaceName)
 	{
 		return string.IsNullOrWhiteSpace(namespaceName)
@@ -707,6 +749,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="namespaceName">The namespace, or <see langword="null"/> to write nothing.</param>
 	/// <returns>The namespace body scope, or an empty scope when no namespace is supplied.</returns>
+	/// <example><code>using (writer.WriteBlockNamespaceScope("Example")) writer.WriteLine("class C { }");</code></example>
 	public BlockScope WriteBlockNamespaceScope(string? namespaceName)
 	{
 		if (string.IsNullOrWhiteSpace(namespaceName))
@@ -723,6 +766,7 @@ public sealed class CodeWriter
 	/// <param name="typeValue">The type whose namespace will be used, or a value with no namespace to omit the wrapper.</param>
 	/// <param name="bodyWriter">The action that writes the namespace body.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteBlockNamespace(new TypeValueObject("C", "Example"), body =&gt; body.WriteLine("class C { }"));</code></example>
 	public CodeWriter WriteBlockNamespace(TypeValueObject typeValue, Action<CodeWriter> bodyWriter)
 	{
 		if (bodyWriter is null)
@@ -739,6 +783,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="typeValue">The type whose namespace will be used, or a value with no namespace to return an empty scope.</param>
 	/// <returns>The namespace body scope, or an empty scope when no namespace is supplied.</returns>
+	/// <example><code>using (writer.WriteBlockNamespaceScope(new TypeValueObject("C", "Example"))) writer.WriteLine("class C { }");</code></example>
 	public BlockScope WriteBlockNamespaceScope(TypeValueObject typeValue) =>
 		WriteBlockNamespaceScope(typeValue.Namespace);
 
@@ -746,6 +791,7 @@ public sealed class CodeWriter
 	/// <param name="namespaceName">The namespace, or <see langword="null"/> to omit the wrapper.</param>
 	/// <param name="bodyWriter">The action that writes the namespace body.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteBlockNamespace("Example", body =&gt; body.WriteLine("class C { }"));</code></example>
 	public CodeWriter WriteBlockNamespace(string? namespaceName, Action<CodeWriter> bodyWriter)
 	{
 		if (bodyWriter is null)
@@ -760,6 +806,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="namespaceName">The namespace, or <see langword="null"/> to write nothing.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteFileScopedNamespace("Example"); // namespace Example;</code></example>
 	public CodeWriter WriteFileScopedNamespace(string? namespaceName)
 	{
 		return string.IsNullOrWhiteSpace(namespaceName)
@@ -772,6 +819,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="typeValue">The type whose namespace will be used, or a value with no namespace to write nothing.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteFileScopedNamespace(new TypeValueObject("C", "Example"));</code></example>
 	public CodeWriter WriteFileScopedNamespace(TypeValueObject typeValue) =>
 		WriteFileScopedNamespace(typeValue.Namespace);
 
@@ -780,6 +828,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="declaration">The class declaration options.</param>
 	/// <returns>The class body scope.</returns>
+	/// <example><code>using (writer.WriteClassScope(new TypeDeclarationOptions("C"))) writer.WriteLine("// body");</code></example>
 	public BlockScope WriteClassScope(TypeDeclarationOptions declaration)
 	{
 		return declaration is null
@@ -793,6 +842,7 @@ public sealed class CodeWriter
 	/// <param name="declaration">The class declaration options.</param>
 	/// <param name="bodyWriter">The action that writes the body of the class.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteClass(new TypeDeclarationOptions("C"), body =&gt; body.WriteLine("// body"));</code></example>
 	public CodeWriter WriteClass(TypeDeclarationOptions declaration, Action<CodeWriter> bodyWriter)
 	{
 		if (bodyWriter is null)
@@ -817,6 +867,7 @@ public sealed class CodeWriter
 	/// <param name="inherited">Whether derived classes and overriding members inherit the attribute.</param>
 	/// <param name="allowMultiple">Whether more than one instance may be specified on one declaration.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteAttributeClass(new TypeDeclarationOptions("MarkerAttribute"), AttributeTargets.Class, _ =&gt; { });</code></example>
 	public CodeWriter WriteAttributeClass(
 		TypeDeclarationOptions declaration,
 		AttributeTargets targets,
@@ -874,6 +925,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="declaration">The struct declaration options.</param>
 	/// <returns>The struct body scope.</returns>
+	/// <example><code>using (writer.WriteStructScope(new TypeDeclarationOptions("Value"))) { }</code></example>
 	public BlockScope WriteStructScope(TypeDeclarationOptions declaration)
 	{
 		return declaration is null
@@ -887,6 +939,7 @@ public sealed class CodeWriter
 	/// <param name="declaration">The struct declaration options.</param>
 	/// <param name="bodyWriter">The action that writes the body of the struct.</param>
 	/// <returns>The struct body scope.</returns>
+	/// <example><code>writer.WriteStruct(new TypeDeclarationOptions("Value"), _ =&gt; { });</code></example>
 	public CodeWriter WriteStruct(TypeDeclarationOptions declaration, Action<CodeWriter> bodyWriter)
 	{
 		if (bodyWriter is null)
@@ -903,6 +956,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="declaration">The record class declaration options.</param>
 	/// <returns>The record body scope.</returns>
+	/// <example><code>using (writer.WriteRecordClassScope(new TypeDeclarationOptions("Model"))) { }</code></example>
 	public BlockScope WriteRecordClassScope(TypeDeclarationOptions declaration)
 	{
 		return declaration is null
@@ -916,6 +970,7 @@ public sealed class CodeWriter
 	/// <param name="declaration">The record class declaration options.</param>
 	/// <param name="bodyWriter">The action that writes the body of the record class.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteRecordClass(new TypeDeclarationOptions("Model"), _ =&gt; { });</code></example>
 	public CodeWriter WriteRecordClass(TypeDeclarationOptions declaration, Action<CodeWriter> bodyWriter)
 	{
 		if (bodyWriter is null)
@@ -932,6 +987,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="declaration">The record struct declaration options.</param>
 	/// <returns>The record body scope.</returns>
+	/// <example><code>using (writer.WriteRecordStructScope(new TypeDeclarationOptions("Value"))) { }</code></example>
 	public BlockScope WriteRecordStructScope(TypeDeclarationOptions declaration)
 	{
 		return declaration is null
@@ -945,6 +1001,7 @@ public sealed class CodeWriter
 	/// <param name="declaration">The record struct declaration options.</param>
 	/// <param name="bodyWriter">The action that writes the body of the record struct.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteRecordStruct(new TypeDeclarationOptions("Value"), _ =&gt; { });</code></example>
 	public CodeWriter WriteRecordStruct(TypeDeclarationOptions declaration, Action<CodeWriter> bodyWriter)
 	{
 		if (bodyWriter is null)
@@ -957,12 +1014,14 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Writes an interface declaration and returns its body scope.</summary>
+	/// <example><code>using (writer.WriteInterfaceScope(new TypeDeclarationOptions("IService"))) { }</code></example>
 	public BlockScope WriteInterfaceScope(TypeDeclarationOptions declaration) =>
 		declaration is null
 			? throw new ArgumentNullException(nameof(declaration))
 			: WriteTypeScope(declaration with { Kind = TypeDeclarationKind.Interface });
 
 	/// <summary>Writes an interface declaration and invokes a callback for its body.</summary>
+	/// <example><code>writer.WriteInterface(new TypeDeclarationOptions("IService"), _ =&gt; { });</code></example>
 	public CodeWriter WriteInterface(TypeDeclarationOptions declaration, Action<CodeWriter> bodyWriter)
 	{
 		if (bodyWriter is null)
@@ -973,12 +1032,14 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Writes an enum declaration and returns its body scope.</summary>
+	/// <example><code>using (writer.WriteEnumScope(new TypeDeclarationOptions("Status"))) { }</code></example>
 	public BlockScope WriteEnumScope(TypeDeclarationOptions declaration) =>
 		declaration is null
 			? throw new ArgumentNullException(nameof(declaration))
 			: WriteTypeScope(declaration with { Kind = TypeDeclarationKind.Enum });
 
 	/// <summary>Writes an enum declaration and invokes a callback for its body.</summary>
+	/// <example><code>writer.WriteEnum(new TypeDeclarationOptions("Status"), _ =&gt; { });</code></example>
 	public CodeWriter WriteEnum(TypeDeclarationOptions declaration, Action<CodeWriter> bodyWriter)
 	{
 		if (bodyWriter is null)
@@ -994,6 +1055,7 @@ public sealed class CodeWriter
 	/// <param name="declaration">The enum declaration options.</param>
 	/// <param name="fields">The fields to write in declaration order.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteEnum(new TypeDeclarationOptions("Status"), new EnumFieldDeclarationOptions("Ready", 1));</code></example>
 	public CodeWriter WriteEnum(TypeDeclarationOptions declaration, params EnumFieldDeclarationOptions[] fields)
 	{
 		if (fields is null)
@@ -1016,6 +1078,7 @@ public sealed class CodeWriter
 	/// <summary>Writes a field in an enum declaration.</summary>
 	/// <param name="declaration">The enum field declaration options.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteEnumField(new EnumFieldDeclarationOptions("Ready", 1));</code></example>
 	public CodeWriter WriteEnumField(EnumFieldDeclarationOptions declaration)
 	{
 		ValidateEnumFieldDeclaration(declaration);
@@ -1049,6 +1112,7 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Writes a complete delegate declaration.</summary>
+	/// <example><code>writer.WriteDelegate(new TypeDeclarationOptions("Handler") { DelegateReturnType = "void" });</code></example>
 	public CodeWriter WriteDelegate(TypeDeclarationOptions declaration)
 	{
 		if (declaration is null)
@@ -1062,6 +1126,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="declaration">The structured type declaration options.</param>
 	/// <returns>The generated type body scope.</returns>
+	/// <example><code>using (writer.WriteTypeScope(new TypeDeclarationOptions("C"))) { }</code></example>
 	public BlockScope WriteTypeScope(TypeDeclarationOptions declaration)
 	{
 		if (declaration is null)
@@ -1155,6 +1220,7 @@ public sealed class CodeWriter
 	/// <param name="declaration">The structured type declaration options.</param>
 	/// <param name="bodyWriter">The action that writes the type body.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteType(new TypeDeclarationOptions("C"), _ =&gt; { });</code></example>
 	public CodeWriter WriteType(TypeDeclarationOptions declaration, Action<CodeWriter> bodyWriter)
 	{
 		if (bodyWriter is null)
@@ -1169,6 +1235,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="declaration">The constructor declaration options.</param>
 	/// <returns>The constructor body scope.</returns>
+	/// <example><code>using (writer.WriteConstructorScope(new ConstructorDeclarationOptions("C"))) writer.WriteLine("// body");</code></example>
 	public BlockScope WriteConstructorScope(ConstructorDeclarationOptions declaration)
 	{
 		ValidateConstructorDeclaration(declaration);
@@ -1201,6 +1268,7 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Writes a structured constructor and invokes a callback for its body.</summary>
+	/// <example><code>writer.WriteConstructor(new ConstructorDeclarationOptions("C"), _ =&gt; { });</code></example>
 	public CodeWriter WriteConstructor(ConstructorDeclarationOptions declaration, Action<CodeWriter> writeBody)
 	{
 		if (writeBody is null)
@@ -1217,6 +1285,7 @@ public sealed class CodeWriter
 	/// <param name="version">The generator version; defaults to <see cref="GeneratorVersion"/>.</param>
 	/// <param name="pragmas">The pragmas to include in the header.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteAutoGeneratedHeader(pragmas: ["CS0618"]);</code></example>
 	public CodeWriter WriteAutoGeneratedHeader(
 		string? generatorName = null,
 		string? version = null,
@@ -1257,6 +1326,7 @@ public sealed class CodeWriter
 	/// <param name="generatorName">The generator name.</param>
 	/// <param name="version">The generator version, defaulting to <c>1.0.0.0</c>.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteGeneratedCodeAttribute("MyGenerator", "1.0.0");</code></example>
 	public CodeWriter WriteGeneratedCodeAttribute(string generatorName, string? version = null)
 	{
 		if (string.IsNullOrWhiteSpace(generatorName))
@@ -1283,6 +1353,7 @@ public sealed class CodeWriter
 	/// <see langword="false"/> for ordinary generated members.
 	/// </param>
 	/// <param name="includeGeneratedCodeAttribute">Whether to emit <see cref="System.CodeDom.Compiler.GeneratedCodeAttribute"/> and <see cref="System.Runtime.CompilerServices.CompilerGeneratedAttribute"/>.</param>
+	/// <example><code>writer.WriteGeneratedAttributes(includeCoverageExclusion: true);</code></example>
 	public CodeWriter WriteGeneratedAttributes(
 		bool includeCoverageExclusion = false,
 		bool includeEmbeddedAttribute = false,
@@ -1309,6 +1380,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="pragmas">The warning codes to disable.</param>
 	/// <returns>A scope that writes the corresponding restore pragmas once.</returns>
+	/// <example><code>using (writer.OpenPragmasScope("CS0618")) writer.WriteLine("ObsoleteCall();");</code></example>
 	public PragmaScope OpenPragmasScope(params string[] pragmas)
 	{
 		if (pragmas is null || pragmas.Length == 0)
@@ -1326,6 +1398,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="parts">The lines to write.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.MultiLine("first", "second");</code></example>
 	public CodeWriter MultiLine(params string[] parts)
 	{
 		if (parts is null)
@@ -1342,6 +1415,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="parameters">The parameters to write.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.Write("Call(").MultiLineParameters("string name", "int count");</code></example>
 	public CodeWriter MultiLineParameters(params string[] parameters)
 	{
 		if (parameters is null)
@@ -1364,6 +1438,7 @@ public sealed class CodeWriter
 	/// <summary>Writes an assignment statement.</summary>
 	/// <param name="target">The target, such as <c>value</c> or <c>var result</c>.</param>
 	/// <param name="value">The assigned expression.</param>
+	/// <example><code>writer.WriteAssignment("value", "CreateValue()"); // value = CreateValue();</code></example>
 	public CodeWriter WriteAssignment(string target, string value)
 	{
 		ValidateStatementPart(target, nameof(target));
@@ -1374,6 +1449,7 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Writes an assignment statement using a callback for a multiline expression.</summary>
+	/// <example><code>writer.WriteAssignment("value", expression =&gt; expression.Write("new Value()"));</code></example>
 	public CodeWriter WriteAssignment(string target, Action<CodeWriter> writeValue)
 	{
 		ValidateStatementPart(target, nameof(target));
@@ -1385,6 +1461,7 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Writes a typed local or declaration assignment.</summary>
+	/// <example><code>writer.WriteAssignment("var", "value", "CreateValue()");</code></example>
 	public CodeWriter WriteAssignment(string type, string name, string value)
 	{
 		ValidateStatementPart(type, nameof(type));
@@ -1393,6 +1470,7 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Writes a typed local or declaration assignment with a multiline expression.</summary>
+	/// <example><code>writer.WriteAssignment("Value", "value", expression =&gt; expression.Write("CreateValue()"));</code></example>
 	public CodeWriter WriteAssignment(string type, string name, Action<CodeWriter> writeValue)
 	{
 		ValidateStatementPart(type, nameof(type));
@@ -1401,6 +1479,7 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Writes a return statement.</summary>
+	/// <example><code>writer.WriteReturn("value"); // return value;</code></example>
 	public CodeWriter WriteReturn(string? expression = null)
 	{
 		if (string.IsNullOrWhiteSpace(expression))
@@ -1411,6 +1490,7 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Writes a return statement using a callback for a multiline expression.</summary>
+	/// <example><code>writer.WriteReturn(expression =&gt; expression.Write("value"));</code></example>
 	public CodeWriter WriteReturn(Action<CodeWriter> writeExpression)
 	{
 		if (writeExpression is null)
@@ -1421,6 +1501,7 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Writes a throw statement.</summary>
+	/// <example><code>writer.WriteThrow("new InvalidOperationException()");</code></example>
 	public CodeWriter WriteThrow(string expression)
 	{
 		ValidateStatementPart(expression, nameof(expression));
@@ -1430,6 +1511,7 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Writes a throw statement using a callback for a multiline expression.</summary>
+	/// <example><code>writer.WriteThrow(expression =&gt; expression.Write("new InvalidOperationException()"));</code></example>
 	public CodeWriter WriteThrow(Action<CodeWriter> writeExpression)
 	{
 		if (writeExpression is null)
@@ -1447,6 +1529,7 @@ public sealed class CodeWriter
 	/// <returns>The current writer.</returns>
 	/// <exception cref="ArgumentException">Thrown if the condition is null or whitespace.</exception>
 	/// <exception cref="ArgumentNullException">Thrown if the bodyWriter is null.</exception>
+	/// <example><code>writer.WriteIfBlock("enabled", body =&gt; body.WriteReturn());</code></example>
 	public CodeWriter WriteIfBlock(string condition, Action<CodeWriter> bodyWriter)
 	{
 		if (bodyWriter is null)
@@ -1459,6 +1542,7 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Writes an if statement and returns its body scope.</summary>
+	/// <example><code>using (writer.WriteIfBlockScope("enabled")) writer.WriteReturn();</code></example>
 	public BlockScope WriteIfBlockScope(string condition)
 	{
 		ValidateStatementPart(condition, nameof(condition));
@@ -1473,6 +1557,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="items">The items to write.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.MultiLineItems("first", "second");</code></example>
 	public CodeWriter MultiLineItems(params string[] items)
 	{
 		if (items is null)
@@ -1495,6 +1580,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="lines">The lines to write.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteLines(["first", null, "second"]);</code></example>
 	public CodeWriter WriteLines(IEnumerable<string?> lines)
 	{
 		if (lines is null)
@@ -1515,6 +1601,7 @@ public sealed class CodeWriter
 	/// <param name="items">The values to write.</param>
 	/// <param name="delimiter">The delimiter written between values.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteDelimited(["a", "b"], " | "); // a | b</code></example>
 	public CodeWriter WriteDelimited(IEnumerable<string?> items, string delimiter = ", ")
 	{
 		if (items is null)
@@ -1539,6 +1626,7 @@ public sealed class CodeWriter
 	/// Increases indentation until the returned scope is disposed.
 	/// </summary>
 	/// <returns>A scope that restores the indentation level.</returns>
+	/// <example><code>using (writer.IndentedScope()) writer.WriteLine("value");</code></example>
 	public IndentScope IndentedScope()
 	{
 		Indent();
@@ -1546,8 +1634,10 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Invokes a callback at one additional indentation level.</summary>
+	/// <summary>Invokes a callback at one additional indentation level.</summary>
 	/// <param name="bodyWriter">The action to invoke while indented.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.Indented(body =&gt; body.WriteLine("value"));</code></example>
 	public CodeWriter Indented(Action<CodeWriter> bodyWriter)
 	{
 		if (bodyWriter is null)
@@ -1562,6 +1652,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <param name="line">The line to write before indenting.</param>
 	/// <returns>A scope that restores the indentation level.</returns>
+	/// <example><code>using (writer.IndentedScope("if (enabled)")) writer.WriteLine("Run();");</code></example>
 	public IndentScope IndentedScope(string line)
 	{
 		WriteLine(line);
@@ -1569,9 +1660,11 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>Writes a line and invokes a callback at one additional indentation level.</summary>
+	/// <summary>Writes a line and invokes a callback at one additional indentation level.</summary>
 	/// <param name="line">The line to write before indenting.</param>
 	/// <param name="bodyWriter">The action to invoke while indented.</param>
 	/// <returns>The current writer.</returns>
+	/// <example><code>writer.Indented("if (enabled)", body =&gt; body.WriteLine("Run();"));</code></example>
 	public CodeWriter Indented(string line, Action<CodeWriter> bodyWriter)
 	{
 		if (bodyWriter is null)
@@ -1585,6 +1678,8 @@ public sealed class CodeWriter
 	/// Creates the generated source string.
 	/// </summary>
 	/// <returns>The complete contents of the writer.</returns>
+	/// <example><code>writer.WriteLine("class C { }");
+/// var source = writer.ToString(); // class C { }</code></example>
 	[SuppressMessage(
 		"Design",
 		"CA1065:Do not raise exceptions in unexpected locations",
@@ -1602,6 +1697,7 @@ public sealed class CodeWriter
 	/// <summary>
 	/// Creates a <see cref="Microsoft.CodeAnalysis.Text.SourceText"/> from the writer's contents.
 	/// </summary>
+	/// <example><code>Microsoft.CodeAnalysis.Text.SourceText sourceText = writer; // class C { }</code></example>
 	[SuppressMessage("Design", "CA1062:Validate arguments of public methods")]
 	public static implicit operator Microsoft.CodeAnalysis.Text.SourceText(CodeWriter writer) =>
 		Microsoft.CodeAnalysis.Text.SourceText.From(writer.ToString(), Encoding.UTF8);
