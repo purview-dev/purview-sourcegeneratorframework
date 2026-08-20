@@ -434,7 +434,10 @@ public sealed class CodeWriter
 	/// The method body scope, or an empty scope when an abstract or expression-bodied method was
 	/// emitted.
 	/// </returns>
-	public BlockScope WriteMethodScope(MethodDeclarationOptions declaration)
+	public BlockScope WriteMethodScope(MethodDeclarationOptions declaration) =>
+		WriteMethodScope(declaration, expressionWriter: null);
+
+	BlockScope WriteMethodScope(MethodDeclarationOptions declaration, Action<CodeWriter>? expressionWriter)
 	{
 		if (declaration.ReturnType.IsEmpty)
 			return default;
@@ -480,7 +483,9 @@ public sealed class CodeWriter
 
 		if (declaration.ExpressionBody is not null)
 		{
-			Write(" => ").Write(declaration.ExpressionBody).WriteLine(";");
+			Write(" => ");
+			WriteExpression(declaration.ExpressionBody, expressionWriter);
+			WriteLine(";");
 			CompleteWrittenItem(WrittenItemKind.Method, _indentLevel);
 			return default;
 		}
@@ -515,6 +520,21 @@ public sealed class CodeWriter
 		return WriteMethod(declaration, _ => { });
 	}
 
+	/// <summary>Writes an expression-bodied method using a callback for the expression.</summary>
+	public CodeWriter WriteMethodExpression(MethodDeclarationOptions declaration, Action<CodeWriter> writeExpression)
+	{
+		if (writeExpression is null)
+			throw new ArgumentNullException(nameof(writeExpression));
+		if (declaration.ExpressionBody is not null)
+			throw new ArgumentException(
+				"A callback expression cannot be supplied when ExpressionBody is already set.",
+				nameof(declaration)
+			);
+
+		using (WriteMethodScope(declaration with { ExpressionBody = string.Empty }, writeExpression)) { }
+		return this;
+	}
+
 	/// <summary>Writes a structured method and invokes a callback for its body.</summary>
 	public CodeWriter WriteMethod(MethodDeclarationOptions declaration, Action<CodeWriter> writeBody)
 	{
@@ -547,7 +567,9 @@ public sealed class CodeWriter
 		WritePropertyHeader(declaration);
 		if (declaration.ExpressionBody is not null)
 		{
-			Write(" => ").Write(declaration.ExpressionBody).WriteLine(";");
+			Write(" => ");
+			WriteExpression(declaration.ExpressionBody, expressionWriter: null);
+			WriteLine(";");
 			CompleteWrittenItem(WrittenItemKind.Property, _indentLevel);
 			return this;
 		}
@@ -559,8 +581,43 @@ public sealed class CodeWriter
 			WriteAccessor(declaration.SetterAccessibility, declaration.IsInitOnly ? "init;" : "set;");
 		Write("}");
 		if (declaration.Initializer is not null)
-			Write(" = ").Write(declaration.Initializer).Write(';');
+		{
+			Write(" = ");
+			WriteExpression(declaration.Initializer, expressionWriter: null);
+			Write(';');
+		}
 		NewLine();
+		CompleteWrittenItem(WrittenItemKind.Property, _indentLevel);
+		return this;
+	}
+
+	/// <summary>Writes an expression-bodied property using a callback for the expression.</summary>
+	public CodeWriter WritePropertyExpression(
+		PropertyDeclarationOptions declaration,
+		Action<CodeWriter> writeExpression
+	)
+	{
+		if (writeExpression is null)
+			throw new ArgumentNullException(nameof(writeExpression));
+		if (declaration.ExpressionBody is not null)
+			throw new ArgumentException(
+				"A callback expression cannot be supplied when ExpressionBody is already set.",
+				nameof(declaration)
+			);
+		if (declaration.Initializer is not null)
+			throw new ArgumentException(
+				"An expression-bodied property cannot specify an initializer.",
+				nameof(declaration)
+			);
+
+		ValidatePropertyDeclaration(declaration with { ExpressionBody = "callback" });
+		BeginWrittenItem(WrittenItemKind.Property);
+		if (declaration.IncludeGeneratedAttributes ?? DefaultIncludeGeneratedAttributes)
+			WriteGeneratedAttributes(includeCoverageExclusion: true, includeEmbeddedAttribute: false);
+		WriteAttributes(declaration.Attributes);
+		WritePropertyHeader(declaration).Write(" => ");
+		WriteExpression(null, writeExpression);
+		WriteLine(";");
 		CompleteWrittenItem(WrittenItemKind.Property, _indentLevel);
 		return this;
 	}
@@ -624,7 +681,10 @@ public sealed class CodeWriter
 			.Write(' ')
 			.Write(declaration.Name);
 		if (declaration.Initializer is not null)
-			Write(" = ").Write(declaration.Initializer);
+		{
+			Write(" = ");
+			WriteExpression(declaration.Initializer, expressionWriter: null);
+		}
 		WriteLine(";");
 		CompleteWrittenItem(WrittenItemKind.Field, _indentLevel);
 		return this;
@@ -1301,6 +1361,84 @@ public sealed class CodeWriter
 		return Unindent();
 	}
 
+	/// <summary>Writes an assignment statement.</summary>
+	/// <param name="target">The target, such as <c>value</c> or <c>var result</c>.</param>
+	/// <param name="value">The assigned expression.</param>
+	public CodeWriter WriteAssignment(string target, string value)
+	{
+		ValidateStatementPart(target, nameof(target));
+		ValidateStatementPart(value, nameof(value));
+		Write(target).Write(" = ");
+		WriteExpression(value, expressionWriter: null);
+		return WriteLine(";");
+	}
+
+	/// <summary>Writes an assignment statement using a callback for a multiline expression.</summary>
+	public CodeWriter WriteAssignment(string target, Action<CodeWriter> writeValue)
+	{
+		ValidateStatementPart(target, nameof(target));
+		if (writeValue is null)
+			throw new ArgumentNullException(nameof(writeValue));
+		Write(target).Write(" = ");
+		WriteExpression(null, writeValue);
+		return WriteLine(";");
+	}
+
+	/// <summary>Writes a typed local or declaration assignment.</summary>
+	public CodeWriter WriteAssignment(string type, string name, string value)
+	{
+		ValidateStatementPart(type, nameof(type));
+		ValidateStatementPart(name, nameof(name));
+		return WriteAssignment($"{type} {name}", value);
+	}
+
+	/// <summary>Writes a typed local or declaration assignment with a multiline expression.</summary>
+	public CodeWriter WriteAssignment(string type, string name, Action<CodeWriter> writeValue)
+	{
+		ValidateStatementPart(type, nameof(type));
+		ValidateStatementPart(name, nameof(name));
+		return WriteAssignment($"{type} {name}", writeValue);
+	}
+
+	/// <summary>Writes a return statement.</summary>
+	public CodeWriter WriteReturn(string? expression = null)
+	{
+		if (string.IsNullOrWhiteSpace(expression))
+			return WriteLine("return;");
+		Write("return ");
+		WriteExpression(expression, expressionWriter: null);
+		return WriteLine(";");
+	}
+
+	/// <summary>Writes a return statement using a callback for a multiline expression.</summary>
+	public CodeWriter WriteReturn(Action<CodeWriter> writeExpression)
+	{
+		if (writeExpression is null)
+			throw new ArgumentNullException(nameof(writeExpression));
+		Write("return ");
+		WriteExpression(null, writeExpression);
+		return WriteLine(";");
+	}
+
+	/// <summary>Writes a throw statement.</summary>
+	public CodeWriter WriteThrow(string expression)
+	{
+		ValidateStatementPart(expression, nameof(expression));
+		Write("throw ");
+		WriteExpression(expression, expressionWriter: null);
+		return WriteLine(";");
+	}
+
+	/// <summary>Writes a throw statement using a callback for a multiline expression.</summary>
+	public CodeWriter WriteThrow(Action<CodeWriter> writeExpression)
+	{
+		if (writeExpression is null)
+			throw new ArgumentNullException(nameof(writeExpression));
+		Write("throw ");
+		WriteExpression(null, writeExpression);
+		return WriteLine(";");
+	}
+
 	/// <summary>
 	/// Writes an if statement with a block body and invokes a callback for the body.
 	/// </summary>
@@ -1311,16 +1449,23 @@ public sealed class CodeWriter
 	/// <exception cref="ArgumentNullException">Thrown if the bodyWriter is null.</exception>
 	public CodeWriter WriteIfBlock(string condition, Action<CodeWriter> bodyWriter)
 	{
-		if (string.IsNullOrWhiteSpace(condition))
-			throw new ArgumentException("Condition cannot be null or whitespace.", nameof(condition));
 		if (bodyWriter is null)
 			throw new ArgumentNullException(nameof(bodyWriter));
 
-		Write("if (").Write(condition).WriteLine(")");
-		using (OpenBlockScope())
+		using (WriteIfBlockScope(condition))
 			bodyWriter(this);
 
 		return this;
+	}
+
+	/// <summary>Writes an if statement and returns its body scope.</summary>
+	public BlockScope WriteIfBlockScope(string condition)
+	{
+		ValidateStatementPart(condition, nameof(condition));
+		Write("if (");
+		WriteExpression(condition, expressionWriter: null);
+		WriteLine(")");
+		return OpenBlockScope();
 	}
 
 	/// <summary>
@@ -1470,6 +1615,40 @@ public sealed class CodeWriter
 			_builder.Append(IndentCharacter, _indentLevel);
 
 		_atLineStart = false;
+	}
+
+	void WriteExpression(string? expression, Action<CodeWriter>? expressionWriter)
+	{
+		var callback = expressionWriter;
+		if (callback is not null)
+		{
+			var expressionWriterBuffer = new CodeWriter(GeneratorName, GeneratorVersion);
+			expressionWriterBuffer.DefaultIncludeGeneratedAttributes = DefaultIncludeGeneratedAttributes;
+			callback!(expressionWriterBuffer);
+			expression = expressionWriterBuffer.ToString().TrimEnd(NewLineCharacter);
+		}
+
+		if (string.IsNullOrEmpty(expression))
+			return;
+
+		var lines = expression!.Split(NewLineCharacter);
+		for (var index = 0; index < lines.Length; index++)
+		{
+			if (index != 0)
+			{
+				NewLine();
+				Indent();
+			}
+			Write(lines[index].TrimEnd('\r'));
+			if (index != 0)
+				Unindent();
+		}
+	}
+
+	static void ValidateStatementPart(string? value, string parameterName)
+	{
+		if (string.IsNullOrWhiteSpace(value))
+			throw new ArgumentException("Statement text cannot be null or whitespace.", parameterName);
 	}
 
 	void WriteParametersWithHeuristic(ImmutableArray<ParameterDeclarationOptions> parameters)

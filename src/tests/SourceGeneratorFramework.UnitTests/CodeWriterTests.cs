@@ -1972,4 +1972,88 @@ public class CodeWriterTests
 		// Assert
 		await Assert.That(writer.DefaultIncludeGeneratedAttributes).IsTrue();
 	}
+
+	[Test]
+	public async Task WriteIfBlock_WritesSingleLineConditionAndScopedBody()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.WriteIfBlock("enabled", body => body.WriteReturn());
+
+		await Assert.That(writer.ToString()).IsEqualTo("if (enabled)\n{\n\treturn;\n}\n");
+	}
+
+	[Test]
+	public async Task WriteIfBlock_WritesMultilineConditionWithContinuationIndent()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.WriteIfBlock("value != null\n&& value.IsValid", body => body.WriteReturn("value"));
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("if (value != null\n\t&& value.IsValid)\n{\n\treturn value;\n}\n");
+	}
+
+	[Test]
+	public async Task WriteAssignment_WritesDeclarationAndMultilineInitializer()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.WriteAssignment(
+			"var value",
+			value =>
+			{
+				value.WriteLine("new()");
+				value.OpenBlock(
+					null,
+					block =>
+					{
+						block.WriteLine("X = 1,");
+						block.WriteLine("Y = 2,");
+						block.WriteLine("Z = 3");
+					}
+				);
+			}
+		);
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("var value = new()\n\t{\n\t\tX = 1,\n\t\tY = 2,\n\t\tZ = 3\n\t};\n");
+	}
+
+	[Test]
+	public async Task WriteReturnAndThrow_WritesStatements()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.WriteReturn("value");
+		writer.WriteThrow(throwExpression => throwExpression.WriteLine("new InvalidOperationException()"));
+
+		await Assert.That(writer.ToString()).IsEqualTo("return value;\nthrow new InvalidOperationException();\n");
+	}
+
+	[Test]
+	public async Task ExpressionMembers_WritesMultilineExpressions()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.WriteMethodScope(
+			new MethodDeclarationOptions("Load", Type("Value")) { ExpressionBody = "Create()\n.Configure()" }
+		);
+		writer.WritePropertyExpression(
+			new PropertyDeclarationOptions("Current", Type("Value")),
+			property => property.WriteLine("GetCurrent()")
+		);
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				GeneratedAttributes()
+					+ "Value Load() => Create()\n\t.Configure();\n"
+					+ "\n"
+					+ GeneratedAttributes()
+					+ "Value Current => GetCurrent();\n"
+			);
+	}
 }
