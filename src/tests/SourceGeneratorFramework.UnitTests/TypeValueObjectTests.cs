@@ -102,7 +102,9 @@ public partial class TypeValueObjectTests
 		await Assert.That(reference.ArrayRanks).IsEquivalentTo([1]);
 		await Assert.That(reference.TypeValue).IsNotEqualTo(TypeValueObject.Empty);
 		await Assert.That(reference.Equals(typeof(Dictionary<string, int>[]))).IsTrue();
-		await Assert.That(new TypeValueObject(typeof(Dictionary<string, int>[])).Equals(typeof(Dictionary<string, int>[]))).IsTrue();
+		await Assert
+			.That(new TypeValueObject(typeof(Dictionary<string, int>[])).Equals(typeof(Dictionary<string, int>[])))
+			.IsTrue();
 	}
 
 	[Test]

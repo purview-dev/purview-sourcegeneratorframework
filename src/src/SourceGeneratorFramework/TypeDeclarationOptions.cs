@@ -201,21 +201,25 @@ public sealed record TypeDeclarationOptions
 	/// Initializes a type declaration description.
 	/// </summary>
 	/// <param name="name">The generated type name without generic parameters.</param>
-	public TypeDeclarationOptions(string name)
+	/// <param name="accessibility">The optional accessibility modifier, or <see langword="null"/> to omit accessibility.</param>
+	public TypeDeclarationOptions(string name, TypeDeclarationAccessibility? accessibility = null)
 	{
 		if (string.IsNullOrWhiteSpace(name))
 			throw new ArgumentException("Type name cannot be null or whitespace.", nameof(name));
 
 		Name = name;
+		Accessibility = accessibility;
 	}
 
 	/// <summary>
 	/// Initializes a type declaration description from a <see cref="TypeValueObject"/>.
 	/// </summary>
 	/// <param name="typeValue">The type value object.</param>
-	public TypeDeclarationOptions(TypeValueObject typeValue)
+	/// <param name="accessibility">The optional accessibility modifier, or <see langword="null"/> to omit accessibility.</param>
+	public TypeDeclarationOptions(TypeValueObject typeValue, TypeDeclarationAccessibility? accessibility = null)
 	{
 		Name = typeValue.TypeName;
+		Accessibility = accessibility;
 	}
 
 	/// <summary>

@@ -8,19 +8,26 @@ public readonly record struct MethodDeclarationOptions
 	/// <summary>Creates a method declaration.</summary>
 	/// <param name="name">The method name.</param>
 	/// <param name="returnType">The return type. The default is <c>void</c>.</param>
-	public MethodDeclarationOptions(string name, TypeReferenceOptions returnType)
+	/// <param name="accessibility">The optional accessibility.</param>
+	public MethodDeclarationOptions(
+		string name,
+		TypeReferenceOptions returnType,
+		TypeDeclarationAccessibility? accessibility = null
+	)
 	{
 		if (string.IsNullOrWhiteSpace(name))
 			throw new ArgumentException("Method name cannot be null or whitespace.", nameof(name));
 
 		Name = name;
 		ReturnType = returnType;
+		Accessibility = accessibility;
 	}
 
 	/// <summary>Creates a method declaration with the <see cref="ReturnType"/> set to <c>void</c>.</summary>
 	/// <param name="name">The method name.</param>
-	public MethodDeclarationOptions(string name)
-		: this(name, PurviewTypeLibrary.System.Void) { }
+	/// <param name="accessibility">The optional accessibility.</param>
+	public MethodDeclarationOptions(string name, TypeDeclarationAccessibility? accessibility = null)
+		: this(name, PurviewTypeLibrary.System.Void, accessibility) { }
 
 	/// <summary>Gets the method name.</summary>
 	public string Name { get; }
@@ -82,10 +89,15 @@ public readonly record struct MethodDeclarationOptions
 public readonly record struct PropertyDeclarationOptions
 {
 	/// <summary>Creates a property declaration.</summary>
-	public PropertyDeclarationOptions(string name, TypeReferenceOptions type)
+	public PropertyDeclarationOptions(
+		string name,
+		TypeReferenceOptions type,
+		TypeDeclarationAccessibility? accessibility = null
+	)
 	{
 		Name = name;
 		Type = type;
+		Accessibility = accessibility;
 	}
 
 	/// <summary>Gets the property name.</summary>
@@ -151,10 +163,15 @@ public readonly record struct PropertyDeclarationOptions
 public readonly record struct FieldDeclarationOptions
 {
 	/// <summary>Creates a field declaration.</summary>
-	public FieldDeclarationOptions(string name, TypeReferenceOptions type)
+	public FieldDeclarationOptions(
+		string name,
+		TypeReferenceOptions type,
+		TypeDeclarationAccessibility? accessibility = null
+	)
 	{
 		Name = name;
 		Type = type;
+		Accessibility = accessibility;
 	}
 
 	/// <summary>Gets the field name.</summary>

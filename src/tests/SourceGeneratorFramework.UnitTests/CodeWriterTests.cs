@@ -1626,9 +1626,7 @@ public class CodeWriterTests
 			writeArgumentsOnSeparateLines: true
 		);
 
-		await Assert
-			.That(writer.ToString())
-			.IsEqualTo("await service.LoadAsync(\n\ttoken,\n\tout result);\n");
+		await Assert.That(writer.ToString()).IsEqualTo("await service.LoadAsync(\n\ttoken,\n\tout result);\n");
 	}
 
 	[Test]
@@ -1638,10 +1636,7 @@ public class CodeWriterTests
 
 		writer.WriteMethodCall(
 			"Create",
-			[
-				"firstArgumentWithANameThatMakesTheCallLong",
-				"secondArgumentWithANameThatMakesTheCallLong",
-			],
+			["firstArgumentWithANameThatMakesTheCallLong", "secondArgumentWithANameThatMakesTheCallLong"],
 			receiver: "factory",
 			genericArguments: [Type("string")]
 		);
@@ -1672,11 +1667,7 @@ public class CodeWriterTests
 
 		await Assert
 			.That(writer.ToString())
-			.IsEqualTo(
-				"AMethodCallWithLotsOfParams(\n"
-					+ "\tref a-long-a-param,\n"
-					+ "\tout another-long-param);\n"
-			);
+			.IsEqualTo("AMethodCallWithLotsOfParams(\n" + "\tref a-long-a-param,\n" + "\tout another-long-param);\n");
 	}
 
 	[Test]
@@ -1684,10 +1675,7 @@ public class CodeWriterTests
 	{
 		var writer = CodeWriterFactory.ForTests();
 
-		writer.WriteMethodCall(
-			"Configure",
-			new MethodCallArgumentOptions[] { new("value") { Name = "option" } }
-		);
+		writer.WriteMethodCall("Configure", new MethodCallArgumentOptions[] { new("value") { Name = "option" } });
 
 		await Assert.That(writer.ToString()).IsEqualTo("Configure(option: value);\n");
 	}

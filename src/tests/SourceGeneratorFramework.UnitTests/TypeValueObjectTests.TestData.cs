@@ -40,11 +40,7 @@ partial class TypeValueObjectTests
 				blockNamespace = writer.WriteBlockNamespaceScope(namespaceInfo.Namespace);
 		}
 
-		using (
-			writer.WriteTypeScope(
-				new TypeDeclarationOptions(typeName) { Accessibility = accessibility, Kind = declarationKind }
-			)
-		)
+		using (writer.WriteTypeScope(new TypeDeclarationOptions(typeName, accessibility) { Kind = declarationKind }))
 		{
 			writer.WriteLine("public void DoAThing() {}");
 		}

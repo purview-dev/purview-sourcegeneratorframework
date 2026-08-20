@@ -1499,13 +1499,14 @@ public sealed class CodeWriter
 		string? receiver = null,
 		IEnumerable<TypeReferenceOptions>? genericArguments = null,
 		bool writeArgumentsOnSeparateLines = false
-	) => WriteMethodCall(
-		methodName,
-		(arguments ?? throw new ArgumentNullException(nameof(arguments))).Select(RenderCallArgument),
-		receiver,
-		genericArguments,
-		writeArgumentsOnSeparateLines
-	);
+	) =>
+		WriteMethodCall(
+			methodName,
+			(arguments ?? throw new ArgumentNullException(nameof(arguments))).Select(RenderCallArgument),
+			receiver,
+			genericArguments,
+			writeArgumentsOnSeparateLines
+		);
 
 	/// <summary>Writes an awaited method invocation from structured argument declarations.</summary>
 	/// <param name="methodName">The method name without a receiver or generic argument list.</param>
@@ -1521,14 +1522,15 @@ public sealed class CodeWriter
 		string? receiver = null,
 		IEnumerable<TypeReferenceOptions>? genericArguments = null,
 		bool writeArgumentsOnSeparateLines = false
-	) => WriteMethodCallCore(
-		methodName,
-		(arguments ?? throw new ArgumentNullException(nameof(arguments))).Select(RenderCallArgument),
-		receiver,
-		genericArguments,
-		writeArgumentsOnSeparateLines,
-		true
-	);
+	) =>
+		WriteMethodCallCore(
+			methodName,
+			(arguments ?? throw new ArgumentNullException(nameof(arguments))).Select(RenderCallArgument),
+			receiver,
+			genericArguments,
+			writeArgumentsOnSeparateLines,
+			true
+		);
 
 	/// <summary>
 	/// Writes a method invocation statement with optional receiver and generic type arguments.
@@ -1590,6 +1592,7 @@ public sealed class CodeWriter
 		if (WriteMethodCallArguments(argumentList, writeArgumentsOnSeparateLines))
 			return this;
 
+		// If the arguments were written inline, we can write the closing parenthesis and semicolon on the same line.
 		return WriteLine(";");
 	}
 
@@ -1634,13 +1637,17 @@ public sealed class CodeWriter
 	/// <summary>Writes an assignment statement.</summary>
 	/// <param name="target">The target, such as <c>value</c> or <c>var result</c>.</param>
 	/// <param name="value">The assigned expression.</param>
+	/// <param name="forceNotNull">Whether to force the value to be not null, by appending the null-forgiving operator (<c>!</c>).</param>
 	/// <example><code>writer.WriteAssignment("value", "CreateValue()"); // value = CreateValue();</code></example>
-	public CodeWriter WriteAssignment(string target, string value)
+	public CodeWriter WriteAssignment(string target, string value, bool forceNotNull = false)
 	{
 		ValidateStatementPart(target, nameof(target));
 		ValidateStatementPart(value, nameof(value));
 		Write(target).Write(" = ");
 		WriteExpression(value, expressionWriter: null);
+		if (forceNotNull)
+			Write("!");
+
 		return WriteLine(";");
 	}
 
@@ -1658,11 +1665,11 @@ public sealed class CodeWriter
 
 	/// <summary>Writes a typed local or declaration assignment.</summary>
 	/// <example><code>writer.WriteAssignment("var", "value", "CreateValue()");</code></example>
-	public CodeWriter WriteAssignment(string type, string name, string value)
+	public CodeWriter WriteAssignment(string type, string name, string value, bool forceNotNull = false)
 	{
 		ValidateStatementPart(type, nameof(type));
 		ValidateStatementPart(name, nameof(name));
-		return WriteAssignment($"{type} {name}", value);
+		return WriteAssignment($"{type} {name}", value, forceNotNull);
 	}
 
 	/// <summary>Writes a typed local or declaration assignment with a multiline expression.</summary>
@@ -2035,16 +2042,18 @@ public sealed class CodeWriter
 		if (argument.Name is not null)
 			ValidateRequired(argument.Name, "Argument name", nameof(argument));
 		return (
-			argument.Modifier switch
-			{
-				ParameterModifier.None => string.Empty,
-				ParameterModifier.Ref => "ref ",
-				ParameterModifier.Out => "out ",
-				ParameterModifier.In => "in ",
-				ParameterModifier.RefReadOnly => "ref readonly ",
-				_ => throw new ArgumentOutOfRangeException(nameof(argument)),
-			}
-		) + (argument.Name is null ? string.Empty : argument.Name + ": ") + argument.Value;
+				argument.Modifier switch
+				{
+					ParameterModifier.None => string.Empty,
+					ParameterModifier.Ref => "ref ",
+					ParameterModifier.Out => "out ",
+					ParameterModifier.In => "in ",
+					ParameterModifier.RefReadOnly => "ref readonly ",
+					_ => throw new ArgumentOutOfRangeException(nameof(argument)),
+				}
+			)
+			+ (argument.Name is null ? string.Empty : argument.Name + ": ")
+			+ argument.Value;
 	}
 
 	void WriteAttributes(ImmutableArray<AttributeDeclarationOptions> attributes, string? defaultTarget = null)

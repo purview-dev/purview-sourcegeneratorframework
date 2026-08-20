@@ -11,21 +11,30 @@ public readonly record struct ConstructorDeclarationOptions
 	/// Initializes a constructor declaration description.
 	/// </summary>
 	/// <param name="typeName">The name of the containing type without generic parameters.</param>
-	public ConstructorDeclarationOptions(string typeName)
+	/// <param name="accessibility">The optional accessibility modifier, or <see langword="null"/> to omit accessibility.</param>
+	public ConstructorDeclarationOptions(string typeName, TypeDeclarationAccessibility? accessibility = null)
 	{
 		if (string.IsNullOrWhiteSpace(typeName))
 			throw new ArgumentException("Type name cannot be null or whitespace.", nameof(typeName));
 
 		Type = new TypeValueObject(typeName, null).AsTypeReference();
+		Accessibility = accessibility;
 	}
 
 	/// <summary>Initializes a constructor declaration from its containing type.</summary>
 	/// <param name="type">The containing type. Only its unqualified declaration name is used.</param>
-	public ConstructorDeclarationOptions(TypeValueObject type)
-		: this(type.AsTypeReference()) { }
+	/// <param name="accessibility">The optional accessibility modifier, or <see langword="null"/> to omit accessibility.</param>
+	public ConstructorDeclarationOptions(TypeValueObject type, TypeDeclarationAccessibility? accessibility = null)
+		: this(type.AsTypeReference(), accessibility) { }
 
 	/// <summary>Initializes a constructor declaration from its containing type reference.</summary>
-	public ConstructorDeclarationOptions(TypeReferenceOptions type) => Type = type;
+	/// <param name="type">The containing type reference.</param>
+	/// <param name="accessibility">The optional accessibility modifier, or <see langword="null"/> to omit accessibility.</param>
+	public ConstructorDeclarationOptions(TypeReferenceOptions type, TypeDeclarationAccessibility? accessibility = null)
+	{
+		Type = type;
+		Accessibility = accessibility;
+	}
 
 	/// <summary>Gets the structured containing type reference.</summary>
 	public TypeReferenceOptions Type { get; }
