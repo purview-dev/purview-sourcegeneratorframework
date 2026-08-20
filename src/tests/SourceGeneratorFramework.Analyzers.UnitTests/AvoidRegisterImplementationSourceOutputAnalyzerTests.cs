@@ -3,7 +3,7 @@ namespace Purview.SourceGeneratorFramework.Analyzers;
 public class AvoidRegisterImplementationSourceOutputAnalyzerTests
 {
 	[Test]
-	public async Task RegisterImplementationSourceOutput_ReportsDiagnostic()
+	public async Task RegisterImplementationSourceOutput_ReportsDiagnostic(CancellationToken cancellationToken)
 	{
 		const string source = """
 			using Microsoft.CodeAnalysis;
@@ -21,7 +21,8 @@ public class AvoidRegisterImplementationSourceOutputAnalyzerTests
 			""";
 
 		var diagnostics = await new AvoidRegisterImplementationSourceOutputAnalyzer().GetAnalyzerDiagnosticsAsync(
-			source
+			source,
+			cancellationToken
 		);
 
 		await Assert.That(diagnostics).Count().IsEqualTo(1);
@@ -29,7 +30,7 @@ public class AvoidRegisterImplementationSourceOutputAnalyzerTests
 	}
 
 	[Test]
-	public async Task RegisterSourceOutput_DoesNotReportDiagnostic()
+	public async Task RegisterSourceOutput_DoesNotReportDiagnostic(CancellationToken cancellationToken)
 	{
 		const string source = """
 			using Microsoft.CodeAnalysis;
@@ -47,7 +48,8 @@ public class AvoidRegisterImplementationSourceOutputAnalyzerTests
 			""";
 
 		var diagnostics = await new AvoidRegisterImplementationSourceOutputAnalyzer().GetAnalyzerDiagnosticsAsync(
-			source
+			source,
+			cancellationToken
 		);
 
 		await Assert.That(diagnostics).IsEmpty();

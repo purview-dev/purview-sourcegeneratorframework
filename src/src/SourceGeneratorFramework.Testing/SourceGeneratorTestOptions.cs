@@ -36,13 +36,8 @@ public record SourceGeneratorTestOptions
 	/// <summary>Initializes an options snapshot by copying another instance.</summary>
 	/// <param name="source">The options to copy.</param>
 	/// <remarks>
-	/// <para>
 	/// This is also the record copy constructor. Mutable collections are copied so options snapshots
 	/// can be customized independently.
-	/// </para>
-	/// <para>
-	/// <b>Notes: </b> the <see cref="State"/> property is not copied, as it is intented to be a per-test-run state bag. If you need to copy the state, do so explicitly after constructing the new options instance.
-	/// </para>
 	/// </remarks>
 	protected SourceGeneratorTestOptions(SourceGeneratorTestOptions source)
 	{
@@ -179,9 +174,4 @@ public record SourceGeneratorTestOptions
 	/// Gets additional text files to include in the test compilation.
 	/// </summary>
 	public ImmutableArray<AdditionalText> AdditionalText { get; init; } = [];
-
-	/// <summary>
-	/// Gets a state object that can be used to pass arbitrary data to the test runner. Useful for the <see cref="SourceGeneratorTestBase{TGenerator, SourceGeneratorTestOptions}.OnBeforeRun(IEnumerable{string}, SourceGeneratorTestOptions, CancellationToken)"/>
-	/// </summary>
-	public object? State { get; init; }
 }

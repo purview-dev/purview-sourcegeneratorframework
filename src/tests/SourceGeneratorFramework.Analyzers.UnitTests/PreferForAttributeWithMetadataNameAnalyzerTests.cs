@@ -3,7 +3,7 @@ namespace Purview.SourceGeneratorFramework.Analyzers;
 public class PreferForAttributeWithMetadataNameAnalyzerTests
 {
 	[Test]
-	public async Task CreateSyntaxProvider_ReportsDiagnostic()
+	public async Task CreateSyntaxProvider_ReportsDiagnostic(CancellationToken cancellationToken)
 	{
 		const string source = """
 			using Microsoft.CodeAnalysis;
@@ -20,14 +20,17 @@ public class PreferForAttributeWithMetadataNameAnalyzerTests
 			}
 			""";
 
-		var diagnostics = await new PreferForAttributeWithMetadataNameAnalyzer().GetAnalyzerDiagnosticsAsync(source);
+		var diagnostics = await new PreferForAttributeWithMetadataNameAnalyzer().GetAnalyzerDiagnosticsAsync(
+			source,
+			cancellationToken
+		);
 
 		await Assert.That(diagnostics).Count().IsEqualTo(1);
 		await Assert.That(diagnostics.First().Id).IsEqualTo("PSGFR11");
 	}
 
 	[Test]
-	public async Task ForAttributeWithMetadataName_DoesNotReportDiagnostic()
+	public async Task ForAttributeWithMetadataName_DoesNotReportDiagnostic(CancellationToken cancellationToken)
 	{
 		const string source = """
 			using Microsoft.CodeAnalysis;
@@ -45,7 +48,10 @@ public class PreferForAttributeWithMetadataNameAnalyzerTests
 			}
 			""";
 
-		var diagnostics = await new PreferForAttributeWithMetadataNameAnalyzer().GetAnalyzerDiagnosticsAsync(source);
+		var diagnostics = await new PreferForAttributeWithMetadataNameAnalyzer().GetAnalyzerDiagnosticsAsync(
+			source,
+			cancellationToken
+		);
 
 		await Assert.That(diagnostics).IsEmpty();
 	}

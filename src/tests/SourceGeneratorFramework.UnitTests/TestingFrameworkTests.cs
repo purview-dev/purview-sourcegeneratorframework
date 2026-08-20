@@ -275,12 +275,10 @@ namespace Test
 	public async Task Constructor_DerivedOptions_CopiesConfiguredDefaultWithoutSharingMutableCollections()
 	{
 		var originalDefault = SourceGeneratorTestOptions.Default;
-		var marker = new object();
 		try
 		{
 			SourceGeneratorTestOptions.Default = originalDefault with
 			{
-				State = marker,
 				AnalyzerConfigOptions = new Dictionary<string, string> { ["Shared"] = "default" },
 			};
 
@@ -291,26 +289,6 @@ namespace Test
 			await Assert.That(first.AnalyzerConfigOptions["Shared"]).IsEqualTo("default");
 			await Assert.That(second.AnalyzerConfigOptions.ContainsKey("OnlyFirst")).IsFalse();
 			await Assert.That(first.CustomValue).IsEqualTo("custom");
-		}
-		finally
-		{
-			SourceGeneratorTestOptions.Default = originalDefault;
-		}
-	}
-
-	[Test]
-	[NotInParallel]
-	public async Task Constructor_DerivedOptions_DoesNotCopyState()
-	{
-		var originalDefault = SourceGeneratorTestOptions.Default;
-		var marker = new object();
-		try
-		{
-			SourceGeneratorTestOptions.Default = originalDefault with { State = marker };
-
-			var first = new CustomSourceGeneratorTestOptions();
-
-			await Assert.That(first.State).IsNull();
 		}
 		finally
 		{
