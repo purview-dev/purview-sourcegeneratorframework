@@ -107,6 +107,31 @@ public readonly record struct MethodCallArgumentOptions
 	public static implicit operator MethodCallArgumentOptions(string value) => new(value);
 }
 
+/// <summary>Describes a generated object-creation expression.</summary>
+public readonly record struct ObjectCreationOptions
+{
+	/// <summary>Creates an object-creation expression.</summary>
+	/// <param name="type">The type to instantiate.</param>
+	/// <param name="arguments">The constructor arguments; strings are implicitly supported.</param>
+	public ObjectCreationOptions(TypeReferenceOptions type, params MethodCallArgumentOptions[] arguments)
+	{
+		if (type.IsEmpty)
+			throw new ArgumentException("Object-creation type cannot be empty.", nameof(type));
+
+		Type = type;
+		Arguments = arguments is null ? [] : [.. arguments];
+	}
+
+	/// <summary>Gets the type to instantiate.</summary>
+	public TypeReferenceOptions Type { get; }
+
+	/// <summary>Gets the constructor arguments.</summary>
+	public ImmutableArray<MethodCallArgumentOptions> Arguments { get; }
+
+	/// <summary>Gets whether constructor arguments are written one per line.</summary>
+	public bool WriteArgumentsOnSeparateLines { get; init; }
+}
+
 /// <summary>Describes a generated method, constructor, delegate, or primary-constructor parameter.</summary>
 public readonly record struct ParameterDeclarationOptions
 {

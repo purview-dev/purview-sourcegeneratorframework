@@ -1596,7 +1596,11 @@ public sealed class CodeWriter
 		return WriteLine(";");
 	}
 
-	bool WriteMethodCallArguments(string?[] arguments, bool writeOnSeparateLines)
+	bool WriteMethodCallArguments(
+		string?[] arguments,
+		bool writeOnSeparateLines,
+		string multilineClosingToken = ");"
+	)
 	{
 		var inlineLength = CurrentLineLength + 2;
 		for (var index = 0; index < arguments.Length; index++)
@@ -1628,7 +1632,7 @@ public sealed class CodeWriter
 		for (var index = 0; index < arguments.Length; index++)
 		{
 			WriteExpression(arguments[index], expressionWriter: null);
-			WriteLine(index == arguments.Length - 1 ? ");" : ",");
+			WriteLine(index == arguments.Length - 1 ? multilineClosingToken : ",");
 		}
 		Unindent();
 		return true;
@@ -1663,6 +1667,17 @@ public sealed class CodeWriter
 		return WriteLine(";");
 	}
 
+	/// <summary>Writes an assignment whose value is a structured object-creation expression.</summary>
+	/// <example><code>writer.WriteAssignment("@event", new ObjectCreationOptions(eventType, "propVal1", "propVal2"));</code></example>
+	public CodeWriter WriteAssignment(string target, ObjectCreationOptions value, bool forceNotNull = false)
+	{
+		ValidateStatementPart(target, nameof(target));
+		Write(target).Write(" = ");
+		if (WriteObjectCreationExpression(value, forceNotNull))
+			return this;
+		return WriteLine(";");
+	}
+
 	/// <summary>Writes a typed local or declaration assignment.</summary>
 	/// <example><code>writer.WriteAssignment("var", "value", "CreateValue()");</code></example>
 	public CodeWriter WriteAssignment(string type, string name, string value, bool forceNotNull = false)
@@ -1679,6 +1694,32 @@ public sealed class CodeWriter
 		ValidateStatementPart(type, nameof(type));
 		ValidateStatementPart(name, nameof(name));
 		return WriteAssignment($"{type} {name}", writeValue);
+	}
+
+	/// <summary>Writes a typed local assignment whose value is a structured object creation.</summary>
+	/// <example><code>writer.WriteAssignment("var", "@event", new ObjectCreationOptions(eventType, "propVal1", "propVal2"));</code></example>
+	public CodeWriter WriteAssignment(
+		string type,
+		string name,
+		ObjectCreationOptions value,
+		bool forceNotNull = false
+	)
+	{
+		ValidateStatementPart(type, nameof(type));
+		ValidateStatementPart(name, nameof(name));
+		return WriteAssignment($"{type} {name}", value, forceNotNull);
+	}
+
+	bool WriteObjectCreationExpression(ObjectCreationOptions value, bool forceNotNull)
+	{
+		Write("new ").WriteTypeReference(value.Type).Write('(');
+		string[] arguments = value.Arguments.IsDefault ? [] : [.. value.Arguments.Select(RenderCallArgument)];
+		if (WriteMethodCallArguments(arguments, value.WriteArgumentsOnSeparateLines, forceNotNull ? ")!;" : ");"))
+			return true;
+		Write(')');
+		if (forceNotNull)
+			Write('!');
+		return false;
 	}
 
 	/// <summary>Writes a return statement.</summary>

@@ -1681,6 +1681,34 @@ public class CodeWriterTests
 	}
 
 	[Test]
+	public async Task WriteAssignment_WithObjectCreationOptions_WritesOptionalVarAndMixedArguments()
+	{
+		var writer = CodeWriterFactory.ForTests();
+		var creation = new ObjectCreationOptions(
+			Type("ASpecificType"),
+			"propVal1",
+			new MethodCallArgumentOptions("propVal2") { Name = "second" }
+		)
+		{
+			WriteArgumentsOnSeparateLines = true,
+		};
+
+		writer.WriteAssignment("var", "@event", creation);
+		writer.WriteAssignment("existingEvent", creation);
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"var @event = new ASpecificType(\n"
+					+ "\tpropVal1,\n"
+					+ "\tsecond: propVal2);\n"
+					+ "existingEvent = new ASpecificType(\n"
+					+ "\tpropVal1,\n"
+					+ "\tsecond: propVal2);\n"
+			);
+	}
+
+	[Test]
 	public async Task ToString_GivenOpenBlockAndValidationEnabled_ThrowsScopeValidationException()
 	{
 		// Arrange
