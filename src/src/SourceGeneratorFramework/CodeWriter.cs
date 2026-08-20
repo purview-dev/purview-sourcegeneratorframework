@@ -1596,11 +1596,7 @@ public sealed class CodeWriter
 		return WriteLine(";");
 	}
 
-	bool WriteMethodCallArguments(
-		string?[] arguments,
-		bool writeOnSeparateLines,
-		string multilineClosingToken = ");"
-	)
+	bool WriteMethodCallArguments(string?[] arguments, bool writeOnSeparateLines, string multilineClosingToken = ");")
 	{
 		var inlineLength = CurrentLineLength + 2;
 		for (var index = 0; index < arguments.Length; index++)
@@ -1673,8 +1669,11 @@ public sealed class CodeWriter
 	{
 		ValidateStatementPart(target, nameof(target));
 		Write(target).Write(" = ");
+
 		if (WriteObjectCreationExpression(value, forceNotNull))
 			return this;
+
+		// If the object creation was written inline, we can write the closing semicolon on the same line.
 		return WriteLine(";");
 	}
 
@@ -1698,12 +1697,7 @@ public sealed class CodeWriter
 
 	/// <summary>Writes a typed local assignment whose value is a structured object creation.</summary>
 	/// <example><code>writer.WriteAssignment("var", "@event", new ObjectCreationOptions(eventType, "propVal1", "propVal2"));</code></example>
-	public CodeWriter WriteAssignment(
-		string type,
-		string name,
-		ObjectCreationOptions value,
-		bool forceNotNull = false
-	)
+	public CodeWriter WriteAssignment(string type, string name, ObjectCreationOptions value, bool forceNotNull = false)
 	{
 		ValidateStatementPart(type, nameof(type));
 		ValidateStatementPart(name, nameof(name));
@@ -1751,6 +1745,22 @@ public sealed class CodeWriter
 		ValidateStatementPart(expression, nameof(expression));
 		Write("throw ");
 		WriteExpression(expression, expressionWriter: null);
+		return WriteLine(";");
+	}
+
+	/// <summary>Writes a throw statement.</summary>
+	/// <example><code>writer.WriteThrow("new InvalidOperationException()");</code></example>
+	public CodeWriter WriteThrow(TypeReferenceOptions exceptionType, string? message = null)
+	{
+		if (exceptionType.IsEmpty)
+			throw new ArgumentException("Exception type cannot be empty.", nameof(exceptionType));
+
+		Write("throw ");
+		WriteExpression(
+			$"{exceptionType}{(message is null ? string.Empty : $"(\"{message}\")")}",
+			expressionWriter: null
+		);
+
 		return WriteLine(";");
 	}
 

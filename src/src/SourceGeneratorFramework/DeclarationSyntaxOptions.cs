@@ -136,10 +136,15 @@ public readonly record struct ObjectCreationOptions
 public readonly record struct ParameterDeclarationOptions
 {
 	/// <summary>Creates a parameter declaration.</summary>
-	public ParameterDeclarationOptions(string name, TypeReferenceOptions type)
+	public ParameterDeclarationOptions(
+		string name,
+		TypeReferenceOptions type,
+		ParameterModifier modifier = ParameterModifier.None
+	)
 	{
 		Name = name;
 		Type = type;
+		Modifier = modifier;
 	}
 
 	/// <summary>Gets the parameter name.</summary>

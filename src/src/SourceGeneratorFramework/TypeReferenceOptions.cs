@@ -86,6 +86,9 @@ public readonly record struct TypeReferenceOptions
 	/// <summary>Returns this type with a nullable annotation.</summary>
 	public TypeReferenceOptions Nullable() => this with { IsNullable = true };
 
+	/// <summary>Returns this type without a nullable annotation.</summary>
+	public TypeReferenceOptions NonNullable() => this with { IsNullable = false };
+
 	/// <summary>Returns this type with concrete generic arguments.</summary>
 	public TypeReferenceOptions MakeGeneric(params TypeReferenceOptions[] arguments) =>
 		this with
