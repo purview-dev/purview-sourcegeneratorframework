@@ -117,6 +117,12 @@ public readonly record struct TypeReferenceOptions
 		&& GenericArity == 0
 		&& TypeValue.Equals(other);
 
+	/// <summary>Determines whether the specified runtime type has the same complete reference shape.</summary>
+	public bool Equals(Type? other) => other is not null && RenderTypeName == new TypeReferenceOptions(other).RenderTypeName;
+
+	/// <summary>Determines whether the specified Roslyn symbol has the same complete reference shape.</summary>
+	public bool Equals(ITypeSymbol? other) => other is not null && RenderTypeName == new TypeReferenceOptions(other).RenderTypeName;
+
 	/// <summary>Gets the type rendered as valid C# type syntax.</summary>
 	public string RenderTypeName
 	{

@@ -101,6 +101,26 @@ public partial class TypeValueObjectTests
 			.IsEquivalentTo(["string", "int"]);
 		await Assert.That(reference.ArrayRanks).IsEquivalentTo([1]);
 		await Assert.That(reference.TypeValue).IsNotEqualTo(TypeValueObject.Empty);
+		await Assert.That(reference.Equals(typeof(Dictionary<string, int>[]))).IsTrue();
+		await Assert.That(new TypeValueObject(typeof(Dictionary<string, int>[])).Equals(typeof(Dictionary<string, int>[]))).IsTrue();
+	}
+
+	[Test]
+	public async Task TypeValueObject_AndTypeReference_CompareToRoslynSymbol()
+	{
+		const string source = "public sealed class Widget { }";
+		var options = new SourceGeneratorTestOptions();
+		var compilation = SourceGeneratorHelpers.CreateCompilation(
+			[CSharpSyntaxTree.ParseText(source)],
+			SourceGeneratorHelpers.ResolveReferences(options, typeof(TypeValueObjectTests).Assembly),
+			options
+		);
+		var symbol = compilation.GetTypeByMetadataName("Widget")!;
+		var value = new TypeValueObject(symbol);
+		var reference = new TypeReferenceOptions(symbol);
+
+		await Assert.That(value.Equals(symbol)).IsTrue();
+		await Assert.That(reference.Equals(symbol)).IsTrue();
 	}
 
 	[Test]

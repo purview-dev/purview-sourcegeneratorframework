@@ -261,6 +261,12 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 				.All(static equal => equal);
 	}
 
+	/// <summary>Determines whether the specified runtime type represents the same semantic type.</summary>
+	public bool Equals(Type? other) => other is not null && Equals(new TypeValueObject(other));
+
+	/// <summary>Determines whether the specified structured type reference represents this semantic type.</summary>
+	public bool Equals(TypeReferenceOptions other) => other.Equals(this);
+
 	/// <summary>
 	/// Determines whether the specified value represents the same type.
 	/// </summary>
@@ -287,11 +293,6 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 
 		return true;
 	}
-
-	/// <summary>
-	/// Determines whether this semantic type matches an unmodified structured type reference.
-	/// </summary>
-	public bool Equals(TypeReferenceOptions other) => other.Equals(this);
 
 	/// <summary>
 	/// Returns a structural hash code for this type and its generic arguments.
