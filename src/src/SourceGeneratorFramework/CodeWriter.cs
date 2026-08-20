@@ -496,6 +496,38 @@ public sealed class CodeWriter
 		if (declaration.ReturnType.IsEmpty)
 			return default;
 
+		WriteMethodHeader(declaration);
+
+		if (declaration.IsPartial)
+		{
+			Write(';').NewLine();
+
+			CompleteWrittenItem(WrittenItemKind.Method, _indentLevel);
+			return default;
+		}
+
+		if (declaration.ExpressionBody is not null)
+		{
+			Write(" => ");
+			WriteExpression(declaration.ExpressionBody, expressionWriter);
+			WriteLine(";");
+			CompleteWrittenItem(WrittenItemKind.Method, _indentLevel);
+			return default;
+		}
+
+		if (declaration.IsAbstract)
+		{
+			WriteLine(";");
+			CompleteWrittenItem(WrittenItemKind.Method, _indentLevel);
+			return default;
+		}
+
+		NewLine();
+		return OpenBlockScope(WrittenItemKind.Method);
+	}
+
+	void WriteMethodHeader(MethodDeclarationOptions declaration)
+	{
 		ValidateMethodDeclaration(declaration);
 		BeginWrittenItem(WrittenItemKind.Method);
 
@@ -526,39 +558,15 @@ public sealed class CodeWriter
 			NewLine();
 
 		WriteMethodGenericConstraints(declaration.GenericTypes);
-
-		if (declaration.IsPartial)
-		{
-			Write(';').NewLine();
-
-			CompleteWrittenItem(WrittenItemKind.Method, _indentLevel);
-			return default;
-		}
-
-		if (declaration.ExpressionBody is not null)
-		{
-			Write(" => ");
-			WriteExpression(declaration.ExpressionBody, expressionWriter);
-			WriteLine(";");
-			CompleteWrittenItem(WrittenItemKind.Method, _indentLevel);
-			return default;
-		}
-
-		if (declaration.IsAbstract)
-		{
-			WriteLine(";");
-			CompleteWrittenItem(WrittenItemKind.Method, _indentLevel);
-			return default;
-		}
-
-		NewLine();
-		return OpenBlockScope(WrittenItemKind.Method);
 	}
 
 	/// <summary>Writes a structured partial method declaration.</summary>
 	/// <example><code>writer.WritePartialMethod(new MethodDeclarationOptions("OnChanged"));</code></example>
-	public CodeWriter WritePartialMethod(MethodDeclarationOptions declaration) =>
-		WriteMethod(declaration with { IsPartial = true, Accessibility = null }, _ => { });
+	public CodeWriter WritePartialMethod(MethodDeclarationOptions declaration)
+	{
+		WriteMethodScope(declaration with { IsPartial = true, Accessibility = null });
+		return this;
+	}
 
 	/// <summary>Writes a structured partial method declaration.</summary>
 	/// <example><code>writer.WriteMethodExpression(new MethodDeclarationOptions("Count", "int") { ExpressionBody = "items.Count" });</code></example>
@@ -602,12 +610,26 @@ public sealed class CodeWriter
 	{
 		if (writeBody is null)
 			throw new ArgumentNullException(nameof(writeBody));
+
 		if (declaration.IsAbstract || declaration.ExpressionBody is not null)
 		{
 			throw new ArgumentException(
 				"A callback body cannot be supplied for an abstract or expression-bodied method.",
 				nameof(declaration)
 			);
+		}
+
+		if (declaration.IsPartial)
+		{
+			if (declaration.ReturnType.IsEmpty)
+				return this;
+
+			WriteMethodHeader(declaration);
+			NewLine();
+			using (OpenBlockScope(WrittenItemKind.Method))
+				writeBody(this);
+
+			return this;
 		}
 
 		using (WriteMethodScope(declaration))

@@ -2217,4 +2217,30 @@ public class CodeWriterTests
 					+ "Value Current => GetCurrent();\n"
 			);
 	}
+
+	[Test]
+	public async Task WriteMethod_WithPartialDeclarationWithBody_WritesBodyOutsideMethod()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		writer.DefaultIncludeGeneratedAttributes = false;
+
+		// Act
+		writer.WriteClass(
+			new("Example") { IsPartial = true },
+			body => body.WriteMethod(new("Apply") { IsPartial = true }, methodBody => methodBody.WriteReturn())
+		);
+
+		// Assert
+		await Assert
+			.That(writer)
+			.ContainsGenerated(
+				"""
+partial void Apply()
+{
+	return;
+}
+"""
+			);
+	}
 }
