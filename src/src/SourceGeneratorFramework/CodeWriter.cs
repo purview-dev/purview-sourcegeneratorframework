@@ -170,6 +170,27 @@ public sealed class CodeWriter
 	}
 
 	/// <summary>
+	/// Ensures that the next content starts after a blank line.
+	/// </summary>
+	/// <remarks>
+	/// Unlike <see cref="EnsureNewLine"/>, this method also adds a separator when the writer is
+	/// already at the start of a line. Calling it repeatedly does not add additional blank lines.
+	/// </remarks>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteMethodCall("Run").EnsureBlankLine().Comment("Explains the next member.");</code></example>
+	public CodeWriter EnsureBlankLine()
+	{
+		if (_builder.Length == 0)
+			return this;
+
+		EnsureNewLine();
+		if (_builder.Length < 2 || _builder[_builder.Length - 2] != NewLineCharacter)
+			NewLine();
+
+		return this;
+	}
+
+	/// <summary>
 	/// Writes an optional value followed by a line feed, applying the current indentation.
 	/// </summary>
 	/// <param name="value">The value to write, or <see langword="null"/> to write an empty line.</param>
@@ -1445,7 +1466,69 @@ public sealed class CodeWriter
 	/// <returns>The current writer.</returns>
 	/// <example><code>writer.WriteMethodCall("Run", "value", "cancellationToken"); // Run(value, cancellationToken);</code></example>
 	public CodeWriter WriteMethodCall(string methodName, params string[] arguments) =>
-		WriteMethodCall(methodName, (IEnumerable<string?>)arguments);
+		WriteMethodCallCore(methodName, arguments, receiver: null, genericArguments: null, false, false);
+
+	/// <summary>Writes an awaited method invocation statement.</summary>
+	/// <param name="methodName">The method name, optionally including a receiver.</param>
+	/// <param name="arguments">The argument expressions.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteAwaitedMethodCall("LoadAsync", "cancellationToken"); // await LoadAsync(cancellationToken);</code></example>
+	public CodeWriter WriteAwaitedMethodCall(string methodName, params string[] arguments) =>
+		WriteMethodCallCore(methodName, arguments, receiver: null, genericArguments: null, false, true);
+
+	/// <summary>
+	/// Writes a method invocation from structured argument declarations.
+	/// </summary>
+	/// <remarks>
+	/// The argument type is not emitted; each declaration contributes its name and argument
+	/// modifier. This allows call sites to reuse parameter declarations while preserving
+	/// <c>ref</c>, <c>out</c>, and <c>in</c> arguments.
+	/// </remarks>
+	/// <param name="methodName">The method name, optionally including a receiver.</param>
+	/// <param name="arguments">The structured arguments to invoke the method with.</param>
+	/// <param name="receiver">An optional receiver such as <c>service</c>.</param>
+	/// <param name="genericArguments">Optional generic type arguments.</param>
+	/// <param name="writeArgumentsOnSeparateLines">Whether to force one argument per line.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteMethodCall("Copy", [
+	/// 	new("source", Type("Buffer")),
+	/// 	new("destination", Type("Buffer")) { Modifier = ParameterModifier.Out }]);</code></example>
+	public CodeWriter WriteMethodCall(
+		string methodName,
+		IEnumerable<ParameterDeclarationOptions> arguments,
+		string? receiver = null,
+		IEnumerable<TypeReferenceOptions>? genericArguments = null,
+		bool writeArgumentsOnSeparateLines = false
+	) => WriteMethodCall(
+		methodName,
+		(arguments ?? throw new ArgumentNullException(nameof(arguments))).Select(RenderCallArgument),
+		receiver,
+		genericArguments,
+		writeArgumentsOnSeparateLines
+	);
+
+	/// <summary>Writes an awaited method invocation from structured argument declarations.</summary>
+	/// <param name="methodName">The method name without a receiver or generic argument list.</param>
+	/// <param name="arguments">The structured arguments to invoke the method with.</param>
+	/// <param name="receiver">An optional receiver such as <c>service</c>.</param>
+	/// <param name="genericArguments">Optional generic type arguments.</param>
+	/// <param name="writeArgumentsOnSeparateLines">Whether to force one argument per line.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteAwaitedMethodCall("LoadAsync", [new("token", Type("CancellationToken"))], "service");</code></example>
+	public CodeWriter WriteAwaitedMethodCall(
+		string methodName,
+		IEnumerable<ParameterDeclarationOptions> arguments,
+		string? receiver = null,
+		IEnumerable<TypeReferenceOptions>? genericArguments = null,
+		bool writeArgumentsOnSeparateLines = false
+	) => WriteMethodCallCore(
+		methodName,
+		(arguments ?? throw new ArgumentNullException(nameof(arguments))).Select(RenderCallArgument),
+		receiver,
+		genericArguments,
+		writeArgumentsOnSeparateLines,
+		true
+	);
 
 	/// <summary>
 	/// Writes a method invocation statement with optional receiver and generic type arguments.
@@ -1454,13 +1537,24 @@ public sealed class CodeWriter
 	/// <param name="arguments">The argument expressions.</param>
 	/// <param name="receiver">An optional receiver such as <c>service</c> or <c>global::Api.Service</c>.</param>
 	/// <param name="genericArguments">Optional generic type arguments.</param>
+	/// <param name="writeArgumentsOnSeparateLines">Whether to force one argument per line.</param>
 	/// <returns>The current writer.</returns>
 	/// <example><code>writer.WriteMethodCall("Create", ["value"], "factory", [TypeLibrary.System.String.AsTypeReference()]);</code></example>
 	public CodeWriter WriteMethodCall(
 		string methodName,
 		IEnumerable<string?> arguments,
 		string? receiver = null,
-		IEnumerable<TypeReferenceOptions>? genericArguments = null
+		IEnumerable<TypeReferenceOptions>? genericArguments = null,
+		bool writeArgumentsOnSeparateLines = false
+	) => WriteMethodCallCore(methodName, arguments, receiver, genericArguments, writeArgumentsOnSeparateLines, false);
+
+	CodeWriter WriteMethodCallCore(
+		string methodName,
+		IEnumerable<string?> arguments,
+		string? receiver,
+		IEnumerable<TypeReferenceOptions>? genericArguments,
+		bool writeArgumentsOnSeparateLines,
+		bool isAwaited
 	)
 	{
 		ValidateStatementPart(methodName, nameof(methodName));
@@ -1475,6 +1569,8 @@ public sealed class CodeWriter
 			if (genericArgumentList[index].IsEmpty)
 				throw new ArgumentException("Generic arguments cannot be empty.", nameof(genericArguments));
 
+		if (isAwaited)
+			Write("await ");
 		if (receiver is not null)
 			Write(receiver).Write('.');
 		Write(methodName);
@@ -1491,35 +1587,48 @@ public sealed class CodeWriter
 		}
 
 		Write('(');
-		var inlineLength = CurrentLineLength + 2;
-		for (var index = 0; index < argumentList.Length; index++)
-			inlineLength += (argumentList[index]?.Length ?? 0) + (index == 0 ? 0 : 2);
+		if (WriteMethodCallArguments(argumentList, writeArgumentsOnSeparateLines))
+			return this;
 
-		if (argumentList.Length == 0)
-			Write(')');
-		else if (inlineLength <= DefaultMaximumLineLength && argumentList.All(static argument => argument is not null && !argument.Contains('\n')))
+		return WriteLine(";");
+	}
+
+	bool WriteMethodCallArguments(string?[] arguments, bool writeOnSeparateLines)
+	{
+		var inlineLength = CurrentLineLength + 2;
+		for (var index = 0; index < arguments.Length; index++)
+			inlineLength += (arguments[index]?.Length ?? 0) + (index == 0 ? 0 : 2);
+
+		var canWriteInline =
+			!writeOnSeparateLines
+			&& inlineLength <= DefaultMaximumLineLength
+			&& arguments.All(static argument => argument is not null && !argument.Contains('\n'));
+		if (arguments.Length == 0)
 		{
-			for (var index = 0; index < argumentList.Length; index++)
+			Write(')');
+			return false;
+		}
+
+		if (canWriteInline)
+		{
+			for (var index = 0; index < arguments.Length; index++)
 			{
 				if (index != 0)
 					Write(", ");
-				Write(argumentList[index]);
+				Write(arguments[index]);
 			}
 			Write(')');
-		}
-		else
-		{
-			NewLine().Indent();
-			for (var index = 0; index < argumentList.Length; index++)
-			{
-				WriteExpression(argumentList[index], expressionWriter: null);
-				WriteLine(index == argumentList.Length - 1 ? ");" : ",");
-			}
-			Unindent();
-			return this;
+			return false;
 		}
 
-		return WriteLine(";");
+		NewLine().Indent();
+		for (var index = 0; index < arguments.Length; index++)
+		{
+			WriteExpression(arguments[index], expressionWriter: null);
+			WriteLine(index == arguments.Length - 1 ? ");" : ",");
+		}
+		Unindent();
+		return true;
 	}
 
 	/// <summary>Writes an assignment statement.</summary>
@@ -1919,6 +2028,22 @@ public sealed class CodeWriter
 	}
 
 	static TypeReferenceOptions GetParameterType(ParameterDeclarationOptions parameter) => parameter.Type;
+
+	static string RenderCallArgument(ParameterDeclarationOptions argument)
+	{
+		ValidateRequired(argument.Name, "Argument name", nameof(argument));
+		return (
+			argument.Modifier switch
+			{
+				ParameterModifier.None => string.Empty,
+				ParameterModifier.Ref => "ref ",
+				ParameterModifier.Out => "out ",
+				ParameterModifier.In => "in ",
+				ParameterModifier.RefReadOnly => "ref readonly ",
+				_ => throw new ArgumentOutOfRangeException(nameof(argument)),
+			}
+		) + argument.Name;
+	}
 
 	void WriteAttributes(ImmutableArray<AttributeDeclarationOptions> attributes, string? defaultTarget = null)
 	{

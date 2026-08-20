@@ -158,6 +158,36 @@ public class CodeWriterTests
 	}
 
 	[Test]
+	public async Task EnsureBlankLine_AddsSeparatorAfterCompletedLine()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.WriteMethodCall("Run").EnsureBlankLine().Comment("Explains the next member.");
+
+		await Assert.That(writer.ToString()).IsEqualTo("Run();\n\n// Explains the next member.\n");
+	}
+
+	[Test]
+	public async Task EnsureBlankLine_CompletesPartialLineAndIsIdempotent()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.Write("Run();").EnsureBlankLine().EnsureBlankLine().Write("Next");
+
+		await Assert.That(writer.ToString()).IsEqualTo("Run();\n\nNext");
+	}
+
+	[Test]
+	public async Task EnsureBlankLine_OnEmptyWriterDoesNotWrite()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.EnsureBlankLine();
+
+		await Assert.That(writer.ToString()).IsEmpty();
+	}
+
+	[Test]
 	public async Task WriteLines_WritesMultipleLines()
 	{
 		var writer = CodeWriterFactory.ForTests();
@@ -1571,6 +1601,37 @@ public class CodeWriterTests
 	}
 
 	[Test]
+	public async Task WriteAwaitedMethodCall_WritesAwaitPrefix()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.WriteAwaitedMethodCall("LoadAsync", "cancellationToken");
+
+		await Assert.That(writer.ToString()).IsEqualTo("await LoadAsync(cancellationToken);\n");
+	}
+
+	[Test]
+	public async Task WriteAwaitedMethodCall_WithStructuredArguments_WritesReceiverAndModifiers()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.WriteAwaitedMethodCall(
+			"LoadAsync",
+			new ParameterDeclarationOptions[]
+			{
+				new("token", Type("CancellationToken")),
+				new("result", Type("Result")) { Modifier = ParameterModifier.Out },
+			},
+			receiver: "service",
+			writeArgumentsOnSeparateLines: true
+		);
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("await service.LoadAsync(\n\ttoken,\n\tout result);\n");
+	}
+
+	[Test]
 	public async Task WriteMethodCall_WritesReceiverGenericArgumentsAndMultilineArguments()
 	{
 		var writer = CodeWriterFactory.ForTests();
@@ -1591,6 +1652,30 @@ public class CodeWriterTests
 				"factory.Create<string>(\n"
 					+ "\tfirstArgumentWithANameThatMakesTheCallLong,\n"
 					+ "\tsecondArgumentWithANameThatMakesTheCallLong);\n"
+			);
+	}
+
+	[Test]
+	public async Task WriteMethodCall_WithStructuredArguments_WritesModifiersAndMultilineArguments()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.WriteMethodCall(
+			"AMethodCallWithLotsOfParams",
+			new ParameterDeclarationOptions[]
+			{
+				new("a-long-a-param", Type("string")) { Modifier = ParameterModifier.Ref },
+				new("another-long-param", Type("string")) { Modifier = ParameterModifier.Out },
+			},
+			writeArgumentsOnSeparateLines: true
+		);
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"AMethodCallWithLotsOfParams(\n"
+					+ "\tref a-long-a-param,\n"
+					+ "\tout another-long-param);\n"
 			);
 	}
 
