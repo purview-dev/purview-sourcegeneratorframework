@@ -38,8 +38,8 @@
 			Link="Extensions\Purview\SourceGeneratorFramework\TypeReferenceOptions.cs"
 		/>
 		<Compile
-			Include="..\SourceGeneratorFramework\TypeLibrary.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\TypeLibrary.cs"
+			Include="..\SourceGeneratorFramework\PurviewTypeLibrary.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\PurviewTypeLibrary.cs"
 		/>
 
 		<!-- Models -->
