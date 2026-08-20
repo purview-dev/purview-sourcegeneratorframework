@@ -1561,6 +1561,40 @@ public class CodeWriterTests
 	}
 
 	[Test]
+	public async Task WriteMethodCall_WritesSimpleInvocation()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.WriteMethodCall("Run", "value", "cancellationToken");
+
+		await Assert.That(writer.ToString()).IsEqualTo("Run(value, cancellationToken);\n");
+	}
+
+	[Test]
+	public async Task WriteMethodCall_WritesReceiverGenericArgumentsAndMultilineArguments()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.WriteMethodCall(
+			"Create",
+			[
+				"firstArgumentWithANameThatMakesTheCallLong",
+				"secondArgumentWithANameThatMakesTheCallLong",
+			],
+			receiver: "factory",
+			genericArguments: [Type("string")]
+		);
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"factory.Create<string>(\n"
+					+ "\tfirstArgumentWithANameThatMakesTheCallLong,\n"
+					+ "\tsecondArgumentWithANameThatMakesTheCallLong);\n"
+			);
+	}
+
+	[Test]
 	public async Task ToString_GivenOpenBlockAndValidationEnabled_ThrowsScopeValidationException()
 	{
 		// Arrange

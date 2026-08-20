@@ -1439,6 +1439,89 @@ public sealed class CodeWriter
 		return Unindent();
 	}
 
+	/// <summary>Writes a method invocation statement.</summary>
+	/// <param name="methodName">The method name, optionally including a receiver.</param>
+	/// <param name="arguments">The argument expressions.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteMethodCall("Run", "value", "cancellationToken"); // Run(value, cancellationToken);</code></example>
+	public CodeWriter WriteMethodCall(string methodName, params string[] arguments) =>
+		WriteMethodCall(methodName, (IEnumerable<string?>)arguments);
+
+	/// <summary>
+	/// Writes a method invocation statement with optional receiver and generic type arguments.
+	/// </summary>
+	/// <param name="methodName">The method name without a receiver or generic argument list.</param>
+	/// <param name="arguments">The argument expressions.</param>
+	/// <param name="receiver">An optional receiver such as <c>service</c> or <c>global::Api.Service</c>.</param>
+	/// <param name="genericArguments">Optional generic type arguments.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.WriteMethodCall("Create", ["value"], "factory", [TypeLibrary.System.String.AsTypeReference()]);</code></example>
+	public CodeWriter WriteMethodCall(
+		string methodName,
+		IEnumerable<string?> arguments,
+		string? receiver = null,
+		IEnumerable<TypeReferenceOptions>? genericArguments = null
+	)
+	{
+		ValidateStatementPart(methodName, nameof(methodName));
+		if (arguments is null)
+			throw new ArgumentNullException(nameof(arguments));
+		if (receiver is not null && string.IsNullOrWhiteSpace(receiver))
+			throw new ArgumentException("Receiver cannot be whitespace.", nameof(receiver));
+
+		var argumentList = arguments.ToArray();
+		var genericArgumentList = genericArguments?.ToArray() ?? [];
+		for (var index = 0; index < genericArgumentList.Length; index++)
+			if (genericArgumentList[index].IsEmpty)
+				throw new ArgumentException("Generic arguments cannot be empty.", nameof(genericArguments));
+
+		if (receiver is not null)
+			Write(receiver).Write('.');
+		Write(methodName);
+		if (genericArgumentList.Length > 0)
+		{
+			Write('<');
+			for (var index = 0; index < genericArgumentList.Length; index++)
+			{
+				if (index != 0)
+					Write(", ");
+				WriteTypeReference(genericArgumentList[index]);
+			}
+			Write('>');
+		}
+
+		Write('(');
+		var inlineLength = CurrentLineLength + 2;
+		for (var index = 0; index < argumentList.Length; index++)
+			inlineLength += (argumentList[index]?.Length ?? 0) + (index == 0 ? 0 : 2);
+
+		if (argumentList.Length == 0)
+			Write(')');
+		else if (inlineLength <= DefaultMaximumLineLength && argumentList.All(static argument => argument is not null && !argument.Contains('\n')))
+		{
+			for (var index = 0; index < argumentList.Length; index++)
+			{
+				if (index != 0)
+					Write(", ");
+				Write(argumentList[index]);
+			}
+			Write(')');
+		}
+		else
+		{
+			NewLine().Indent();
+			for (var index = 0; index < argumentList.Length; index++)
+			{
+				WriteExpression(argumentList[index], expressionWriter: null);
+				WriteLine(index == argumentList.Length - 1 ? ");" : ",");
+			}
+			Unindent();
+			return this;
+		}
+
+		return WriteLine(";");
+	}
+
 	/// <summary>Writes an assignment statement.</summary>
 	/// <param name="target">The target, such as <c>value</c> or <c>var result</c>.</param>
 	/// <param name="value">The assigned expression.</param>
