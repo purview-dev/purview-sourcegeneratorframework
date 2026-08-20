@@ -4,16 +4,13 @@ using Microsoft.CodeAnalysis;
 
 namespace Purview.SourceGeneratorFramework;
 
-/// <summary>Describes C# type syntax without requiring callers to assemble nullable or generic text.</summary>
+/// <summary>
+/// Describes C# type syntax without requiring callers to assemble nullable or generic text.
+/// This is the canonical type representation for source-generation pipelines.
+/// </summary>
 public readonly record struct TypeReferenceOptions
 {
-	/// <summary>Creates a named type reference.</summary>
-	public TypeReferenceOptions(string name) =>
-		Name = string.IsNullOrWhiteSpace(name)
-			? throw new ArgumentException("Type name cannot be null, empty, or whitespace.", nameof(name))
-			: name;
-
-	/// <summary>Creates a type reference from a framework type value.</summary>
+	/// <summary>Creates a type reference from a required framework type value.</summary>
 	public TypeReferenceOptions(TypeValueObject type)
 	{
 		if (type == TypeValueObject.Empty)
@@ -22,25 +19,45 @@ public readonly record struct TypeReferenceOptions
 			return;
 		}
 
-		var name = type.RenderFullName;
+		var name = RenderBaseTypeName(type);
 		Name = string.IsNullOrWhiteSpace(name)
 			? throw new ArgumentException("The type value must provide a non-empty rendered name.", nameof(type))
 			: name;
+		TypeValue = type;
+		GenericArguments = type.TypeArguments.IsDefaultOrEmpty
+			? []
+			: [.. type.TypeArguments.Select(static argument => new TypeReferenceOptions(argument))];
+		GenericArity = GenericArguments.IsDefaultOrEmpty ? type.GenericArity : 0;
 	}
 
 	/// <summary>Creates a type reference from a runtime type.</summary>
 	public TypeReferenceOptions(Type type)
-		: this(new TypeValueObject(type)) { }
+	{
+		if (type is null)
+			throw new ArgumentNullException(nameof(type));
+
+		this = CreateFromRuntimeType(type);
+	}
 
 	/// <summary>Creates a type reference from a Roslyn symbol.</summary>
 	public TypeReferenceOptions(ITypeSymbol type)
-		: this(new TypeValueObject(type))
 	{
-		IsNullable = type.NullableAnnotation == NullableAnnotation.Annotated;
+		if (type is null)
+			throw new ArgumentNullException(nameof(type));
+
+		this = CreateFromSymbol(type);
 	}
 
 	/// <summary>Gets the named type, predefined keyword, tuple element list, or generic parameter.</summary>
 	public string Name { get; }
+
+	/// <summary>
+	/// Gets the required semantic type value represented by this reference.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="TypeValueObject.Empty"/> is used only by <see cref="Empty"/>.
+	/// </remarks>
+	public TypeValueObject TypeValue { get; private init; }
 
 	/// <summary>Gets whether this value represents the absence of a type reference.</summary>
 	public bool IsEmpty => this == Empty;
@@ -82,6 +99,18 @@ public readonly record struct TypeReferenceOptions
 	/// <summary>Returns this type as a pointer type.</summary>
 	public TypeReferenceOptions MakePointer() => this with { IsPointer = true };
 
+	/// <summary>
+	/// Determines whether this unmodified reference represents the specified semantic type value.
+	/// </summary>
+	public bool Equals(TypeValueObject other) =>
+		!IsEmpty
+		&& !IsNullable
+		&& !IsPointer
+		&& ArrayRanks.IsDefaultOrEmpty
+		&& GenericArguments.IsDefaultOrEmpty
+		&& GenericArity == 0
+		&& TypeValue.Equals(other);
+
 	/// <summary>Gets the type rendered as valid C# type syntax.</summary>
 	public string RenderTypeName
 	{
@@ -119,22 +148,32 @@ public readonly record struct TypeReferenceOptions
 		}
 	}
 
+	/// <summary>Gets this type rendered as C# attribute syntax without the optional <c>Attribute</c> suffix.</summary>
+	public string RenderAttributeName
+	{
+		get
+		{
+			var rendered = RenderTypeName;
+			var genericStart = rendered.IndexOf('<');
+			var baseName = genericStart < 0 ? rendered : rendered.Substring(0, genericStart);
+			var suffix = "Attribute";
+			if (!baseName.EndsWith(suffix, StringComparison.Ordinal))
+				return rendered;
+
+			baseName = baseName.Substring(0, baseName.Length - suffix.Length);
+			return genericStart < 0 ? baseName : baseName + rendered.Substring(genericStart);
+		}
+	}
+
 	/// <summary>Returns the type rendered as valid C# type syntax.</summary>
 	public override string ToString() => RenderTypeName;
 
 	public static implicit operator TypeReferenceOptions(TypeValueObject type) =>
 		type == TypeValueObject.Empty ? Empty : new(type);
 
-	public static implicit operator TypeReferenceOptions?(TypeValueObject? type) =>
-		type == null || type == TypeValueObject.Empty ? null : new(type);
-
 	public static implicit operator TypeReferenceOptions?(Type? type) => type == null ? null : new(type);
 
 	public static implicit operator TypeReferenceOptions(Type type) => new(type);
-
-	public static implicit operator TypeReferenceOptions?(string? type) => type == null ? null : new(type);
-
-	public static implicit operator TypeReferenceOptions(string type) => new(type);
 
 	/// <summary>Implicitly converts a structured type reference to rendered C# type syntax.</summary>
 	public static implicit operator string(TypeReferenceOptions type) => type.RenderTypeName;
@@ -143,4 +182,48 @@ public readonly record struct TypeReferenceOptions
 	/// Represents the absence of a type reference. Code renderers and emitters ignore this value.
 	/// </summary>
 	public static readonly TypeReferenceOptions Empty;
+
+	static TypeReferenceOptions CreateFromRuntimeType(Type type)
+	{
+		if (type.IsByRef)
+			return CreateFromRuntimeType(type.GetElementType());
+
+		if (type.IsArray)
+			return CreateFromRuntimeType(type.GetElementType()).MakeArray(type.GetArrayRank());
+
+		if (type.IsPointer)
+			return CreateFromRuntimeType(type.GetElementType()).MakePointer();
+
+		return new TypeReferenceOptions(new TypeValueObject(type));
+	}
+
+	static TypeReferenceOptions CreateFromSymbol(ITypeSymbol type)
+	{
+		if (type is IArrayTypeSymbol array)
+		{
+			var arrayReference = CreateFromSymbol(array.ElementType).MakeArray(array.Rank);
+			return type.NullableAnnotation == NullableAnnotation.Annotated ? arrayReference.Nullable() : arrayReference;
+		}
+
+		if (type is IPointerTypeSymbol pointer)
+			return CreateFromSymbol(pointer.PointedAtType).MakePointer();
+
+		var reference = new TypeReferenceOptions(new TypeValueObject(type));
+		if (type is INamedTypeSymbol named && named.IsGenericType)
+		{
+			reference = reference with
+			{
+				GenericArguments = [.. named.TypeArguments.Select(CreateFromSymbol)],
+				GenericArity = named.IsUnboundGenericType ? named.Arity : 0,
+			};
+		}
+		return type.NullableAnnotation == NullableAnnotation.Annotated ? reference.Nullable() : reference;
+	}
+
+	static string RenderBaseTypeName(TypeValueObject type) =>
+		type.SpecialType != SpecialType.None
+			? type.Keyword!
+			: type.IsGlobalNamespace
+				? type.TypeName
+				: $"global::{type.Namespace}.{type.TypeName}";
 }

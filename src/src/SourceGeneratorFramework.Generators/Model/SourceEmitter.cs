@@ -14,7 +14,7 @@ static partial class SourceEmitter
 		yield return (GetHintName(nameof(GenericTypeArgumentAttribute)), GenericTypeArgumentAttribute());
 	}
 
-	static CodeWriter CreateWriter(string generatorName, TypeValueObject type)
+	static CodeWriter CreateWriter(string generatorName, TypeReferenceOptions type)
 	{
 		CodeWriter writer = new(generatorName, AssemblyInfo.Version);
 

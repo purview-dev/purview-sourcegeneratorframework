@@ -5,8 +5,8 @@ namespace Purview.SourceGeneratorFramework;
 /// <summary>Describes an attribute applied to a generated declaration.</summary>
 public readonly record struct AttributeDeclarationOptions
 {
-	/// <summary>Creates an attribute declaration.</summary>
-	public AttributeDeclarationOptions(string typeName) => TypeName = typeName;
+	/// <summary>Creates an attribute declaration from a structured type reference.</summary>
+	public AttributeDeclarationOptions(TypeReferenceOptions type) => Type = type;
 
 	/// <summary>Creates an attribute declaration from a structured type value.</summary>
 	/// <remarks>
@@ -15,16 +15,10 @@ public readonly record struct AttributeDeclarationOptions
 	/// delimiters because the code writer supplies them.
 	/// </remarks>
 	public AttributeDeclarationOptions(TypeValueObject type)
-	{
-		var renderedName = type.RenderAttributeName;
-		TypeName =
-			renderedName.Length >= 2 && renderedName[0] == '[' && renderedName[renderedName.Length - 1] == ']'
-				? renderedName.Substring(1, renderedName.Length - 2)
-				: renderedName;
-	}
+		: this(type.AsTypeReference()) { }
 
-	/// <summary>Gets the attribute type name.</summary>
-	public string TypeName { get; }
+	/// <summary>Gets the structured attribute type.</summary>
+	public TypeReferenceOptions Type { get; }
 
 	/// <summary>Gets an optional target such as <c>return</c>, <c>field</c>, or <c>property</c>.</summary>
 	public string? Target { get; init; }
@@ -100,12 +94,6 @@ public readonly record struct ParameterDeclarationOptions
 
 	/// <summary>Gets whether <c>scoped</c> is emitted.</summary>
 	public bool IsScoped { get; init; }
-
-	/// <summary>
-	/// Gets whether the parameter type is nullable. This is a convenience for applying a nullable
-	/// annotation to <see cref="Type"/> and is ignored when the type is already nullable.
-	/// </summary>
-	public bool IsNullable { get; init; }
 
 	/// <summary>Gets an optional default-value expression.</summary>
 	public string? DefaultValue { get; init; }

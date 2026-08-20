@@ -313,10 +313,10 @@ public sealed class CodeWriter
 	/// <param name="header">Optional content written before the opening brace.</param>
 	/// <returns>A scope that restores indentation and writes the closing token.</returns>
 	/// <example><code>using (writer.OpenBlockScope("if (enabled)")) writer.WriteLine("Run();");
-/// // if (enabled)
-/// // {
-/// // 	Run();
-/// // }</code></example>
+	/// // if (enabled)
+	/// // {
+	/// // 	Run();
+	/// // }</code></example>
 	public BlockScope OpenBlockScope(string? header = null) => OpenDelimitedBlockScope(header, "{", "}");
 
 	/// <summary>Writes a complete block and invokes a callback for its body.</summary>
@@ -340,10 +340,10 @@ public sealed class CodeWriter
 	/// <param name="closingToken">The closing token, or <see langword="null"/> for none.</param>
 	/// <returns>A scope that restores indentation and writes the closing token.</returns>
 	/// <example><code>using (writer.OpenDelimitedBlockScope("items", "(", ");")) writer.WriteLine("value");
-/// // items
-/// // (
-/// // 	value
-/// // );</code></example>
+	/// // items
+	/// // (
+	/// // 	value
+	/// // );</code></example>
 	public BlockScope OpenDelimitedBlockScope(string? header, string? openingToken, string? closingToken)
 	{
 		if (header is not null)
@@ -384,7 +384,7 @@ public sealed class CodeWriter
 	/// <param name="closingToken">The closing token, or <see langword="null"/> for none.</param>
 	/// <returns>A scope that restores indentation and writes the closing token.</returns>
 	/// <example><code>using (writer.OpenDelimitedBlockWithHeaderScope("Call", w =&gt; w.Write("(value)"), "{", "}"))
-/// 	writer.WriteLine("Run();");</code></example>
+	/// 	writer.WriteLine("Run();");</code></example>
 	public BlockScope OpenDelimitedBlockWithHeaderScope(
 		string? header,
 		Action<CodeWriter> writeRemainingHeader,
@@ -763,16 +763,16 @@ public sealed class CodeWriter
 	/// <summary>
 	/// Writes a block-scoped namespace and invokes a callback for its body.
 	/// </summary>
-	/// <param name="typeValue">The type whose namespace will be used, or a value with no namespace to omit the wrapper.</param>
+	/// <param name="typeReference">The type reference whose namespace will be used, or a value with no namespace to omit the wrapper.</param>
 	/// <param name="bodyWriter">The action that writes the namespace body.</param>
 	/// <returns>The current writer.</returns>
-	/// <example><code>writer.WriteBlockNamespace(new TypeValueObject("C", "Example"), body =&gt; body.WriteLine("class C { }"));</code></example>
-	public CodeWriter WriteBlockNamespace(TypeValueObject typeValue, Action<CodeWriter> bodyWriter)
+	/// <example><code>writer.WriteBlockNamespace(new TypeValueObject("C", "Example").AsTypeReference(), body =&gt; body.WriteLine("class C { }"));</code></example>
+	public CodeWriter WriteBlockNamespace(TypeReferenceOptions typeReference, Action<CodeWriter> bodyWriter)
 	{
 		if (bodyWriter is null)
 			throw new ArgumentNullException(nameof(bodyWriter));
 
-		using (WriteBlockNamespaceScope(typeValue))
+		using (WriteBlockNamespaceScope(typeReference))
 			bodyWriter(this);
 
 		return this;
@@ -781,11 +781,11 @@ public sealed class CodeWriter
 	/// <summary>
 	/// Writes a block-scoped namespace and returns its body scope.
 	/// </summary>
-	/// <param name="typeValue">The type whose namespace will be used, or a value with no namespace to return an empty scope.</param>
+	/// <param name="typeReference">The type reference whose namespace will be used, or a value with no namespace to return an empty scope.</param>
 	/// <returns>The namespace body scope, or an empty scope when no namespace is supplied.</returns>
-	/// <example><code>using (writer.WriteBlockNamespaceScope(new TypeValueObject("C", "Example"))) writer.WriteLine("class C { }");</code></example>
-	public BlockScope WriteBlockNamespaceScope(TypeValueObject typeValue) =>
-		WriteBlockNamespaceScope(typeValue.Namespace);
+	/// <example><code>using (writer.WriteBlockNamespaceScope(new TypeValueObject("C", "Example").AsTypeReference())) writer.WriteLine("class C { }");</code></example>
+	public BlockScope WriteBlockNamespaceScope(TypeReferenceOptions typeReference) =>
+		WriteBlockNamespaceScope(typeReference.TypeValue.Namespace);
 
 	/// <summary>Writes a block-scoped namespace and invokes a callback for its body.</summary>
 	/// <param name="namespaceName">The namespace, or <see langword="null"/> to omit the wrapper.</param>
@@ -817,11 +817,11 @@ public sealed class CodeWriter
 	/// <summary>
 	/// Writes a file-scoped namespace followed by an empty line.
 	/// </summary>
-	/// <param name="typeValue">The type whose namespace will be used, or a value with no namespace to write nothing.</param>
+	/// <param name="typeReference">The type reference whose namespace will be used, or a value with no namespace to write nothing.</param>
 	/// <returns>The current writer.</returns>
-	/// <example><code>writer.WriteFileScopedNamespace(new TypeValueObject("C", "Example"));</code></example>
-	public CodeWriter WriteFileScopedNamespace(TypeValueObject typeValue) =>
-		WriteFileScopedNamespace(typeValue.Namespace);
+	/// <example><code>writer.WriteFileScopedNamespace(new TypeValueObject("C", "Example").AsTypeReference());</code></example>
+	public CodeWriter WriteFileScopedNamespace(TypeReferenceOptions typeReference) =>
+		WriteFileScopedNamespace(typeReference.TypeValue.Namespace);
 
 	/// <summary>
 	/// Writes a class declaration from structured options and returns its body scope.
@@ -883,7 +883,9 @@ public sealed class CodeWriter
 		if (targets == 0 || (targets & ~AttributeTargets.All) != 0)
 			throw new ArgumentOutOfRangeException(nameof(targets), targets, "Invalid attribute targets.");
 
-		AttributeDeclarationOptions attributeUsage = new("global::System.AttributeUsageAttribute")
+		AttributeDeclarationOptions attributeUsage = new(
+			new TypeValueObject("AttributeUsageAttribute", "System")
+		)
 		{
 			Arguments =
 			[
@@ -896,7 +898,7 @@ public sealed class CodeWriter
 		return WriteClass(
 			declaration with
 			{
-				BaseType = declaration.BaseType ?? new("global::System.Attribute"),
+				BaseType = declaration.BaseType ?? new TypeValueObject("Attribute", "System"),
 				Attributes = declaration.Attributes.Insert(0, attributeUsage),
 				IncludeEmbeddedAttribute = declaration.IncludeEmbeddedAttribute ?? true,
 			},
@@ -1249,7 +1251,7 @@ public sealed class CodeWriter
 		else if (declaration.Accessibility is { } accessibility)
 			WriteAccessibility(accessibility).Write(' ');
 
-		Write(declaration.TypeName);
+		Write(declaration.Type.TypeValue.TypeName);
 		if (declaration.WriteParametersOnSeparateLines)
 			WriteParameterList(declaration.Parameters, writeOnSeparateLines: true, writeWhenEmpty: true);
 		else
@@ -1679,7 +1681,7 @@ public sealed class CodeWriter
 	/// </summary>
 	/// <returns>The complete contents of the writer.</returns>
 	/// <example><code>writer.WriteLine("class C { }");
-/// var source = writer.ToString(); // class C { }</code></example>
+	/// var source = writer.ToString(); // class C { }</code></example>
 	[SuppressMessage(
 		"Design",
 		"CA1065:Do not raise exceptions in unexpected locations",
@@ -1829,8 +1831,7 @@ public sealed class CodeWriter
 		return length;
 	}
 
-	static TypeReferenceOptions GetParameterType(ParameterDeclarationOptions parameter) =>
-		parameter.IsNullable ? parameter.Type.Nullable() : parameter.Type;
+	static TypeReferenceOptions GetParameterType(ParameterDeclarationOptions parameter) => parameter.Type;
 
 	void WriteAttributes(ImmutableArray<AttributeDeclarationOptions> attributes, string? defaultTarget = null)
 	{
@@ -1845,7 +1846,7 @@ public sealed class CodeWriter
 		var target = attribute.Target ?? defaultTarget;
 		if (target is not null)
 			Write(target).Write(": ");
-		Write(attribute.TypeName);
+		Write(attribute.Type.RenderAttributeName);
 		if (!attribute.Arguments.IsDefaultOrEmpty)
 		{
 			Write('(');
@@ -1865,7 +1866,7 @@ public sealed class CodeWriter
 
 	static int GetAttributeLength(AttributeDeclarationOptions attribute)
 	{
-		var length = attribute.TypeName.Length + 2;
+		var length = attribute.Type.RenderAttributeName.Length + 2;
 		if (attribute.Target is not null)
 			length += attribute.Target.Length + 2;
 		if (attribute.Arguments.IsDefaultOrEmpty)
@@ -2562,7 +2563,7 @@ public sealed class CodeWriter
 		for (var index = 0; !attributes.IsDefaultOrEmpty && index < attributes.Length; index++)
 		{
 			var attribute = attributes[index];
-			if (string.IsNullOrWhiteSpace(attribute.TypeName))
+			if (attribute.Type.IsEmpty)
 				throw new ArgumentException("Attribute type names cannot be null or whitespace.", parameterName);
 			if (attribute.Target is not null && string.IsNullOrWhiteSpace(attribute.Target))
 				throw new ArgumentException("Attribute targets cannot be whitespace.", parameterName);

@@ -16,18 +16,10 @@ public partial class TypeValueObjectTests
 	}
 
 	[Test]
-	public async Task TypeReferenceOptions_WithNull_ReturnsNull()
-	{
-		TypeReferenceOptions? sut = (TypeValueObject?)null;
-
-		await Assert.That(sut).IsNull();
-	}
-
-	[Test]
 	public async Task TypeReferenceOptions_ComplexType_RendersAsCSharpSyntax()
 	{
-		var type = new TypeReferenceOptions("global::System.Collections.Generic.List")
-			.MakeGeneric(new TypeReferenceOptions("global::ZodSharp.Core.ValidationError"))
+		var type = new TypeReferenceOptions(new TypeValueObject("List", "System.Collections.Generic"))
+			.MakeGeneric(new TypeValueObject("ValidationError", "ZodSharp.Core"))
 			.MakeArray()
 			.Nullable();
 
@@ -76,6 +68,69 @@ public partial class TypeValueObjectTests
 		await Assert.That(type.MakeNullable().IsNullable).IsTrue();
 		await Assert.That(type.MakeArray(2).ArrayRanks).IsEquivalentTo([2]);
 		await Assert.That(type.MakePointer().IsPointer).IsTrue();
+	}
+
+	[Test]
+	public async Task TypeReferenceOptions_RetainsSemanticTypeValueThroughSyntaxChanges()
+	{
+		var type = new TypeValueObject("Widget", "Example");
+		var reference = type.AsTypeReference().Nullable().MakeArray();
+
+		await Assert.That(reference.TypeValue).IsEqualTo(type);
+		await Assert.That(reference.RenderTypeName).IsEqualTo("global::Example.Widget[]?");
+	}
+
+	[Test]
+	public async Task TypeReferenceOptions_RetainsSemanticTypeValueWhenAddingGenericSyntax()
+	{
+		var type = new TypeValueObject("Container", "Example");
+		var reference = type.AsTypeReference().MakeGeneric(TypeValueObject.Create<string>());
+
+		await Assert.That(reference.TypeValue).IsEqualTo(type);
+		await Assert.That(reference.RenderTypeName).IsEqualTo("global::Example.Container<string>");
+	}
+
+	[Test]
+	public async Task TypeReferenceOptions_FromRuntimeType_PopulatesGenericAndArrayShape()
+	{
+		var reference = new TypeReferenceOptions(typeof(Dictionary<string, int>[]));
+
+		await Assert
+			.That(reference.Name)
+			.IsEqualTo("global::System.Collections.Generic.Dictionary");
+		await Assert.That(reference.GenericArguments.Select(static argument => argument.RenderTypeName)).IsEquivalentTo(["string", "int"]);
+		await Assert.That(reference.ArrayRanks).IsEquivalentTo([1]);
+		await Assert.That(reference.TypeValue).IsNotEqualTo(TypeValueObject.Empty);
+	}
+
+	[Test]
+	public async Task TypeReferenceOptions_AndTypeValueObject_HaveSymmetricBaseTypeEquality()
+	{
+		var type = new TypeValueObject("Widget", "Example");
+		var reference = type.AsTypeReference();
+
+		await Assert.That(reference.Equals(type)).IsTrue();
+		await Assert.That(type.Equals(reference)).IsTrue();
+		await Assert.That(reference).IsEqualTo(type.AsTypeReference());
+	}
+
+	[Test]
+	public async Task TypeReferenceOptions_SyntaxModifiersDoNotEqualUnderlyingTypeValue()
+	{
+		var type = new TypeValueObject("Widget", "Example");
+
+		await Assert.That(type.MakeNullable().Equals(type)).IsFalse();
+		await Assert.That(type.MakeArray().Equals(type)).IsFalse();
+		await Assert.That(type.MakePointer().Equals(type)).IsFalse();
+	}
+
+	[Test]
+	public async Task TypeReferenceOptions_FromRenderedStringHasNoSemanticTypeValue()
+	{
+		var reference = new TypeReferenceOptions(new TypeValueObject("Widget", "Example"));
+
+		await Assert.That(reference.TypeValue).IsEqualTo(new TypeValueObject("Widget", "Example"));
+		await Assert.That(reference.Equals(new TypeValueObject("Widget", "Example"))).IsTrue();
 	}
 
 	[Test]

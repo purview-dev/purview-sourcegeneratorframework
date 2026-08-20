@@ -76,7 +76,7 @@ static class ServiceRegistrationEmitter
 				);
 
 				cw.WriteProperty(
-					new PropertyDeclarationOptions("Name", "string?")
+					new PropertyDeclarationOptions("Name", PurviewTypeLibrary.System.String.MakeNullable())
 					{
 						Accessibility = TypeDeclarationAccessibility.Public,
 						HasSetter = true,
@@ -193,7 +193,7 @@ static class ServiceRegistrationEmitter
 						inner =>
 						{
 							inner.WriteProperty(
-								new PropertyDeclarationOptions("Name", TypeValueObject.Create<string>())
+								new PropertyDeclarationOptions("Name", TypeValueObject.Create<string>().AsTypeReference())
 								{
 									Accessibility = TypeDeclarationAccessibility.Public,
 									IsStatic = true,
@@ -202,7 +202,7 @@ static class ServiceRegistrationEmitter
 							);
 
 							inner.WriteProperty(
-								new PropertyDeclarationOptions("Lifetime", TypeValueObject.Create<string>())
+								new PropertyDeclarationOptions("Lifetime", TypeValueObject.Create<string>().AsTypeReference())
 								{
 									Accessibility = TypeDeclarationAccessibility.Public,
 									IsStatic = true,

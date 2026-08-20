@@ -16,16 +16,19 @@ public readonly record struct ConstructorDeclarationOptions
 		if (string.IsNullOrWhiteSpace(typeName))
 			throw new ArgumentException("Type name cannot be null or whitespace.", nameof(typeName));
 
-		TypeName = typeName;
+		Type = new TypeValueObject(typeName, null).AsTypeReference();
 	}
 
 	/// <summary>Initializes a constructor declaration from its containing type.</summary>
 	/// <param name="type">The containing type. Only its unqualified declaration name is used.</param>
 	public ConstructorDeclarationOptions(TypeValueObject type)
-		: this(type.TypeName) { }
+		: this(type.AsTypeReference()) { }
 
-	/// <summary>Gets the containing type name without generic parameters.</summary>
-	public string TypeName { get; }
+	/// <summary>Initializes a constructor declaration from its containing type reference.</summary>
+	public ConstructorDeclarationOptions(TypeReferenceOptions type) => Type = type;
+
+	/// <summary>Gets the structured containing type reference.</summary>
+	public TypeReferenceOptions Type { get; }
 
 	/// <summary>
 	/// Gets the optional accessibility modifier, or <see langword="null"/> to omit accessibility.

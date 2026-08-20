@@ -20,7 +20,7 @@ public readonly record struct MethodDeclarationOptions
 	/// <summary>Creates a method declaration with the <see cref="ReturnType"/> set to <c>void</c>.</summary>
 	/// <param name="name">The method name.</param>
 	public MethodDeclarationOptions(string name)
-		: this(name, "void") { }
+		: this(name, PurviewTypeLibrary.System.Void) { }
 
 	/// <summary>Gets the method name.</summary>
 	public string Name { get; }

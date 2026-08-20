@@ -4,7 +4,7 @@ namespace Purview.SourceGeneratorFramework;
 
 public class CodeWriterTests
 {
-	static TypeReferenceOptions Type(string name) => new(name);
+	static TypeReferenceOptions Type(string name) => new(new TypeValueObject(name, null));
 
 	static string GeneratedAttributes(bool includeCoverageExclusion = true) =>
 		(includeCoverageExclusion ? "[global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute]\n" : "")
@@ -32,7 +32,9 @@ public class CodeWriterTests
 	[Arguments("   ")]
 	public async Task TypeReferenceOptions_GivenMissingName_Throws(string? name)
 	{
-		await Assert.That(() => new TypeReferenceOptions(name!)).Throws<ArgumentException>();
+		await Assert
+			.That(() => new TypeReferenceOptions(new TypeValueObject(name!, null)))
+			.Throws<ArgumentException>();
 	}
 
 	[Test]
@@ -547,7 +549,7 @@ public class CodeWriterTests
 			Interfaces =
 			[
 				TypeReferenceOptions.Empty,
-				new TypeReferenceOptions("IResourceKit"),
+				new TypeReferenceOptions(new TypeValueObject("IResourceKit", null)),
 				TypeReferenceOptions.Empty,
 			],
 		};
@@ -688,15 +690,11 @@ public class CodeWriterTests
 		var writer = CodeWriterFactory.ForTests();
 
 		// Act
-		writer.WriteAttributeClass(
-			new TypeDeclarationOptions("RegistryAttribute")
-			{
-				Accessibility = TypeDeclarationAccessibility.Public,
-				IsPartial = false,
-			},
-			AttributeTargets.Class,
-			body => body.WriteLine("public string? Name { get; init; }")
-		);
+		writer.WriteAttributeClass(new TypeDeclarationOptions("RegistryAttribute")
+		{
+			Accessibility = TypeDeclarationAccessibility.Public,
+			IsPartial = false,
+		}, AttributeTargets.Class, body => body.WriteLine("public string? Name { get; init; }"));
 
 		// Assert
 		await Assert
@@ -704,7 +702,7 @@ public class CodeWriterTests
 			.IsEqualTo(
 				"[global::Microsoft.CodeAnalysis.EmbeddedAttribute]\n"
 					+ GeneratedAttributes()
-					+ "[global::System.AttributeUsageAttribute(global::System.AttributeTargets.Class, Inherited = false, AllowMultiple = false)]\n"
+					+ "[global::System.AttributeUsage(global::System.AttributeTargets.Class, Inherited = false, AllowMultiple = false)]\n"
 					+ "public sealed class RegistryAttribute : global::System.Attribute\n"
 					+ "{\n"
 					+ "\tpublic string? Name { get; init; }\n"
@@ -719,19 +717,13 @@ public class CodeWriterTests
 		var writer = CodeWriterFactory.ForTests();
 
 		// Act
-		writer.WriteAttributeClass(
-			new TypeDeclarationOptions("KnownTypeAttribute")
-			{
-				Accessibility = TypeDeclarationAccessibility.Internal,
-				IsPartial = false,
-				BaseType = Type("CustomAttributeBase"),
-				Attributes = [new("Obsolete")],
-			},
-			AttributeTargets.Class | AttributeTargets.Property,
-			_ => { },
-			inherited: true,
-			allowMultiple: true
-		);
+		writer.WriteAttributeClass(new TypeDeclarationOptions("KnownTypeAttribute")
+		{
+			Accessibility = TypeDeclarationAccessibility.Internal,
+			IsPartial = false,
+			BaseType = Type("CustomAttributeBase"),
+			Attributes = [new(new TypeValueObject("Obsolete", null))],
+		}, AttributeTargets.Class | AttributeTargets.Property, _ => { }, inherited: true, allowMultiple: true);
 
 		// Assert
 		await Assert
@@ -739,7 +731,7 @@ public class CodeWriterTests
 			.IsEqualTo(
 				"[global::Microsoft.CodeAnalysis.EmbeddedAttribute]\n"
 					+ GeneratedAttributes()
-					+ "[global::System.AttributeUsageAttribute(global::System.AttributeTargets.Class | global::System.AttributeTargets.Property, Inherited = true, AllowMultiple = true)]\n"
+					+ "[global::System.AttributeUsage(global::System.AttributeTargets.Class | global::System.AttributeTargets.Property, Inherited = true, AllowMultiple = true)]\n"
 					+ "[Obsolete]\n"
 					+ "internal sealed class KnownTypeAttribute : CustomAttributeBase\n"
 					+ "{\n"
@@ -785,7 +777,7 @@ public class CodeWriterTests
 			new EnumFieldDeclarationOptions("None", 0)
 			{
 				XmlSummary = ["No status has been selected."],
-				Attributes = [new("Obsolete")],
+				Attributes = [new(new TypeValueObject("Obsolete", null))],
 			},
 			new EnumFieldDeclarationOptions("Ready", (object)"1 << 0"),
 			new EnumFieldDeclarationOptions("Unknown")
@@ -982,7 +974,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var generatedCode = new AttributeDeclarationOptions("GeneratedCode")
+		var generatedCode = new AttributeDeclarationOptions(new TypeValueObject("GeneratedCode", null))
 		{
 			Arguments =
 			[
@@ -999,14 +991,20 @@ public class CodeWriterTests
 		var method = new MethodDeclarationOptions("TryGet", Type("bool"))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
-			Attributes = [new("Obsolete")],
-			ReturnAttributes = [new("NotNull")],
+			Attributes = [new(new TypeValueObject("Obsolete", null))],
+			ReturnAttributes = [new(new TypeValueObject("NotNull", null))],
 			Parameters =
 			[
 				new("value", Type("string").Nullable())
 				{
 					Modifier = ParameterModifier.Out,
-					Attributes = [new("NotNullWhen") { Arguments = [new(true)] }],
+					Attributes =
+					[
+						new(new TypeValueObject("NotNullWhen", null))
+						{
+							Arguments = [new(true)],
+						},
+					],
 				},
 			],
 		};
@@ -1031,6 +1029,26 @@ public class CodeWriterTests
 					+ "\t}\n"
 					+ "}\n"
 			);
+	}
+
+	[Test]
+	public async Task AttributeDeclaration_RendersRetainedTypeReferenceSyntax()
+	{
+		var writer = CodeWriterFactory.ForTests();
+		var attributeType = new TypeValueObject("MarkerAttribute", "Example")
+			.AsTypeReference()
+			.MakeGeneric(TypeValueObject.Create<string>())
+			.Nullable();
+
+		writer.WriteClass(
+			new TypeDeclarationOptions("C")
+			{
+				Attributes = [new AttributeDeclarationOptions(attributeType)],
+			},
+			_ => { }
+		);
+
+		await Assert.That(writer.ToString()).Contains("[global::Example.Marker<string>?]");
 	}
 
 	[Test]
@@ -1192,7 +1210,6 @@ public class CodeWriterTests
 			[
 				new ParameterDeclarationOptions("value", Type("Widget").Nullable())
 				{
-					IsNullable = true,
 					DefaultValue = "null",
 				},
 			],
@@ -1636,7 +1653,7 @@ public class CodeWriterTests
 		writer.WriteAutoGeneratedHeader();
 		writer.WriteClass(
 			new TypeDeclarationOptions("GeneratedType"),
-			body => body.WriteProperty(new PropertyDeclarationOptions("Value", new TypeReferenceOptions("string")))
+			body => body.WriteProperty(new PropertyDeclarationOptions("Value", TypeValueObject.Create<string>()))
 		);
 
 		var result = writer.ToString();
@@ -1686,7 +1703,7 @@ public class CodeWriterTests
 		var writer = new CodeWriter("HostKitGenerator", "2.3.4", throwOnUnclosedScopes: false);
 
 		writer.WriteField(
-			new FieldDeclarationOptions("SectionName", new TypeReferenceOptions("string"))
+			new FieldDeclarationOptions("SectionName", TypeValueObject.Create<string>())
 			{
 				Accessibility = TypeDeclarationAccessibility.Public,
 				IsConst = true,

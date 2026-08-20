@@ -289,6 +289,11 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 	}
 
 	/// <summary>
+	/// Determines whether this semantic type matches an unmodified structured type reference.
+	/// </summary>
+	public bool Equals(TypeReferenceOptions other) => other.Equals(this);
+
+	/// <summary>
 	/// Returns a structural hash code for this type and its generic arguments.
 	/// </summary>
 	public override int GetHashCode()
@@ -316,7 +321,15 @@ public readonly record struct TypeValueObject : IEquatable<ITypeSymbol>
 	/// </summary>
 	public static implicit operator string(TypeValueObject typeValueObject) => typeValueObject.RenderFullName;
 
-	/// <summary>Creates structured declaration syntax for this type.</summary>
+	/// <summary>
+	/// Creates the canonical source-generation type reference for this type.
+	/// </summary>
+	/// <remarks>
+	/// Source-generation pipelines should pass <see cref="TypeReferenceOptions"/> values rather
+	/// than switching between semantic type values and rendered strings. The returned reference
+	/// retains this value for semantic equality while allowing nullable, array, pointer, and
+	/// generic syntax to be composed.
+	/// </remarks>
 	public TypeReferenceOptions AsTypeReference() => new(this);
 
 	/// <summary>Creates a nullable structured type reference.</summary>
