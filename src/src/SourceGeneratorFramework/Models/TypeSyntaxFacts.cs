@@ -24,6 +24,7 @@ public static class TypeSyntaxFacts
 	/// predicate stage against every candidate node, and the overwhelming majority of types are uncomposed.
 	/// </param>
 	/// <returns><see langword="false"/> for tuples, function pointers and other unrepresentable forms.</returns>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1021:Avoid out parameters")]
 	public static bool TryGetCore(TypeSyntax? typeSyntax, out TypeSyntax core, out List<TypeModifier>? modifiers)
 	{
 		core = null!;
@@ -51,7 +52,7 @@ public static class TypeSyntaxFacts
 				case ArrayTypeSyntax arrayType:
 				{
 					// `int[][,]` parses as a single node with a rank-specifier list, outermost-first.
-					modifiers ??= new List<TypeModifier>(arrayType.RankSpecifiers.Count);
+					modifiers ??= [with(arrayType.RankSpecifiers.Count)];
 
 					foreach (var rankSpecifier in arrayType.RankSpecifiers)
 						modifiers.Add(TypeModifier.Array(rankSpecifier.Rank));
@@ -83,6 +84,7 @@ public static class TypeSyntaxFacts
 	/// <summary>
 	/// Splits a name into its rightmost simple name and its optional left-hand qualifier.
 	/// </summary>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1021:Avoid out parameters")]
 	public static void Split(NameSyntax name, out SimpleNameSyntax simpleName, out NameSyntax? qualifier)
 	{
 		if (name is null)
@@ -168,6 +170,7 @@ public static class TypeSyntaxFacts
 	/// <summary>
 	/// Maps a predefined-type keyword to its special type.
 	/// </summary>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0072:Add missing cases")]
 	public static SpecialType GetSpecialType(SyntaxKind keyword) =>
 		keyword switch
 		{
@@ -193,6 +196,7 @@ public static class TypeSyntaxFacts
 	/// <summary>
 	/// Gets the declared identifier and generic arity for any type-defining declaration node.
 	/// </summary>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1021:Avoid out parameters")]
 	public static bool TryGetDeclarationName(SyntaxNode? node, out string identifier, out int arity)
 	{
 		switch (node)
@@ -262,6 +266,7 @@ public static class TypeSyntaxFacts
 		if (semanticModel == null)
 			throw new ArgumentNullException(nameof(semanticModel));
 
+		// Prefer symbol resolution because it is more accurate than type inference, especially for generic type parameters.
 		return semanticModel.GetSymbolInfo(node, cancellationToken).Symbol as ITypeSymbol
 			?? semanticModel.GetTypeInfo(node, cancellationToken).Type;
 	}
@@ -282,6 +287,7 @@ public static class TypeSyntaxFacts
 		if (semanticModel == null)
 			throw new ArgumentNullException(nameof(semanticModel));
 
+		// Prefer symbol resolution because it is more accurate than type inference, especially for generic type parameters.
 		return node switch
 		{
 			BaseFieldDeclarationSyntax field => field.Declaration.Variables.Count == 1

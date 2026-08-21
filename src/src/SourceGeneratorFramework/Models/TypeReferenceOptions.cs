@@ -52,7 +52,7 @@ public sealed record TypeReferenceOptions
 	/// <summary>
 	/// Initializes a new, empty reference. Prefer the named factories.
 	/// </summary>
-	public TypeReferenceOptions()
+	TypeReferenceOptions()
 	{
 		Kind = TypeReferenceKind.None;
 		Modifiers = [];
@@ -107,6 +107,7 @@ public sealed record TypeReferenceOptions
 	/// <summary>
 	/// Gets the fully-qualified reference as it should be rendered in generated code.
 	/// </summary>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0072:Add missing cases")]
 	public string RenderFullName
 	{
 		get
@@ -196,7 +197,10 @@ public sealed record TypeReferenceOptions
 
 		builder.Add(modifier);
 
-		return this with { Modifiers = builder.MoveToImmutable() };
+		return this with
+		{
+			Modifiers = builder.MoveToImmutable(),
+		};
 	}
 
 	// ---------------------------------------------------------------------------------------------
@@ -206,6 +210,7 @@ public sealed record TypeReferenceOptions
 	/// <summary>
 	/// Determines whether the given type symbol is this composed reference.
 	/// </summary>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0072:Add missing cases")]
 	public bool Matches(ITypeSymbol? other)
 	{
 		if (other is null || Kind == TypeReferenceKind.None)
@@ -348,8 +353,7 @@ public sealed record TypeReferenceOptions
 	public static readonly TypeReferenceOptions Empty = new();
 
 	/// <summary>Gets a reference to <see langword="dynamic"/>.</summary>
-	public static TypeReferenceOptions Dynamic { get; } =
-		new() { Kind = TypeReferenceKind.Dynamic, Modifiers = [] };
+	public static TypeReferenceOptions Dynamic { get; } = new() { Kind = TypeReferenceKind.Dynamic, Modifiers = [] };
 
 	/// <summary>Creates a reference to an open generic parameter.</summary>
 	public static TypeReferenceOptions ForTypeParameter(string name)
@@ -357,6 +361,7 @@ public sealed record TypeReferenceOptions
 		if (name == null)
 			throw new ArgumentNullException(nameof(name));
 
+		// The name is stored in the reference, but it is not used for equality or hashing. This is because the name is not part of the C# type system; it is only used for rendering.
 		return new()
 		{
 			Kind = TypeReferenceKind.TypeParameter,
@@ -378,6 +383,7 @@ public sealed record TypeReferenceOptions
 		if (!TryCreate(type, out var value))
 			throw new ArgumentException($"The type '{type}' cannot be represented as a type reference.", nameof(type));
 
+		// The type is known to be representable, so the out value is guaranteed to be valid.
 		return value;
 	}
 
@@ -396,6 +402,7 @@ public sealed record TypeReferenceOptions
 			);
 		}
 
+		// The symbol is known to be representable, so the out value is guaranteed to be valid.
 		return value;
 	}
 
@@ -404,6 +411,7 @@ public sealed record TypeReferenceOptions
 	/// modifiers.
 	/// </summary>
 	/// <returns><see langword="false"/> for unresolved, function-pointer and other unrepresentable symbols.</returns>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0010:Add missing cases")]
 	public static bool TryCreate(ITypeSymbol? typeSymbol, out TypeReferenceOptions value)
 	{
 		value = Empty;
@@ -412,8 +420,10 @@ public sealed record TypeReferenceOptions
 			return false;
 
 		// Fast path: the overwhelmingly common case is an unmodified named type.
-		if (typeSymbol is INamedTypeSymbol { SpecialType: not SpecialType.System_Nullable_T } named
-			&& named.NullableAnnotation != NullableAnnotation.Annotated)
+		if (
+			typeSymbol is INamedTypeSymbol { SpecialType: not SpecialType.System_Nullable_T } named
+			&& named.NullableAnnotation != NullableAnnotation.Annotated
+		)
 		{
 			if (!TypeValueObject.TryCreate(named, out var plain))
 				return false;
@@ -496,14 +506,14 @@ public sealed record TypeReferenceOptions
 		var current = type;
 
 		if (current.IsByRef)
-			current = current.GetElementType()!;
+			current = current.GetElementType();
 
 		while (true)
 		{
 			if (current.IsArray)
 			{
 				modifiers.Add(TypeModifier.Array(current.GetArrayRank()));
-				current = current.GetElementType()!;
+				current = current.GetElementType();
 
 				continue;
 			}
@@ -511,7 +521,7 @@ public sealed record TypeReferenceOptions
 			if (current.IsPointer)
 			{
 				modifiers.Add(TypeModifier.PointerModifier);
-				current = current.GetElementType()!;
+				current = current.GetElementType();
 
 				continue;
 			}

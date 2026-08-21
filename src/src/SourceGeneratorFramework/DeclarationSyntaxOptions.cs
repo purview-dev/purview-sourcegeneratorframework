@@ -115,7 +115,7 @@ public readonly record struct ObjectCreationOptions
 	/// <param name="arguments">The constructor arguments; strings are implicitly supported.</param>
 	public ObjectCreationOptions(TypeReferenceOptions type, params MethodCallArgumentOptions[] arguments)
 	{
-		if (type.IsEmpty)
+		if (type.IsNullOrEmpty())
 			throw new ArgumentException("Object-creation type cannot be empty.", nameof(type));
 
 		Type = type;

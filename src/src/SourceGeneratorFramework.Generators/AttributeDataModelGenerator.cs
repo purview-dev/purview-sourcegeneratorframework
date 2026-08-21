@@ -81,13 +81,7 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 
 		using (target.IsRecord ? writer.WriteRecordStructScope(options) : writer.WriteStructScope(options))
 		{
-			writer.WriteProperty(
-				new("Exists", TypeReference("bool"))
-				{
-					Accessibility = TypeDeclarationAccessibility.Public,
-					HasSetter = false,
-				}
-			);
+			writer.WriteProperty(new("Exists", TypeReference("bool"), TypeDeclarationAccessibility.Public));
 
 			foreach (var property in target.Properties)
 			{
@@ -95,10 +89,12 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 					continue;
 
 				writer.WriteProperty(
-					new(property.PropertyName, TypeReference(property.FullyQualifiedTypeName))
+					new(
+						property.PropertyName,
+						TypeReference(property.FullyQualifiedTypeName),
+						TypeDeclarationAccessibility.Public
+					)
 					{
-						Accessibility = TypeDeclarationAccessibility.Public,
-						HasSetter = true,
 						IsInitOnly = true,
 					}
 				);
@@ -156,12 +152,15 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 	static void WriteTargetAttributeField(CodeWriter writer, AttributeDataModelTarget target)
 	{
 		writer.WriteField(
-			new("TargetAttribute", GeneratorTypeLibrary.TypeValueObject.AsTypeReference())
+			new(
+				"TargetAttribute",
+				GeneratorTypeLibrary.TypeValueObject.AsTypeReference(),
+				TypeDeclarationAccessibility.Public
+			)
 			{
-				Accessibility = TypeDeclarationAccessibility.Public,
 				IsStatic = true,
 				IsReadOnly = true,
-				Initializer = $"new(\"{target.TargetAttribute.Name}\", {target.TargetAttribute.Namespace})",
+				Initializer = $"new(\"{target.TargetAttribute.Name}\", \"{target.TargetAttribute.Namespace}\")",
 			}
 		);
 	}

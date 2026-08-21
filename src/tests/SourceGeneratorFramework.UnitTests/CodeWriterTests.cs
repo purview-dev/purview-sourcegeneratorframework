@@ -7,8 +7,8 @@ public class CodeWriterTests
 	static TypeReferenceOptions Type(string name) => new(new TypeValueObject(name, null));
 
 	static string GeneratedAttributes(bool includeCoverageExclusion = true) =>
-		(includeCoverageExclusion ? "[global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute]\n" : "")
-		+ "[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]\n"
+		(includeCoverageExclusion ? "[global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]\n" : "")
+		+ "[global::System.Runtime.CompilerServices.CompilerGenerated]\n"
 		+ "[global::System.CodeDom.Compiler.GeneratedCode(\"TestGenerator\", \"1.0.0\")]\n";
 
 	static string IndentedGeneratedAttributes(bool includeCoverageExclusion = true) =>
@@ -308,7 +308,7 @@ public class CodeWriterTests
 
 		using (var scope = writer.WriteBlockNamespaceScope(typeValue))
 		{
-			await Assert.That(scope).IsEqualTo(default);
+			await Assert.That(scope).IsNull();
 			writer.WriteLine("public class C { }");
 		}
 
@@ -732,7 +732,7 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				"[global::Microsoft.CodeAnalysis.EmbeddedAttribute]\n"
+				"[global::Microsoft.CodeAnalysis.Embedded]\n"
 					+ GeneratedAttributes()
 					+ "[global::System.AttributeUsage(global::System.AttributeTargets.Class, Inherited = false, AllowMultiple = false)]\n"
 					+ "public sealed class RegistryAttribute : global::System.Attribute\n"
@@ -767,7 +767,7 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				"[global::Microsoft.CodeAnalysis.EmbeddedAttribute]\n"
+				"[global::Microsoft.CodeAnalysis.Embedded]\n"
 					+ GeneratedAttributes()
 					+ "[global::System.AttributeUsage(global::System.AttributeTargets.Class | global::System.AttributeTargets.Property, Inherited = true, AllowMultiple = true)]\n"
 					+ "[Obsolete]\n"
@@ -788,7 +788,7 @@ public class CodeWriterTests
 			_ => { }
 		);
 
-		await Assert.That(writer.ToString()).DoesNotContain("[global::Microsoft.CodeAnalysis.EmbeddedAttribute]");
+		await Assert.That(writer.ToString()).DoesNotContain("[global::Microsoft.CodeAnalysis.Embedded]");
 	}
 
 	[Test]
@@ -1808,11 +1808,9 @@ public class CodeWriterTests
 		var result = writer.ToString();
 		await Assert.That(result).Contains("HostKitGenerator (version 2.3.4)");
 		await Assert.That(result).DoesNotContain("// Generated at ");
-		await Assert.That(result).DoesNotContain("[global::Microsoft.CodeAnalysis.EmbeddedAttribute]");
-		await Assert
-			.That(result)
-			.Contains("[global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute]");
-		await Assert.That(result).Contains("[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]");
+		await Assert.That(result).DoesNotContain("[global::Microsoft.CodeAnalysis.Embedded]");
+		await Assert.That(result).Contains("[global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]");
+		await Assert.That(result).Contains("[global::System.Runtime.CompilerServices.CompilerGenerated]");
 		await Assert
 			.That(result)
 			.Contains("[global::System.CodeDom.Compiler.GeneratedCode(\"HostKitGenerator\", \"2.3.4\")]");
@@ -1861,8 +1859,8 @@ public class CodeWriterTests
 		);
 
 		var result = writer.ToString();
-		await Assert.That(result).DoesNotContain("ExcludeFromCodeCoverageAttribute");
-		await Assert.That(result).Contains("CompilerGeneratedAttribute");
+		await Assert.That(result).DoesNotContain("ExcludeFromCodeCoverage");
+		await Assert.That(result).Contains("CompilerGenerated");
 		await Assert.That(result).Contains("GeneratedCode(");
 	}
 
@@ -2023,10 +2021,7 @@ public class CodeWriterTests
 		var writer = CodeWriterFactory.ForTests();
 
 		// Act
-		writer.WriteClass(
-			new TypeDeclarationOptions("Sample") { Accessibility = TypeDeclarationAccessibility.Public },
-			body => body.Comment("Empty")
-		);
+		writer.WriteClass(new("Sample", TypeDeclarationAccessibility.Public), body => body.Comment("Empty"));
 
 		// Assert
 		var result = writer.ToString();

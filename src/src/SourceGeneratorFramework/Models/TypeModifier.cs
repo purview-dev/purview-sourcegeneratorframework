@@ -46,6 +46,7 @@ public readonly record struct TypeModifier
 		if (rank < 1)
 			throw new ArgumentOutOfRangeException(nameof(rank), rank, "An array rank must be at least one.");
 
+		// The rank is stored in the modifier, but it is not used for equality or hashing. This is because the rank is not part of the C# type system; it is only used for rendering.
 		return new() { Kind = TypeModifierKind.Array, Rank = rank };
 	}
 

@@ -831,8 +831,8 @@ public sealed class CodeWriter
 	/// <param name="typeReference">The type reference whose namespace will be used, or a value with no namespace to return an empty scope.</param>
 	/// <returns>The namespace body scope, or an empty scope when no namespace is supplied.</returns>
 	/// <example><code>using (writer.WriteBlockNamespaceScope(new TypeValueObject("C", "Example").AsTypeReference())) writer.WriteLine("class C { }");</code></example>
-	public BlockScope WriteBlockNamespaceScope(TypeReferenceOptions typeReference) =>
-		WriteBlockNamespaceScope(typeReference.Type.Namespace);
+	public IDisposable WriteBlockNamespaceScope(TypeReferenceOptions? typeReference) =>
+		typeReference is null ? NoOpScope.Instance : WriteBlockNamespaceScope(typeReference.Type.Namespace);
 
 	/// <summary>Writes a block-scoped namespace and invokes a callback for its body.</summary>
 	/// <param name="namespaceName">The namespace, or <see langword="null"/> to omit the wrapper.</param>
@@ -867,8 +867,8 @@ public sealed class CodeWriter
 	/// <param name="typeReference">The type reference whose namespace will be used, or a value with no namespace to write nothing.</param>
 	/// <returns>The current writer.</returns>
 	/// <example><code>writer.WriteFileScopedNamespace(new TypeValueObject("C", "Example").AsTypeReference());</code></example>
-	public CodeWriter WriteFileScopedNamespace(TypeReferenceOptions typeReference) =>
-		WriteFileScopedNamespace(typeReference.Type.Namespace);
+	public CodeWriter WriteFileScopedNamespace(TypeReferenceOptions? typeReference) =>
+		typeReference is null ? this : WriteFileScopedNamespace(typeReference.Type.Namespace);
 
 	/// <summary>
 	/// Writes a class declaration from structured options and returns its body scope.
@@ -1218,7 +1218,7 @@ public sealed class CodeWriter
 			Write("partial ");
 
 		if (declaration.Kind == TypeDeclarationKind.Delegate)
-			Write("delegate ").WriteTypeReference(declaration.DelegateReturnType!.Value).Write(' ');
+			Write("delegate ").WriteTypeReference(declaration.DelegateReturnType!).Write(' ');
 
 		Write(
 				declaration.Kind switch
@@ -1245,7 +1245,7 @@ public sealed class CodeWriter
 			);
 		WriteBaseTypes(declaration);
 		if (declaration.Kind == TypeDeclarationKind.Enum && declaration.EnumUnderlyingType is { IsEmpty: false })
-			Write(" : ").WriteTypeReference(declaration.EnumUnderlyingType.Value);
+			Write(" : ").WriteTypeReference(declaration.EnumUnderlyingType!);
 
 		if (declaration.Kind == TypeDeclarationKind.Delegate)
 		{
@@ -1408,14 +1408,14 @@ public sealed class CodeWriter
 	)
 	{
 		if (includeEmbeddedAttribute)
-			WriteLine("[global::Microsoft.CodeAnalysis.EmbeddedAttribute]");
+			WriteLine("[global::Microsoft.CodeAnalysis.Embedded]");
 
 		if (includeCoverageExclusion)
-			WriteLine("[global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute]");
+			WriteLine("[global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]");
 
 		if (includeGeneratedCodeAttribute)
 		{
-			WriteLine("[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]");
+			WriteLine("[global::System.Runtime.CompilerServices.CompilerGenerated]");
 			WriteGeneratedCodeAttribute(GeneratorName, GeneratorVersion);
 		}
 
@@ -1774,8 +1774,8 @@ public sealed class CodeWriter
 	/// <example><code>writer.WriteThrow("new InvalidOperationException()");</code></example>
 	public CodeWriter WriteThrow(TypeReferenceOptions exceptionType, string? message = null)
 	{
-		if (exceptionType.IsEmpty)
-			throw new ArgumentException("Exception type cannot be empty.", nameof(exceptionType));
+		if (exceptionType.IsNullOrEmpty())
+			throw new ArgumentException("Exception type cannot be null or empty.", nameof(exceptionType));
 
 		Write("throw ");
 		WriteExpression(
@@ -2142,7 +2142,7 @@ public sealed class CodeWriter
 		var target = attribute.Target ?? defaultTarget;
 		if (target is not null)
 			Write(target).Write(": ");
-		Write(attribute.Type.Type.RenderAttributeName);
+		Write(TypeHelpers.GetTypeName(attribute.Type.Type.RenderFullName));
 		if (!attribute.Arguments.IsDefaultOrEmpty)
 		{
 			Write('(');
@@ -2413,7 +2413,7 @@ public sealed class CodeWriter
 
 		Write(" : ");
 		if (hasBaseType)
-			WriteTypeReference(declaration.BaseType!.Value);
+			WriteTypeReference(declaration.BaseType!);
 
 		if (!hasInterfaces)
 			return;
@@ -2585,14 +2585,14 @@ public sealed class CodeWriter
 		if (
 			declaration.Kind == TypeDeclarationKind.Enum
 			&& declaration.EnumUnderlyingType is not null
-			&& string.IsNullOrWhiteSpace(declaration.EnumUnderlyingType.Value.Type.Name)
+			&& string.IsNullOrWhiteSpace(declaration.EnumUnderlyingType.Type.Name)
 		)
 			throw new ArgumentException("Enum underlying type cannot be whitespace.", nameof(declaration));
 		if (declaration.Kind == TypeDeclarationKind.Delegate)
 		{
 			if (declaration.DelegateReturnType is null)
 				throw new ArgumentException("Delegate return type is required.", nameof(declaration));
-			ValidateTypeReference(declaration.DelegateReturnType.Value, nameof(declaration));
+			ValidateTypeReference(declaration.DelegateReturnType, nameof(declaration));
 			ValidateParameters(
 				declaration.DelegateParameters,
 				"Delegate parameters cannot contain null or whitespace values.",
@@ -2980,5 +2980,12 @@ public sealed class CodeWriter
 			_writer = null;
 			writer.CloseBlock(_closingSeparator, _scopeId, _completedItem, _itemIndent);
 		}
+	}
+
+	sealed record class NoOpScope : IDisposable
+	{
+		public static NoOpScope Instance { get; } = new();
+
+		public void Dispose() { }
 	}
 }

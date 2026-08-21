@@ -299,6 +299,7 @@ public readonly record struct TypeValueObject
 			if (GenericArity == 0)
 				return Name;
 
+			// Render the open generic definition with commas for each type parameter, or the constructed form with
 			return TypeArguments.IsDefaultOrEmpty
 				? $"{Name}<{new string(',', GenericArity - 1)}>"
 				: $"{Name}<{string.Join(", ", TypeArguments.Select(static argument => argument.RenderFullName))}>";
@@ -543,6 +544,7 @@ public readonly record struct TypeValueObject
 		if (SpecialType != SpecialType.None)
 			throw new InvalidOperationException($"Cannot create a generic type from the special type '{SpecialType}'.");
 
+		// The new generic arity is the existing arity if already set, otherwise the number of arguments supplied.
 		return this with
 		{
 			GenericArity = GenericArity == 0 ? typeArguments.Length : GenericArity,
@@ -641,7 +643,11 @@ public readonly record struct TypeValueObject
 
 		// Measure, then fill back-to-front. One char[] and one string, no intermediate concatenation.
 		var length = -1;
-		for (var segment = @namespace; segment is not null && !segment.IsGlobalNamespace; segment = segment.ContainingNamespace)
+		for (
+			var segment = @namespace;
+			segment is not null && !segment.IsGlobalNamespace;
+			segment = segment.ContainingNamespace
+		)
 			length += segment.Name.Length + 1;
 
 		if (length <= 0)
@@ -650,7 +656,11 @@ public readonly record struct TypeValueObject
 		var characters = new char[length];
 		var position = length;
 
-		for (var segment = @namespace; segment is not null && !segment.IsGlobalNamespace; segment = segment.ContainingNamespace)
+		for (
+			var segment = @namespace;
+			segment is not null && !segment.IsGlobalNamespace;
+			segment = segment.ContainingNamespace
+		)
 		{
 			var name = segment.Name;
 			position -= name.Length;
@@ -675,7 +685,11 @@ public readonly record struct TypeValueObject
 			return false;
 
 		var end = expected.Length;
-		for (var segment = actual; segment is not null && !segment.IsGlobalNamespace; segment = segment.ContainingNamespace)
+		for (
+			var segment = actual;
+			segment is not null && !segment.IsGlobalNamespace;
+			segment = segment.ContainingNamespace
+		)
 		{
 			var name = segment.Name;
 			var start = end - name.Length;
@@ -742,7 +756,10 @@ public readonly record struct TypeValueObject
 		return true;
 	}
 
-	static bool TypeArgumentsEqual(ImmutableArray<TypeReferenceOptions> left, ImmutableArray<TypeReferenceOptions> right)
+	static bool TypeArgumentsEqual(
+		ImmutableArray<TypeReferenceOptions> left,
+		ImmutableArray<TypeReferenceOptions> right
+	)
 	{
 		var leftCount = left.IsDefaultOrEmpty ? 0 : left.Length;
 		var rightCount = right.IsDefaultOrEmpty ? 0 : right.Length;
@@ -879,7 +896,7 @@ public readonly record struct TypeValueObject
 		for (var index = separator + 1; index < metadataName.Length; index++)
 		{
 			var character = metadataName[index];
-			if (character < '0' || character > '9')
+			if (character is < '0' or > '9')
 				return 0;
 
 			arity = (arity * 10) + (character - '0');

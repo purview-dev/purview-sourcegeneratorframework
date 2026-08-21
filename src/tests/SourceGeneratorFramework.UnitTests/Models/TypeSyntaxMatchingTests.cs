@@ -419,6 +419,8 @@ public sealed class TypeSyntaxMatchingTests
 			.IsTrue();
 
 		await Assert.That(core.ToString()).IsEqualTo("int");
+
+		await Assert.That(modifiers).IsNotNull();
 		await Assert.That(modifiers.Count).IsEqualTo(2);
 		await Assert.That(modifiers[0].Rank).IsEqualTo(1);
 		await Assert.That(modifiers[1].Rank).IsEqualTo(2);

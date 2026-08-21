@@ -44,6 +44,10 @@
 			Link="Extensions\Purview\SourceGeneratorFramework\Models\TypeReferenceOptions.cs"
 		/>
 		<Compile
+			Include="..\SourceGeneratorFramework\Models\TypeReferenceOptionsExtensions.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Models\TypeReferenceOptionsExtensions.cs"
+		/>
+		<Compile
 			Include="..\SourceGeneratorFramework\Models\TypeSyntaxFacts.cs"
 			Link="Extensions\Purview\SourceGeneratorFramework\Models\TypeSyntaxFacts.cs"
 		/>
