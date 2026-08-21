@@ -220,7 +220,7 @@ public sealed record TypeDeclarationOptions
 	/// <param name="accessibility">The optional accessibility modifier, or <see langword="null"/> to omit accessibility.</param>
 	public TypeDeclarationOptions(TypeValueObject typeValue, TypeDeclarationAccessibility? accessibility = null)
 	{
-		Name = typeValue.TypeName;
+		Name = typeValue.Name;
 		Accessibility = accessibility;
 	}
 

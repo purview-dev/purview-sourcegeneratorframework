@@ -1,13 +1,15 @@
-namespace Purview.SourceGeneratorFramework;
+using System.ComponentModel;
 
-/// <summary>Provides expression-building helpers for structured type descriptors.</summary>
-public static class TypeValueObjectExpressionExtensions
+namespace Purview.SourceGeneratorFramework.Models;
+
+[EditorBrowsable(EditorBrowsableState.Never)]
+public static class TypeValueObjectSyntaxExtensions
 {
 	/// <summary>Returns a fully qualified reference to a static member on the specified type.</summary>
 	/// <param name="type">The type that declares the static member.</param>
 	/// <param name="memberName">The static field, property, method, or nested-type name.</param>
 	/// <returns>A C# expression in the form <c>global::Namespace.Type.Member</c>.</returns>
-	public static string StaticMember(this TypeValueObject type, string memberName)
+	public static string StaticMember(this in TypeValueObject type, string memberName)
 	{
 		if (type == TypeValueObject.Empty)
 			throw new ArgumentException("The declaring type cannot be empty.", nameof(type));

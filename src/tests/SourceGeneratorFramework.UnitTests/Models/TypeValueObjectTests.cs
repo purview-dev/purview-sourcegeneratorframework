@@ -1,0 +1,453 @@
+using Microsoft.CodeAnalysis;
+using Purview.SourceGeneratorFramework.Helpers;
+
+namespace Purview.SourceGeneratorFramework.Models;
+
+public sealed class TypeValueObjectTests
+{
+	// ---------------------------------------------------------------------------------------------
+	// Keyword / special types
+	// ---------------------------------------------------------------------------------------------
+
+	[Test]
+	[Arguments("System.Int32")]
+	[Arguments("System.String")]
+	[Arguments("System.Boolean")]
+	[Arguments("System.Object")]
+	public async Task Matches_GivenKeywordType_ReturnsTrue(string metadataName)
+	{
+		var compilation = TestCompilation.Create();
+		var symbol = compilation.GetTypeByMetadataName(metadataName)!;
+		var value = new TypeValueObject(symbol);
+
+		await Assert.That(value.Matches(symbol)).IsTrue();
+		await Assert.That(value.SpecialType).IsNotEqualTo(SpecialType.None);
+	}
+
+	[Test]
+	public async Task Matches_GivenKeywordTypeDeclaredByName_ReturnsTrue()
+	{
+		var compilation = TestCompilation.Create();
+		var symbol = compilation.GetTypeByMetadataName("System.Int32")!;
+
+		// Constructed without keyword knowledge, so SpecialType is None on this side.
+		var value = new TypeValueObject("Int32", "System");
+
+		await Assert.That(value.SpecialType).IsEqualTo(SpecialType.None);
+		await Assert.That(value.Matches(symbol)).IsTrue();
+	}
+
+	// ---------------------------------------------------------------------------------------------
+	// Regression: non-keyword special types must not be rejected
+	// ---------------------------------------------------------------------------------------------
+
+	[Test]
+	[Arguments("System.DateTime")]
+	[Arguments("System.IDisposable")]
+	[Arguments("System.Array")]
+	[Arguments("System.Enum")]
+	[Arguments("System.ValueType")]
+	[Arguments("System.Delegate")]
+	[Arguments("System.Collections.IEnumerable")]
+	public async Task Matches_GivenNonKeywordSpecialType_ReturnsTrue(string metadataName)
+	{
+		var compilation = TestCompilation.Create();
+		var symbol = compilation.GetTypeByMetadataName(metadataName)!;
+
+		// Guards the premise: Roslyn stamps SpecialType well beyond the C# keyword types.
+		await Assert.That(symbol.SpecialType).IsNotEqualTo(SpecialType.None);
+
+		var fromSymbol = new TypeValueObject(symbol);
+		var fromName = new TypeValueObject(symbol.Name, symbol.ContainingNamespace.ToDisplayString());
+
+		await Assert.That(fromSymbol.Matches(symbol)).IsTrue();
+		await Assert.That(fromName.Matches(symbol)).IsTrue();
+	}
+
+	[Test]
+	public async Task Matches_GivenOpenGenericSpecialTypeDefinition_ReturnsTrue()
+	{
+		var compilation = TestCompilation.Create();
+		var definition = compilation.GetTypeByMetadataName("System.Collections.Generic.IEnumerable`1")!;
+		var constructed = definition.Construct(compilation.GetSpecialType(SpecialType.System_Int32));
+
+		var value = new TypeValueObject("IEnumerable", "System.Collections.Generic") with { GenericArity = 1 };
+
+		await Assert.That(definition.SpecialType).IsNotEqualTo(SpecialType.None);
+		await Assert.That(value.Matches(definition)).IsTrue();
+		await Assert.That(value.Matches(constructed)).IsTrue();
+	}
+
+	// ---------------------------------------------------------------------------------------------
+	// Regression: composed symbols must not throw
+	// ---------------------------------------------------------------------------------------------
+
+	[Test]
+	public async Task Matches_GivenArrayPointerOrDynamicSymbol_ReturnsFalseWithoutThrowing()
+	{
+		var compilation = TestCompilation.Create();
+		var int32 = compilation.GetSpecialType(SpecialType.System_Int32);
+		var value = TypeValueObject.Create<int>();
+
+		await Assert.That(value.Matches(compilation.CreateArrayTypeSymbol(int32))).IsFalse();
+		await Assert.That(value.Matches(compilation.CreatePointerTypeSymbol(int32))).IsFalse();
+		await Assert.That(value.Matches(compilation.DynamicType)).IsFalse();
+	}
+
+	[Test]
+	public async Task Matches_GivenErrorType_ReturnsFalse()
+	{
+		var symbol = TestCompilation.FieldType("public Missing.Thing Value;");
+
+		await Assert.That(symbol.TypeKind).IsEqualTo(TypeKind.Error);
+		await Assert.That(new TypeValueObject("Thing", "Missing").Matches(symbol)).IsFalse();
+		await Assert.That(TypeValueObject.TryCreate(symbol, out _)).IsFalse();
+	}
+
+	// ---------------------------------------------------------------------------------------------
+	// Nested types
+	// ---------------------------------------------------------------------------------------------
+
+	[Test]
+	public async Task Matches_GivenNestedType_DoesNotMatchTopLevelTypeOfSameName()
+	{
+		var compilation = TestCompilation.Create(
+			"""
+			namespace Sample
+			{
+				public class Outer { public class Inner { } }
+				public class Inner { }
+			}
+			"""
+		);
+
+		var nested = compilation.GetTypeByMetadataName("Sample.Outer+Inner")!;
+		var topLevel = compilation.GetTypeByMetadataName("Sample.Inner")!;
+
+		var nestedValue = new TypeValueObject(nested);
+		var topLevelValue = new TypeValueObject(topLevel);
+
+		await Assert.That(nestedValue.Matches(nested)).IsTrue();
+		await Assert.That(nestedValue.Matches(topLevel)).IsFalse();
+		await Assert.That(topLevelValue.Matches(nested)).IsFalse();
+		await Assert.That(topLevelValue.Matches(topLevel)).IsTrue();
+	}
+
+	[Test]
+	public async Task MetadataFullName_GivenNestedType_UsesPlusSeparator()
+	{
+		var value = new TypeValueObject("Outer", "Sample").Nested("Inner");
+
+		await Assert.That(value.IsNested).IsTrue();
+		await Assert.That(value.MetadataFullName).IsEqualTo("Sample.Outer+Inner");
+		await Assert.That(value.RenderFullName).IsEqualTo("global::Sample.Outer.Inner");
+	}
+
+	[Test]
+	public async Task Nested_RoundTripsThroughSymbol()
+	{
+		var compilation = TestCompilation.Create(
+			"namespace Sample { public class Outer { public class Middle { public class Inner { } } } }"
+		);
+
+		var symbol = compilation.GetTypeByMetadataName("Sample.Outer+Middle+Inner")!;
+		var value = new TypeValueObject("Outer", "Sample").Nested("Middle").Nested("Inner");
+
+		await Assert.That(value.Matches(symbol)).IsTrue();
+		await Assert.That(value).IsEqualTo(new TypeValueObject(symbol));
+	}
+
+	[Test]
+	public async Task Matches_GivenNestedTypeInsideGenericContainer_ComparesContainerArity()
+	{
+		var compilation = TestCompilation.Create(
+			"namespace Sample { public class Outer<T> { public class Inner { } } }"
+		);
+
+		var symbol = compilation.GetTypeByMetadataName("Sample.Outer`1+Inner")!;
+
+		var correct = (new TypeValueObject("Outer", "Sample") with { GenericArity = 1 }).Nested("Inner");
+		var wrongArity = new TypeValueObject("Outer", "Sample").Nested("Inner");
+
+		await Assert.That(correct.Matches(symbol)).IsTrue();
+		await Assert.That(wrongArity.Matches(symbol)).IsFalse();
+		await Assert.That(correct.MetadataFullName).IsEqualTo("Sample.Outer`1+Inner");
+	}
+
+	// ---------------------------------------------------------------------------------------------
+	// Generic shape
+	// ---------------------------------------------------------------------------------------------
+
+	[Test]
+	public async Task Matches_GivenOpenDefinition_MatchesEveryConstruction()
+	{
+		var compilation = TestCompilation.Create();
+		var list = compilation.GetTypeByMetadataName("System.Collections.Generic.List`1")!;
+		var value = new TypeValueObject("List", "System.Collections.Generic") with { GenericArity = 1 };
+
+		await Assert.That(value.IsGenericTypeDefinition).IsTrue();
+		await Assert.That(value.Matches(list)).IsTrue();
+		await Assert
+			.That(value.Matches(list.Construct(compilation.GetSpecialType(SpecialType.System_String))))
+			.IsTrue();
+	}
+
+	[Test]
+	public async Task Matches_GivenConstructedGeneric_RequiresMatchingArguments()
+	{
+		var compilation = TestCompilation.Create();
+		var list = compilation.GetTypeByMetadataName("System.Collections.Generic.List`1")!;
+
+		var value = new TypeValueObject("List", "System.Collections.Generic").MakeGeneric(
+			new TypeValueObject(SpecialType.System_Int32)
+		);
+
+		await Assert.That(value.Matches(list.Construct(compilation.GetSpecialType(SpecialType.System_Int32)))).IsTrue();
+		await Assert
+			.That(value.Matches(list.Construct(compilation.GetSpecialType(SpecialType.System_String))))
+			.IsFalse();
+		await Assert.That(value.Matches(list)).IsFalse();
+	}
+
+	[Test]
+	public async Task Matches_GivenArityMismatch_ReturnsFalse()
+	{
+		var compilation = TestCompilation.Create();
+		var dictionary = compilation.GetTypeByMetadataName("System.Collections.Generic.Dictionary`2")!;
+		var value = new TypeValueObject("Dictionary", "System.Collections.Generic") with { GenericArity = 1 };
+
+		await Assert.That(value.Matches(dictionary)).IsFalse();
+	}
+
+	// ---------------------------------------------------------------------------------------------
+	// Composed type arguments no longer widen
+	// ---------------------------------------------------------------------------------------------
+
+	[Test]
+	public async Task TypeArguments_GivenArrayArgument_ArePreserved()
+	{
+		var symbol = TestCompilation.FieldType("public List<int[]> Value = null!;");
+		var value = new TypeValueObject(symbol);
+
+		await Assert.That(value.IsGenericTypeDefinition).IsFalse();
+		await Assert.That(value.TypeArguments.Length).IsEqualTo(1);
+		await Assert.That(value.TypeArguments[0].IsArray).IsTrue();
+		await Assert.That(value.RenderFullName).IsEqualTo("global::System.Collections.Generic.List<int[]>");
+
+		await Assert.That(value.Matches(symbol)).IsTrue();
+		await Assert.That(value.Matches(TestCompilation.FieldType("public List<int> Value = null!;"))).IsFalse();
+		await Assert.That(value.Matches(TestCompilation.FieldType("public List<string[]> Value = null!;"))).IsFalse();
+		await Assert.That(value.Matches(TestCompilation.FieldType("public List<int[,]> Value = null!;"))).IsFalse();
+	}
+
+	[Test]
+	public async Task TypeArguments_GivenTypeParameterArgument_ArePreserved()
+	{
+		var symbol = TestCompilation.FieldType("public List<T> Value = null!;");
+		var value = new TypeValueObject(symbol);
+
+		await Assert.That(value.IsGenericTypeDefinition).IsFalse();
+		await Assert.That(value.TypeArguments[0].Kind).IsEqualTo(TypeReferenceKind.TypeParameter);
+		await Assert.That(value.TypeArguments[0].TypeParameterName).IsEqualTo("T");
+		await Assert.That(value.RenderFullName).IsEqualTo("global::System.Collections.Generic.List<T>");
+
+		await Assert.That(value.Matches(symbol)).IsTrue();
+		await Assert.That(value.Matches(TestCompilation.FieldType("public List<int> Value = null!;"))).IsFalse();
+	}
+
+	[Test]
+	public async Task TypeArguments_GivenNullableValueTypeArgument_ArePreserved()
+	{
+		var symbol = TestCompilation.FieldType("public List<int?> Value = null!;");
+		var value = new TypeValueObject(symbol);
+
+		await Assert.That(value.TypeArguments[0].IsNullable).IsTrue();
+		await Assert.That(value.RenderFullName).IsEqualTo("global::System.Collections.Generic.List<int?>");
+		await Assert.That(value.Matches(symbol)).IsTrue();
+		await Assert.That(value.Matches(TestCompilation.FieldType("public List<int> Value = null!;"))).IsFalse();
+	}
+
+	[Test]
+	public async Task TypeArguments_GivenNestedGenericArgument_ArePreserved()
+	{
+		var symbol = TestCompilation.FieldType("public Dictionary<string, List<int>> Value = null!;");
+		var value = new TypeValueObject(symbol);
+
+		await Assert.That(value.TypeArguments.Length).IsEqualTo(2);
+		await Assert.That(value.Matches(symbol)).IsTrue();
+		await Assert
+			.That(value.Matches(TestCompilation.FieldType("public Dictionary<string, List<string>> Value = null!;")))
+			.IsFalse();
+	}
+
+	// ---------------------------------------------------------------------------------------------
+	// Namespace comparison
+	// ---------------------------------------------------------------------------------------------
+
+	[Test]
+	[Arguments("System.Collections.Generic", true)]
+	[Arguments("Collections.Generic", false)]
+	[Arguments("System.Collections", false)]
+	[Arguments("System.Collections.Generic.Extra", false)]
+	[Arguments(null, false)]
+	public async Task Matches_ComparesFullNamespace(string? @namespace, bool expected)
+	{
+		var compilation = TestCompilation.Create();
+		var list = compilation.GetTypeByMetadataName("System.Collections.Generic.List`1")!;
+		var value = new TypeValueObject("List", @namespace) with { GenericArity = 1 };
+
+		await Assert.That(value.Matches(list)).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task Matches_GivenGlobalNamespaceType_ReturnsTrue()
+	{
+		var compilation = TestCompilation.Create("public class Rootless { }");
+		var symbol = compilation.GetTypeByMetadataName("Rootless")!;
+		var value = new TypeValueObject("Rootless", null);
+
+		await Assert.That(value.IsGlobalNamespace).IsTrue();
+		await Assert.That(value.Matches(symbol)).IsTrue();
+		await Assert.That(value.RenderFullName).IsEqualTo("Rootless");
+	}
+
+	// ---------------------------------------------------------------------------------------------
+	// ISymbol matching
+	// ---------------------------------------------------------------------------------------------
+
+	[Test]
+	public async Task Matches_GivenMemberSymbols_ResolvesTheirType()
+	{
+		var compilation = TestCompilation.Create(
+			"""
+			using System;
+
+			namespace Sample;
+
+			public class Holder
+			{
+				public Guid Field;
+				public Guid Property { get; set; }
+				public Guid Method(Guid parameter) => default;
+				public event EventHandler? Event;
+			}
+			"""
+		);
+
+		var holder = compilation.GetTypeByMetadataName("Sample.Holder")!;
+		var guid = new TypeValueObject("Guid", "System");
+
+		await Assert.That(guid.Matches(holder.GetMembers("Field").Single())).IsTrue();
+		await Assert.That(guid.Matches(holder.GetMembers("Property").Single())).IsTrue();
+		await Assert.That(guid.Matches(holder.GetMembers("Method").Single())).IsTrue();
+
+		var method = (IMethodSymbol)holder.GetMembers("Method").Single();
+		await Assert.That(guid.Matches(method.Parameters[0])).IsTrue();
+
+		var eventHandler = new TypeValueObject("EventHandler", "System");
+		await Assert.That(eventHandler.Matches(holder.GetMembers("Event").OfType<IEventSymbol>().Single())).IsTrue();
+
+		await Assert.That(guid.Matches(holder.GetMembers("Event").OfType<IEventSymbol>().Single())).IsFalse();
+		await Assert.That(guid.Matches((ISymbol?)null)).IsFalse();
+	}
+
+	[Test]
+	public async Task Matches_GivenNamespaceSymbol_ReturnsFalse()
+	{
+		var compilation = TestCompilation.Create();
+		var @namespace = compilation.GlobalNamespace.GetNamespaceMembers().First();
+
+		await Assert.That(new TypeValueObject("System", null).Matches(@namespace)).IsFalse();
+	}
+
+	// ---------------------------------------------------------------------------------------------
+	// Reflection parity
+	// ---------------------------------------------------------------------------------------------
+
+	[Test]
+	public async Task Create_GivenRuntimeType_MatchesEquivalentSymbol()
+	{
+		var compilation = TestCompilation.Create();
+
+		await Assert
+			.That(TypeValueObject.Create<DateTime>().Matches(compilation.GetTypeByMetadataName("System.DateTime")))
+			.IsTrue();
+		await Assert
+			.That(TypeValueObject.Create<Guid>().Matches(compilation.GetTypeByMetadataName("System.Guid")))
+			.IsTrue();
+
+		var listOfInt = compilation
+			.GetTypeByMetadataName("System.Collections.Generic.List`1")!
+			.Construct(compilation.GetSpecialType(SpecialType.System_Int32));
+
+		await Assert.That(TypeValueObject.Create<List<int>>().Matches(listOfInt)).IsTrue();
+		await Assert.That(TypeValueObject.Create<List<string>>().Matches(listOfInt)).IsFalse();
+	}
+
+	[Test]
+	public async Task Create_GivenRuntimeTypeWithArrayArgument_DoesNotWiden()
+	{
+		var value = TypeValueObject.Create<List<int[]>>();
+
+		await Assert.That(value.TypeArguments.Length).IsEqualTo(1);
+		await Assert.That(value.TypeArguments[0].IsArray).IsTrue();
+		await Assert.That(value.Matches(TestCompilation.FieldType("public List<int[]> Value = null!;"))).IsTrue();
+		await Assert.That(value.Matches(TestCompilation.FieldType("public List<int> Value = null!;"))).IsFalse();
+	}
+
+	[Test]
+	public async Task TryCreate_GivenUnrepresentableRuntimeType_ReturnsFalse()
+	{
+		await Assert.That(TypeValueObject.TryCreate(typeof(int[]), out _)).IsFalse();
+		await Assert.That(TypeValueObject.TryCreate(typeof(int).MakeByRefType(), out _)).IsFalse();
+		await Assert.That(TypeValueObject.TryCreate(typeof(List<>).GetGenericArguments()[0], out _)).IsFalse();
+		await Assert.That(TypeValueObject.TryCreate((Type?)null, out _)).IsFalse();
+	}
+
+	// ---------------------------------------------------------------------------------------------
+	// Equality contract
+	// ---------------------------------------------------------------------------------------------
+
+	[Test]
+	public async Task Equality_IsStructuralAndHashConsistent()
+	{
+		var left = new TypeValueObject("Outer", "Sample")
+			.Nested("Inner")
+			.MakeGeneric(new TypeValueObject(SpecialType.System_String));
+		var right = new TypeValueObject("Outer", "Sample")
+			.Nested("Inner")
+			.MakeGeneric(new TypeValueObject(SpecialType.System_String));
+		var different = new TypeValueObject("Outer", "Sample")
+			.Nested("Inner")
+			.MakeGeneric(new TypeValueObject(SpecialType.System_Int32));
+
+		await Assert.That(left).IsEqualTo(right);
+		await Assert.That(left.GetHashCode()).IsEqualTo(right.GetHashCode());
+		await Assert.That(left).IsNotEqualTo(different);
+	}
+
+	[Test]
+	public async Task Equality_DistinguishesComposedTypeArguments()
+	{
+		var listOfInt = new TypeValueObject("List", "System.Collections.Generic").MakeGeneric(
+			new TypeValueObject(SpecialType.System_Int32)
+		);
+
+		var listOfIntArray = new TypeValueObject("List", "System.Collections.Generic").MakeGeneric(
+			new TypeValueObject(SpecialType.System_Int32).MakeArray()
+		);
+
+		await Assert.That(listOfInt).IsNotEqualTo(listOfIntArray);
+		await Assert.That(listOfIntArray.RenderFullName).IsEqualTo("global::System.Collections.Generic.List<int[]>");
+	}
+
+	[Test]
+	public async Task MakeGeneric_GivenWrongArgumentCount_Throws()
+	{
+		var dictionary = new TypeValueObject("Dictionary", "System.Collections.Generic") with { GenericArity = 2 };
+
+		await Assert
+			.That(void () => _ = dictionary.MakeGeneric(new TypeValueObject(SpecialType.System_String)))
+			.Throws<ArgumentException>();
+	}
+}

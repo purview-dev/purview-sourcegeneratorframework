@@ -155,17 +155,13 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 
 	static void WriteTargetAttributeField(CodeWriter writer, AttributeDataModelTarget target)
 	{
-		var namespaceValue = target.TargetAttribute.Namespace is null
-			? "null"
-			: $"\"{target.TargetAttribute.Namespace}\"";
-
 		writer.WriteField(
 			new("TargetAttribute", GeneratorTypeLibrary.TypeValueObject.AsTypeReference())
 			{
 				Accessibility = TypeDeclarationAccessibility.Public,
 				IsStatic = true,
 				IsReadOnly = true,
-				Initializer = $"new(\"{target.TargetAttribute.TypeName}\", {namespaceValue})",
+				Initializer = $"new(\"{target.TargetAttribute.Name}\", {target.TargetAttribute.Namespace})",
 			}
 		);
 	}

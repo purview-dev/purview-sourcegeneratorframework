@@ -143,8 +143,10 @@ public static class PurviewTypeLibrary
 			/// <summary>
 			/// <see cref="EmbeddedAttribute"/>.
 			/// </summary>
-			public static readonly TypeValueObject EmbeddedAttribute =
-				TypeValueObject.Create<global::Microsoft.CodeAnalysis.EmbeddedAttribute>();
+			public static readonly TypeValueObject EmbeddedAttribute = new(
+				nameof(EmbeddedAttribute),
+				"Microsoft.CodeAnalysis"
+			);
 		}
 	}
 }

@@ -377,8 +377,8 @@ public class CodeWriterTests
 		var declaration = new TypeDeclarationOptions("Repository")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
-			BaseType = Type("RepositoryBase").MakeGeneric(Type("T")),
-			Interfaces = [Type("IRepository").MakeGeneric(Type("T")), Type("IDisposable")],
+			BaseType = Type("RepositoryBase").Type.MakeGeneric(Type("T")),
+			Interfaces = [Type("IRepository").Type.MakeGeneric(Type("T")), Type("IDisposable")],
 			GenericTypes = [new GenericTypeParameterOptions("T") { Constraints = ["class", "new()"] }],
 		};
 
@@ -407,7 +407,7 @@ public class CodeWriterTests
 		{
 			Accessibility = TypeDeclarationAccessibility.Internal,
 			IsReadOnly = true,
-			Interfaces = [Type("IEquatable").MakeGeneric(Type("Identifier"))],
+			Interfaces = [Type("IEquatable").Type.MakeGeneric(Type("Identifier"))],
 		};
 
 		using (writer.WriteRecordStructScope(declaration))
@@ -955,7 +955,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new MethodDeclarationOptions("CreateAsync", Type("Task").MakeGeneric(Type("T")))
+		var declaration = new MethodDeclarationOptions("CreateAsync", Type("Task").Type.MakeGeneric(Type("T")))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			IsStatic = true,
@@ -985,7 +985,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		MethodDeclarationOptions declaration = new("CreateAsync", Type("Task").MakeGeneric(Type("T")))
+		MethodDeclarationOptions declaration = new("CreateAsync", Type("Task").Type.MakeGeneric(Type("T")))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			IsAsync = true,
@@ -1068,8 +1068,8 @@ public class CodeWriterTests
 	{
 		var writer = CodeWriterFactory.ForTests();
 		var attributeType = new TypeValueObject("MarkerAttribute", "Example")
-			.AsTypeReference()
 			.MakeGeneric(TypeValueObject.Create<string>())
+			.AsTypeReference()
 			.Nullable();
 
 		writer.WriteClass(
@@ -1146,7 +1146,9 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var attribute = new AttributeDeclarationOptions(new("HostKitAttribute", "Purview.Aspire.ResourceKit"))
+		var attribute = new AttributeDeclarationOptions(
+			new TypeValueObject("HostKitAttribute", "Purview.Aspire.ResourceKit")
+		)
 		{
 			Arguments = [new AttributeArgumentOptions(true) { Name = "GenerateOptions", IsPropertyAssignment = true }],
 		};
@@ -1200,7 +1202,7 @@ public class CodeWriterTests
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
 		var valueType = Type("global::System.Collections.Generic.Dictionary")
-			.MakeGeneric(Type("string"), Type("Widget").Nullable())
+			.Type.MakeGeneric(Type("string"), Type("Widget").Nullable())
 			.MakeArray()
 			.Nullable();
 		var method = new MethodDeclarationOptions("Load", valueType)
@@ -1209,7 +1211,10 @@ public class CodeWriterTests
 			[
 				new(
 					"items",
-					Type("global::System.Collections.Generic.List").MakeGeneric(Type("Widget").Nullable()).Nullable()
+					Type("global::System.Collections.Generic.List")
+						.Type.MakeGeneric(Type("Widget").Nullable())
+						.AsTypeReference()
+						.Nullable()
 				),
 			],
 			ExpressionBody = "items.ToArray()",

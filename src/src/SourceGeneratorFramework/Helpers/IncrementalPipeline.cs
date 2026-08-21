@@ -176,7 +176,7 @@ public static class IncrementalPipeline
 		if (factory is null)
 			throw new ArgumentNullException(nameof(factory));
 
-		var baseSettings = new GenerationSettings(generatorName, generatorVersion);
+		GenerationSettings baseSettings = new(generatorName, generatorVersion);
 
 		return context
 			.CompilationProvider.Combine(GenerationConfigurationValueProvider(context, disablePropertyName))
@@ -297,7 +297,7 @@ public static class IncrementalPipeline
 
 		return context
 			.SyntaxProvider.ForAttributeWithMetadataName(attributeType.MetadataFullName, predicate, transform)
-			.WithTrackingName(trackingName ?? $"ForAttribute_{attributeType.TypeName}");
+			.WithTrackingName(trackingName ?? $"ForAttribute_{attributeType.Name}");
 	}
 
 	/// <summary>

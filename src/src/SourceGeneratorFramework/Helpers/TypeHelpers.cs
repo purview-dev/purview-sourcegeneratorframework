@@ -116,7 +116,7 @@ public static class TypeHelpers
 		var actualNamespace = actualDefinition.ContainingNamespace.IsGlobalNamespace
 			? null
 			: actualDefinition.ContainingNamespace.ToDisplayString();
-		if (actualDefinition.Name != expectedBase.TypeName || actualNamespace != expectedBase.Namespace)
+		if (actualDefinition.Name != expectedBase.Name || actualNamespace != expectedBase.Namespace)
 			return false;
 
 		// A name-only TypeValueObject has no generic shape information. Treat it as the generic
@@ -141,7 +141,7 @@ public static class TypeHelpers
 			var actualArgument = actualBase.TypeArguments[index];
 			if (
 				!expectedArgument.Equals(actualArgument)
-				&& !MatchesFullyQualifiedName(actualArgument, expectedArgument.MetadataFullName)
+				&& !expectedArgument.Equals(actualArgument)
 				&& !Implements(actualArgument, expectedArgument)
 				&& !InheritsFrom(actualArgument, expectedArgument)
 			)

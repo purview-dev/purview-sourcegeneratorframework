@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Purview.SourceGeneratorFramework.Models;
 
 namespace Purview.SourceGeneratorFramework.Testing;
 
@@ -25,6 +26,9 @@ static class SourceGeneratorHelpers
 		);
 	}
 
+	public static ImmutableArray<MetadataReference> ResolveTrustedReferences =>
+		[.. TrustedAssemblies.Select(static path => MetadataReference.CreateFromFile(path))];
+
 	public static ImmutableArray<MetadataReference> ResolveReferences(
 		SourceGeneratorTestOptions options,
 		Assembly generatorAssembly
@@ -33,14 +37,10 @@ static class SourceGeneratorHelpers
 		if (generatorAssembly is null)
 			throw new ArgumentNullException(nameof(generatorAssembly));
 
-		var generatorAssemblyPath = generatorAssembly.GetType(
-			"Purview.SourceGeneratorFramework.Models.TypeValueObject",
-			throwOnError: false
-		)
-			is null
-			? null
-			: generatorAssembly.Location;
+		var generatorAssemblyPath = typeof(TypeValueObject).Assembly.Location;
 		var builder = ImmutableArray.CreateBuilder<MetadataReference>();
+		// Don't use the TrustedAssemblies list to resolve the generator assembly,
+		// because it may be shadow-copied into a temporary folder by the test runner. Instead, use the actual assembly location.
 		builder.AddRange(
 			TrustedAssemblies
 				.Where(path =>

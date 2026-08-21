@@ -34,15 +34,31 @@
 			Link="Extensions\Purview\SourceGeneratorFramework\DeclarationSyntaxOptions.cs"
 		/>
 		<Compile
-			Include="..\SourceGeneratorFramework\TypeReferenceOptions.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\TypeReferenceOptions.cs"
-		/>
-		<Compile
 			Include="..\SourceGeneratorFramework\PurviewTypeLibrary.cs"
 			Link="Extensions\Purview\SourceGeneratorFramework\PurviewTypeLibrary.cs"
 		/>
 
 		<!-- Models -->
+		<Compile
+			Include="..\SourceGeneratorFramework\Models\TypeReferenceOptions.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Models\TypeReferenceOptions.cs"
+		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\Models\TypeSyntaxFacts.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Models\TypeSyntaxFacts.cs"
+		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\Models\TypeModifier.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Models\TypeModifier.cs"
+		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\Models\TypeValueObjectSyntaxExtensions.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Models\TypeValueObjectSyntaxExtensions.cs"
+		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\Models\TypeSyntaxMatchingExtensions.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Models\TypeSyntaxMatchingExtensions.cs"
+		/>
 		<Compile
 			Include="..\SourceGeneratorFramework\Models\DiagnosticInfo.cs"
 			Link="Extensions\Purview\SourceGeneratorFramework\Models\DiagnosticInfo.cs"
@@ -50,6 +66,10 @@
 		<Compile
 			Include="..\SourceGeneratorFramework\Models\GenerationContext.cs"
 			Link="Extensions\Purview\SourceGeneratorFramework\Models\GenerationContext.cs"
+		/>
+		<Compile
+			Include="..\SourceGeneratorFramework\Models\GenerationSettings.cs"
+			Link="Extensions\Purview\SourceGeneratorFramework\Models\GenerationSettings.cs"
 		/>
 		<Compile
 			Include="..\SourceGeneratorFramework\Models\GeneratorResult.cs"

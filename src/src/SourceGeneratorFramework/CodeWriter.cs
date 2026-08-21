@@ -832,7 +832,7 @@ public sealed class CodeWriter
 	/// <returns>The namespace body scope, or an empty scope when no namespace is supplied.</returns>
 	/// <example><code>using (writer.WriteBlockNamespaceScope(new TypeValueObject("C", "Example").AsTypeReference())) writer.WriteLine("class C { }");</code></example>
 	public BlockScope WriteBlockNamespaceScope(TypeReferenceOptions typeReference) =>
-		WriteBlockNamespaceScope(typeReference.TypeValue.Namespace);
+		WriteBlockNamespaceScope(typeReference.Type.Namespace);
 
 	/// <summary>Writes a block-scoped namespace and invokes a callback for its body.</summary>
 	/// <param name="namespaceName">The namespace, or <see langword="null"/> to omit the wrapper.</param>
@@ -868,7 +868,7 @@ public sealed class CodeWriter
 	/// <returns>The current writer.</returns>
 	/// <example><code>writer.WriteFileScopedNamespace(new TypeValueObject("C", "Example").AsTypeReference());</code></example>
 	public CodeWriter WriteFileScopedNamespace(TypeReferenceOptions typeReference) =>
-		WriteFileScopedNamespace(typeReference.TypeValue.Namespace);
+		WriteFileScopedNamespace(typeReference.Type.Namespace);
 
 	/// <summary>
 	/// Writes a class declaration from structured options and returns its body scope.
@@ -1296,7 +1296,7 @@ public sealed class CodeWriter
 		else if (declaration.Accessibility is { } accessibility)
 			WriteAccessibility(accessibility).Write(' ');
 
-		Write(declaration.Type.TypeValue.TypeName);
+		Write(declaration.Type.Type.Name);
 		if (declaration.WriteParametersOnSeparateLines)
 			WriteParameterList(declaration.Parameters, writeOnSeparateLines: true, writeWhenEmpty: true);
 		else
@@ -2142,7 +2142,7 @@ public sealed class CodeWriter
 		var target = attribute.Target ?? defaultTarget;
 		if (target is not null)
 			Write(target).Write(": ");
-		Write(attribute.Type.RenderAttributeName);
+		Write(attribute.Type.Type.RenderAttributeName);
 		if (!attribute.Arguments.IsDefaultOrEmpty)
 		{
 			Write('(');
@@ -2162,7 +2162,7 @@ public sealed class CodeWriter
 
 	static int GetAttributeLength(AttributeDeclarationOptions attribute)
 	{
-		var length = attribute.Type.RenderAttributeName.Length + 2;
+		var length = attribute.Type.Type.RenderAttributeName.Length + 2;
 		if (attribute.Target is not null)
 			length += attribute.Target.Length + 2;
 		if (attribute.Arguments.IsDefaultOrEmpty)
@@ -2585,7 +2585,7 @@ public sealed class CodeWriter
 		if (
 			declaration.Kind == TypeDeclarationKind.Enum
 			&& declaration.EnumUnderlyingType is not null
-			&& string.IsNullOrWhiteSpace(declaration.EnumUnderlyingType.Value.Name)
+			&& string.IsNullOrWhiteSpace(declaration.EnumUnderlyingType.Value.Type.Name)
 		)
 			throw new ArgumentException("Enum underlying type cannot be whitespace.", nameof(declaration));
 		if (declaration.Kind == TypeDeclarationKind.Delegate)
@@ -2779,7 +2779,7 @@ public sealed class CodeWriter
 		{
 			if (
 				string.IsNullOrWhiteSpace(parameters[index].Name)
-				|| string.IsNullOrWhiteSpace(parameters[index].Type.Name)
+				|| string.IsNullOrWhiteSpace(parameters[index].Type.Type.Name)
 			)
 				throw new ArgumentException(message, parameterName);
 			else
@@ -2790,68 +2790,56 @@ public sealed class CodeWriter
 		}
 	}
 
-	CodeWriter WriteTypeReference(TypeReferenceOptions type)
+	CodeWriter WriteTypeReference(TypeReferenceOptions reference)
 	{
-		if (type.IsEmpty)
+		if (reference.IsEmpty)
 			return this;
-		ValidateTypeReference(type, nameof(type));
-		Write(type.Name);
-		if (!type.GenericArguments.IsDefaultOrEmpty)
-		{
-			Write('<');
-			for (var index = 0; index < type.GenericArguments.Length; index++)
-			{
-				if (index != 0)
-					Write(", ");
-				WriteTypeReference(type.GenericArguments[index]);
-			}
-			Write('>');
-		}
-		else if (type.GenericArity > 0)
-			Write('<').Write(new string(',', type.GenericArity - 1)).Write('>');
 
-		for (var index = 0; !type.ArrayRanks.IsDefaultOrEmpty && index < type.ArrayRanks.Length; index++)
-			Write('[').Write(new string(',', type.ArrayRanks[index] - 1)).Write(']');
-		WriteIf(type.IsPointer, "*").WriteIf(type.IsNullable, "?");
+		ValidateTypeReference(reference, nameof(reference));
+
+		Write(reference.RenderFullName);
+
+		//Write(type.Name);
+		//if (!type.TypeArguments.IsDefaultOrEmpty)
+		//{
+		//	Write('<');
+		//	for (var index = 0; index < type.TypeArguments.Length; index++)
+		//	{
+		//		if (index != 0)
+		//			Write(", ");
+		//		WriteTypeReference(type.TypeArguments[index]);
+		//	}
+		//	Write('>');
+		//}
+		//else if (type.GenericArity > 0)
+		//	Write('<').Write(new string(',', type.GenericArity - 1)).Write('>');
+
+		//for (var index = 0; !reference.ArrayRanks.IsDefaultOrEmpty && index < reference.ArrayRanks.Length; index++)
+		//	Write('[').Write(new string(',', reference.ArrayRanks[index] - 1)).Write(']');
+
+		//WriteIf(reference.IsPointer, "*").WriteIf(reference.IsNullable, "?");
 		return this;
 	}
 
-	static int GetTypeReferenceLength(TypeReferenceOptions type)
-	{
-		if (type.IsEmpty)
-			return 0;
-		var length = type.Name.Length + (type.IsNullable ? 1 : 0) + (type.IsPointer ? 1 : 0);
-		if (!type.GenericArguments.IsDefaultOrEmpty)
-		{
-			length += 2;
-			for (var index = 0; index < type.GenericArguments.Length; index++)
-				length += GetTypeReferenceLength(type.GenericArguments[index]) + (index == 0 ? 0 : 2);
-		}
-		else if (type.GenericArity > 0)
-			length += type.GenericArity + 1;
-		for (var index = 0; !type.ArrayRanks.IsDefaultOrEmpty && index < type.ArrayRanks.Length; index++)
-			length += type.ArrayRanks[index] + 1;
-		return length;
-	}
+	static int GetTypeReferenceLength(TypeReferenceOptions type) => type.IsEmpty ? 0 : type.RenderFullName.Length;
 
-	static void ValidateTypeReference(TypeReferenceOptions type, string parameterName)
+	static void ValidateTypeReference(TypeReferenceOptions reference, string parameterName)
 	{
-		if (type.IsEmpty)
+		if (reference.IsEmpty)
 			return;
+
+		var type = reference.Type;
 		if (string.IsNullOrWhiteSpace(type.Name))
 			throw new ArgumentException("Type name cannot be null or whitespace.", parameterName);
 		if (type.GenericArity < 0)
 			throw new ArgumentException("Generic arity cannot be negative.", parameterName);
-		if (type.GenericArity != 0 && !type.GenericArguments.IsDefaultOrEmpty)
+		if (type.GenericArity != 0 && !type.TypeArguments.IsDefaultOrEmpty)
 			throw new ArgumentException(
 				"A type cannot have both open generic arity and concrete generic arguments.",
 				parameterName
 			);
-		for (var index = 0; !type.GenericArguments.IsDefaultOrEmpty && index < type.GenericArguments.Length; index++)
-			ValidateTypeReference(type.GenericArguments[index], parameterName);
-		for (var index = 0; !type.ArrayRanks.IsDefaultOrEmpty && index < type.ArrayRanks.Length; index++)
-			if (type.ArrayRanks[index] < 1)
-				throw new ArgumentException("Array ranks must be positive.", parameterName);
+		for (var index = 0; !type.TypeArguments.IsDefaultOrEmpty && index < type.TypeArguments.Length; index++)
+			ValidateTypeReference(type.TypeArguments[index], parameterName);
 	}
 
 	static void ValidateAttributes(ImmutableArray<AttributeDeclarationOptions> attributes, string parameterName)
