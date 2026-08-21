@@ -37,6 +37,38 @@ public static partial class DiagnosticAssertions
 	}
 
 	/// <summary>
+	/// Asserts that the <paramref name="diagnostic"/> contains a diagnostic with the same Id as the <paramref name="expected"/> <see cref="DiagnosticDescriptor"/>.
+	/// </summary>
+	/// <param name="diagnostic">The result of the driver run to check for the expected diagnostic.</param>
+	/// <param name="expected">The expected diagnostic descriptor.</param>
+	/// <param name="count">The expected number of diagnostics with the same Id as the <paramref name="expected"/> <see cref="DiagnosticDescriptor"/>.</param>
+	/// <returns>An <see cref="AssertionResult"/> indicating whether the assertion passed or failed.</returns>
+	[GenerateAssertion]
+	[EditorBrowsable(EditorBrowsableState.Never)]
+	public static AssertionResult<IEnumerable<Diagnostic>> HasDiagnostics(
+		this DriverRunResult diagnostic,
+		DiagnosticDescriptor expected,
+		int count
+	)
+	{
+		// Don't change the name of the parameter "diagnostic" to "result" because it will break the generated assertion method name.
+		if (diagnostic == null)
+			return AssertionResult.Failed($"expected {nameof(DriverRunResult)} is null");
+		if (count < 1)
+			return AssertionResult.Failed($"expected {nameof(count)} is less than 1");
+
+		// Not null... process
+		if (expected is null)
+			return AssertionResult.Failed($"expected {nameof(DiagnosticDescriptor)} is null");
+
+		var matchingDiagnostic = diagnostic.DriverResult.Diagnostics.Where(d => d.Id == expected.Id);
+		return matchingDiagnostic is null
+			? (AssertionResult<IEnumerable<Diagnostic>>)
+				AssertionResult.Failed($"expected to contain {count} diagnostic(s) with Id {expected.Id}")
+			: AssertionResult<IEnumerable<Diagnostic>>.Passed(matchingDiagnostic);
+	}
+
+	/// <summary>
 	/// Asserts that the <paramref name="diagnostic"/> contains a diagnostic with the same Id as the <paramref name="expected"/> <see cref="DiagnosticDescriptor.Id"/>.
 	/// </summary>
 	/// <param name="diagnostic">The result of the driver run to check for the expected diagnostic.</param>
@@ -50,14 +82,44 @@ public static partial class DiagnosticAssertions
 		if (diagnostic == null)
 			return AssertionResult.Failed($"expected {nameof(DriverRunResult)} is null");
 
-		// Not null... process
-		if (expected is null)
-			return AssertionResult.Failed($"expected {nameof(DiagnosticDescriptor)} is null");
+		if (string.IsNullOrWhiteSpace(expected))
+			return AssertionResult.Failed($"expected {nameof(DiagnosticDescriptor.Id)} is null/ empty/ whitespace");
 
 		var matchedDiagnotics = diagnostic.DriverResult.Diagnostics.FirstOrDefault(d => d.Id == expected);
 		return matchedDiagnotics is null
 			? (AssertionResult<Diagnostic>)AssertionResult.Failed($"expected to contain diagnostic with Id {expected}")
 			: AssertionResult<Diagnostic>.Passed(matchedDiagnotics);
+	}
+
+	/// <summary>
+	/// Asserts that the <paramref name="diagnostic"/> contains a diagnostic with the same Id as the <paramref name="expected"/> <see cref="DiagnosticDescriptor.Id"/>.
+	/// </summary>
+	/// <param name="diagnostic">The result of the driver run to check for the expected diagnostic.</param>
+	/// <param name="expected">The expected diagnostic Id.</param>
+	/// <param name="count">The expected number of diagnostics with the same Id as the <paramref name="expected"/> <see cref="DiagnosticDescriptor.Id"/>.</param>
+	/// <returns>An <see cref="AssertionResult"/> indicating whether the assertion passed or failed.</returns>
+	[GenerateAssertion]
+	[EditorBrowsable(EditorBrowsableState.Never)]
+	public static AssertionResult<IEnumerable<Diagnostic>> HasDiagnostics(
+		this DriverRunResult diagnostic,
+		string expected,
+		int count
+	)
+	{
+		// Don't change the name of the parameter "diagnostic" to "result" because it will break the generated assertion method name.
+		if (diagnostic == null)
+			return AssertionResult.Failed($"expected {nameof(DriverRunResult)} is null");
+		if (count < 1)
+			return AssertionResult.Failed($"expected {nameof(count)} is less than 1");
+
+		if (string.IsNullOrWhiteSpace(expected))
+			return AssertionResult.Failed($"expected {nameof(DiagnosticDescriptor.Id)} is null/ empty/ whitespace");
+
+		var matchedDiagnotics = diagnostic.DriverResult.Diagnostics.Where(d => d.Id == expected);
+		return matchedDiagnotics is null
+			? (AssertionResult<IEnumerable<Diagnostic>>)
+				AssertionResult.Failed($"expected to contain {count} diagnostic(s) with Id {expected}")
+			: AssertionResult<IEnumerable<Diagnostic>>.Passed(matchedDiagnotics);
 	}
 
 	/// <summary>

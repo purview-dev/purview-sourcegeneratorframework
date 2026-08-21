@@ -20,6 +20,7 @@ public sealed record GeneratorFailure(string GeneratorName, Exception Exception)
 public sealed class DriverRunValidationException : Exception
 {
 	internal DriverRunValidationException(
+		DriverRunResult runResult,
 		IEnumerable<GeneratorFailure> generatorFailures,
 		IEnumerable<Diagnostic> compilationErrors,
 		IEnumerable<Diagnostic> emitErrors,
@@ -28,6 +29,7 @@ public sealed class DriverRunValidationException : Exception
 		IEnumerable<SyntaxTree> compilationTrees
 	)
 		: this(
+			runResult,
 			[.. generatorFailures],
 			[.. compilationErrors],
 			[.. emitErrors],
@@ -40,6 +42,7 @@ public sealed class DriverRunValidationException : Exception
 	}
 
 	DriverRunValidationException(
+		DriverRunResult runResult,
 		ImmutableArray<GeneratorFailure> generatorFailures,
 		ImmutableArray<Diagnostic> compilationErrors,
 		ImmutableArray<Diagnostic> emitErrors,
@@ -51,11 +54,15 @@ public sealed class DriverRunValidationException : Exception
 			BuildMessage(generatorFailures, compilationErrors, emitErrors, logErrors, generatedTrees, compilationTrees)
 		)
 	{
+		RunResult = runResult;
 		GeneratorFailures = generatorFailures;
 		CompilationErrors = compilationErrors;
 		EmitErrors = emitErrors;
 		LogErrors = logErrors;
 	}
+
+	/// <summary> Gets the result of the source generator test run that failed validation. </summary>
+	public DriverRunResult RunResult { get; }
 
 	/// <summary>Gets exceptions thrown by generators.</summary>
 	public IReadOnlyList<GeneratorFailure> GeneratorFailures { get; }

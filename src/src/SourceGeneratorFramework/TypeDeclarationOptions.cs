@@ -143,6 +143,8 @@ public sealed record GenericTypeParameterOptions
 	/// a base type, an interface, or <c>new()</c>.
 	/// </remarks>
 	public ImmutableArray<string> Constraints { get; init; } = [];
+
+	public static implicit operator GenericTypeParameterOptions(string name) => new(name);
 }
 
 /// <summary>Describes a field in a generated enum declaration.</summary>

@@ -564,7 +564,7 @@ public sealed class CodeWriter
 	/// <example><code>writer.WritePartialMethod(new MethodDeclarationOptions("OnChanged"));</code></example>
 	public CodeWriter WritePartialMethod(MethodDeclarationOptions declaration)
 	{
-		WriteMethodScope(declaration with { IsPartial = true, Accessibility = null });
+		WriteMethodScope(declaration with { IsPartial = true });
 		return this;
 	}
 

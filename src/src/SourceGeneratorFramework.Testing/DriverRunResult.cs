@@ -52,6 +52,7 @@ public sealed record class DriverRunResult(
 			return;
 
 		throw new DriverRunValidationException(
+			this,
 			generationExceptions,
 			compilationErrors,
 			emitErrors,

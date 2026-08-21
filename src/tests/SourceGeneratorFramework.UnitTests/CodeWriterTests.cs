@@ -985,13 +985,13 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new MethodDeclarationOptions("CreateAsync", Type("Task").MakeGeneric(Type("T")))
+		MethodDeclarationOptions declaration = new("CreateAsync", Type("Task").MakeGeneric(Type("T")))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			IsAsync = true,
 			IsPartial = true,
 			Parameters = [new("value", Type("T")), new("cancellationToken", Type("CancellationToken"))],
-			GenericTypes = [new GenericTypeParameterOptions("T") { Constraints = ["class"] }],
+			GenericTypes = [new("T") { Constraints = ["class"] }],
 		};
 
 		// Act
@@ -999,10 +999,10 @@ public class CodeWriterTests
 
 		// Assert
 		await Assert
-			.That(writer.ToString())
-			.IsEqualTo(
+			.That(writer)
+			.Generates(
 				GeneratedAttributes()
-					+ "async partial Task<T> CreateAsync<T>(T value, CancellationToken cancellationToken)\n"
+					+ "public async partial Task<T> CreateAsync<T>(T value, CancellationToken cancellationToken)\n"
 					+ "where T : class;\n"
 			);
 	}
