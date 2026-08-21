@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Text;
 using Microsoft.CodeAnalysis;
 
 namespace Purview.SourceGeneratorFramework.Models;
@@ -32,13 +33,31 @@ public enum TypeReferenceKind
 /// expressed here, which is why <see cref="TypeValueObject.TypeArguments"/> is a collection of these.
 /// </para>
 /// <para>
+/// <b>This is a reference type by necessity, not by preference.</b> As a struct it would embed a
+/// <see cref="TypeValueObject"/> by value while <see cref="TypeValueObject"/> holds an
+/// <see cref="ImmutableArray{T}"/> of these — a mutual value-type layout cycle. The C# compiler accepts that
+/// (no CS0523, because <see cref="ImmutableArray{T}"/>'s only field is an array reference) but the CLR type
+/// loader rejects it at runtime with a <see cref="TypeLoadException"/>: see dotnet/runtime#11259. Making one
+/// side of the cycle a reference type is the fix, and this is the cheaper side to convert — it is the larger
+/// of the two and lives in arrays, so references cost less to copy than the embedded value did.
+/// </para>
+/// <para>
 /// Nullable reference annotations are recorded but not enforced during matching: <c>string?</c> matches both
 /// the annotated and unannotated symbol, because annotation is metadata rather than identity. Nullable
 /// <i>value</i> types are enforced, because <c>int?</c> is a genuinely different type from <c>int</c>.
 /// </para>
 /// </remarks>
-public readonly record struct TypeReferenceOptions
+public sealed record TypeReferenceOptions
 {
+	/// <summary>
+	/// Initializes a new, empty reference. Prefer the named factories.
+	/// </summary>
+	public TypeReferenceOptions()
+	{
+		Kind = TypeReferenceKind.None;
+		Modifiers = [];
+	}
+
 	/// <summary>
 	/// Initializes a new reference to the given named type.
 	/// </summary>
@@ -50,7 +69,7 @@ public readonly record struct TypeReferenceOptions
 	}
 
 	/// <summary>Gets a value indicating whether this reference is empty.</summary>
-	public bool IsEmpty => this == Empty;
+	public bool IsEmpty => Kind == TypeReferenceKind.None;
 
 	/// <summary>Gets what this reference refers to beneath its modifiers.</summary>
 	public TypeReferenceKind Kind { get; init; }
@@ -103,7 +122,7 @@ public readonly record struct TypeReferenceOptions
 			if (Modifiers.IsDefaultOrEmpty)
 				return core;
 
-			System.Text.StringBuilder builder = new(core);
+			var builder = new StringBuilder(core);
 
 			// `?` and `*` read innermost-first, but a run of array declarators reads outermost-first:
 			// `int[][,]` is a rank-1 array of rank-2 arrays. Each contiguous array run is therefore emitted
@@ -142,12 +161,14 @@ public readonly record struct TypeReferenceOptions
 	/// <summary>
 	/// Implicitly converts a reference to its rendered name.
 	/// </summary>
-	public static implicit operator string(TypeReferenceOptions reference) => reference.RenderFullName;
+	public static implicit operator string(TypeReferenceOptions? reference) =>
+		reference?.RenderFullName ?? string.Empty;
 
 	/// <summary>
-	/// Implicitly converts a reference to its underlying type value object.
+	/// Implicitly converts a reference to its underlying type value object, discarding any modifiers.
 	/// </summary>
-	public static implicit operator TypeValueObject(TypeReferenceOptions reference) => reference.Type;
+	public static implicit operator TypeValueObject(TypeReferenceOptions? reference) =>
+		reference?.Type ?? TypeValueObject.Empty;
 
 	// ---------------------------------------------------------------------------------------------
 	// Composition
@@ -167,18 +188,15 @@ public readonly record struct TypeReferenceOptions
 		if (Kind == TypeReferenceKind.None)
 			throw new InvalidOperationException("Cannot compose modifiers onto an empty type reference.");
 
-		var builder = ImmutableArray.CreateBuilder<TypeModifier>(
-			(Modifiers.IsDefaultOrEmpty ? 0 : Modifiers.Length) + 1
-		);
-		if (!Modifiers.IsDefaultOrEmpty)
+		var existing = Modifiers.IsDefaultOrEmpty ? 0 : Modifiers.Length;
+		var builder = ImmutableArray.CreateBuilder<TypeModifier>(existing + 1);
+
+		if (existing > 0)
 			builder.AddRange(Modifiers);
 
 		builder.Add(modifier);
 
-		return this with
-		{
-			Modifiers = builder.MoveToImmutable(),
-		};
+		return this with { Modifiers = builder.MoveToImmutable() };
 	}
 
 	// ---------------------------------------------------------------------------------------------
@@ -265,9 +283,17 @@ public readonly record struct TypeReferenceOptions
 	/// <summary>
 	/// Determines whether the specified reference describes the same composed type.
 	/// </summary>
-	public bool Equals(TypeReferenceOptions other)
+	/// <remarks>
+	/// Declared explicitly because the synthesised record equality would compare
+	/// <see cref="ImmutableArray{T}"/> by its default comparer, which is reference equality on the underlying
+	/// array rather than structural equality of the modifiers.
+	/// </remarks>
+	public bool Equals(TypeReferenceOptions? other)
 	{
-		if (Kind != other.Kind)
+		if (ReferenceEquals(this, other))
+			return true;
+
+		if (other is null || Kind != other.Kind)
 			return false;
 
 		if (!string.Equals(TypeParameterName, other.TypeParameterName, StringComparison.Ordinal))
@@ -318,11 +344,12 @@ public readonly record struct TypeReferenceOptions
 	// Factories
 	// ---------------------------------------------------------------------------------------------
 
-	/// <summary>Gets an empty reference.</summary>
-	public static readonly TypeReferenceOptions Empty;
+	/// <summary>Gets the empty reference.</summary>
+	public static readonly TypeReferenceOptions Empty = new();
 
 	/// <summary>Gets a reference to <see langword="dynamic"/>.</summary>
-	public static TypeReferenceOptions Dynamic => new() { Kind = TypeReferenceKind.Dynamic, Modifiers = [] };
+	public static TypeReferenceOptions Dynamic { get; } =
+		new() { Kind = TypeReferenceKind.Dynamic, Modifiers = [] };
 
 	/// <summary>Creates a reference to an open generic parameter.</summary>
 	public static TypeReferenceOptions ForTypeParameter(string name)
@@ -377,13 +404,24 @@ public readonly record struct TypeReferenceOptions
 	/// modifiers.
 	/// </summary>
 	/// <returns><see langword="false"/> for unresolved, function-pointer and other unrepresentable symbols.</returns>
-	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0010:Add missing cases")]
 	public static bool TryCreate(ITypeSymbol? typeSymbol, out TypeReferenceOptions value)
 	{
 		value = Empty;
 
 		if (typeSymbol is null)
 			return false;
+
+		// Fast path: the overwhelmingly common case is an unmodified named type.
+		if (typeSymbol is INamedTypeSymbol { SpecialType: not SpecialType.System_Nullable_T } named
+			&& named.NullableAnnotation != NullableAnnotation.Annotated)
+		{
+			if (!TypeValueObject.TryCreate(named, out var plain))
+				return false;
+
+			value = new TypeReferenceOptions(plain);
+
+			return true;
+		}
 
 		// Collected outermost-first, then reversed into innermost-first storage order.
 		var modifiers = ImmutableArray.CreateBuilder<TypeModifier>();
@@ -458,14 +496,14 @@ public readonly record struct TypeReferenceOptions
 		var current = type;
 
 		if (current.IsByRef)
-			current = current.GetElementType();
+			current = current.GetElementType()!;
 
 		while (true)
 		{
 			if (current.IsArray)
 			{
 				modifiers.Add(TypeModifier.Array(current.GetArrayRank()));
-				current = current.GetElementType();
+				current = current.GetElementType()!;
 
 				continue;
 			}
@@ -473,7 +511,7 @@ public readonly record struct TypeReferenceOptions
 			if (current.IsPointer)
 			{
 				modifiers.Add(TypeModifier.PointerModifier);
-				current = current.GetElementType();
+				current = current.GetElementType()!;
 
 				continue;
 			}
@@ -502,7 +540,7 @@ public readonly record struct TypeReferenceOptions
 		if (!TypeValueObject.TryCreate(current, out var namedType))
 			return false;
 
-		value = new(namedType) { Modifiers = modifiers.ToImmutable() };
+		value = new TypeReferenceOptions(namedType) { Modifiers = modifiers.ToImmutable() };
 
 		return true;
 	}

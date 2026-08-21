@@ -40,6 +40,11 @@ public readonly record struct ContainingType(string Name, int GenericArity)
 /// chain and generic shape — rather than symbolic, so a value created against one compilation can be matched
 /// against another.
 /// </para>
+/// <para>
+/// Construction is on the hot path of every generator pipeline, so it deliberately avoids
+/// <c>ToDisplayString</c>, <c>GetGenericArguments</c> and builder growth. The common cases — a non-nested,
+/// non-generic type — allocate nothing beyond the namespace string.
+/// </para>
 /// </remarks>
 public readonly record struct TypeValueObject
 {
@@ -78,13 +83,18 @@ public readonly record struct TypeValueObject
 			return;
 		}
 
-		var allArguments = type.IsGenericType ? type.GetGenericArguments() : [];
-
 		Name = StripArity(type.Name);
 		Namespace = string.IsNullOrEmpty(type.Namespace) ? null : type.Namespace;
 		ContainingTypes = BuildContainingTypes(type, out var consumed);
-		GenericArity = GetOwnArity(type);
-		TypeArguments = type.IsGenericTypeDefinition ? [] : BuildArguments(allArguments, consumed, GenericArity);
+
+		// The metadata name's backtick suffix already encodes the type's *own* arity, excluding any
+		// inherited from containing types, so there is no need to materialise GetGenericArguments() here.
+		GenericArity = ParseArity(type.Name);
+
+		TypeArguments =
+			GenericArity == 0 || type.IsGenericTypeDefinition
+				? []
+				: BuildArguments(type.GetGenericArguments(), consumed, GenericArity);
 	}
 
 	/// <summary>
@@ -145,10 +155,7 @@ public readonly record struct TypeValueObject
 		}
 
 		Name = namedType.Name;
-		Namespace = namedType.ContainingNamespace is null or { IsGlobalNamespace: true }
-			? null
-			: namedType.ContainingNamespace.ToDisplayString();
-
+		Namespace = BuildNamespace(namedType.ContainingNamespace);
 		ContainingTypes = BuildContainingTypes(namedType);
 		GenericArity = namedType.Arity;
 		TypeArguments = BuildArguments(namedType);
@@ -224,8 +231,8 @@ public readonly record struct TypeValueObject
 	/// <remarks>
 	/// Empty for a non-generic type and for an open generic definition; use <see cref="GenericArity"/> to
 	/// distinguish those cases. Arguments are <see cref="TypeReferenceOptions"/> so that composed arguments —
-	/// <c>List&lt;int[]&gt;</c>, <c>List&lt;T&gt;</c>, <c>List&lt;byte*&gt;</c>, <c>List&lt;string?&gt;</c> — are
-	/// represented exactly rather than widened to the open definition.
+	/// <c>List&lt;int[]&gt;</c>, <c>List&lt;T&gt;</c>, <c>List&lt;string?&gt;</c> — are represented exactly
+	/// rather than widened to the open definition.
 	/// </remarks>
 	public ImmutableArray<TypeReferenceOptions> TypeArguments { get; init; }
 
@@ -336,6 +343,7 @@ public readonly record struct TypeValueObject
 		if (other is not INamedTypeSymbol namedType || !IsRepresentable(namedType))
 			return false;
 
+		// Ordered cheapest-first: name and arity reject almost everything before any chain walking.
 		if (!string.Equals(Name, namedType.Name, StringComparison.Ordinal))
 			return false;
 
@@ -370,11 +378,7 @@ public readonly record struct TypeValueObject
 	/// </summary>
 	/// <remarks>
 	/// Fields, properties, events, parameters and locals resolve to their declared type; methods resolve to
-	/// their return type; aliases resolve to their target. Type symbols are matched directly. This makes
-	/// member-level checks a single call:
-	/// <code>
-	/// if (eventStore.Matches(propertySymbol)) { ... }
-	/// </code>
+	/// their return type; aliases resolve to their target. Type symbols are matched directly.
 	/// </remarks>
 	public bool Matches(ISymbol? other) => Matches(SymbolTypeResolver.Resolve(other));
 
@@ -384,8 +388,7 @@ public readonly record struct TypeValueObject
 	/// <remarks>
 	/// An alias for <see cref="Matches(ITypeSymbol?)"/> retained for call-site ergonomics. It is deliberately
 	/// not surfaced through <see cref="IEquatable{T}"/>: the relation is asymmetric — an open definition
-	/// matches its constructions — and cannot be made consistent with a <see cref="ISymbol" /> instance's
-	/// <see cref="object.GetHashCode"/>.
+	/// matches its constructions — and cannot be made consistent with a symbol's own hash code.
 	/// </remarks>
 	public bool Equals(ITypeSymbol? other) => Matches(other);
 
@@ -393,17 +396,17 @@ public readonly record struct TypeValueObject
 	public bool Equals(Type? other) => other is not null && TryCreate(other, out var value) && Equals(value);
 
 	/// <summary>Determines whether the specified structured reference is an unmodified reference to this type.</summary>
-	public bool Equals(TypeReferenceOptions other) => other.Equals(this);
+	public bool Equals(TypeReferenceOptions? other) => other is not null && other.Equals(this);
 
 	/// <summary>
 	/// Determines whether the specified value represents the same type.
 	/// </summary>
 	public bool Equals(TypeValueObject other) =>
 		string.Equals(Name, other.Name, StringComparison.Ordinal)
+		&& GenericArity == other.GenericArity
+		&& SpecialType == other.SpecialType
 		&& string.Equals(Namespace, other.Namespace, StringComparison.Ordinal)
 		&& string.Equals(Keyword, other.Keyword, StringComparison.Ordinal)
-		&& SpecialType == other.SpecialType
-		&& GenericArity == other.GenericArity
 		&& ContainingTypesEqual(ContainingTypes, other.ContainingTypes)
 		&& TypeArgumentsEqual(TypeArguments, other.TypeArguments);
 
@@ -429,7 +432,7 @@ public readonly record struct TypeValueObject
 			if (!TypeArguments.IsDefaultOrEmpty)
 			{
 				foreach (var argument in TypeArguments)
-					hashCode = (hashCode * 397) ^ argument.GetHashCode();
+					hashCode = (hashCode * 397) ^ (argument?.GetHashCode() ?? 0);
 			}
 
 			return hashCode;
@@ -496,11 +499,11 @@ public readonly record struct TypeValueObject
 		if (typeArguments == null)
 			throw new ArgumentNullException(nameof(typeArguments));
 
-		return MakeGeneric(
-			typeArguments
-				.Select(static argument => new TypeReferenceOptions(new TypeValueObject(argument, null)))
-				.ToArray()
-		);
+		var references = new TypeReferenceOptions[typeArguments.Length];
+		for (var index = 0; index < typeArguments.Length; index++)
+			references[index] = new TypeReferenceOptions(new TypeValueObject(typeArguments[index], null));
+
+		return MakeGeneric(references);
 	}
 
 	/// <summary>
@@ -511,7 +514,11 @@ public readonly record struct TypeValueObject
 		if (typeArguments == null)
 			throw new ArgumentNullException(nameof(typeArguments));
 
-		return MakeGeneric(typeArguments.Select(static argument => argument.AsTypeReference()).ToArray());
+		var references = new TypeReferenceOptions[typeArguments.Length];
+		for (var index = 0; index < typeArguments.Length; index++)
+			references[index] = typeArguments[index].AsTypeReference();
+
+		return MakeGeneric(references);
 	}
 
 	/// <summary>
@@ -617,6 +624,46 @@ public readonly record struct TypeValueObject
 		!type.IsArray && !type.IsPointer && !type.IsByRef && !type.IsGenericParameter;
 
 	/// <summary>
+	/// Builds a dotted namespace string from a namespace symbol chain in a single allocation.
+	/// </summary>
+	/// <remarks>
+	/// Replaces <c>ContainingNamespace.ToDisplayString()</c>, which routes through Roslyn's full symbol-display
+	/// machinery — a per-symbol cost that dominates construction in a generator processing thousands of types.
+	/// </remarks>
+	internal static string? BuildNamespace(INamespaceSymbol? @namespace)
+	{
+		if (@namespace is null || @namespace.IsGlobalNamespace)
+			return null;
+
+		// Overwhelmingly the common case: a single segment, or a namespace whose name is already interned.
+		if (@namespace.ContainingNamespace is null or { IsGlobalNamespace: true })
+			return @namespace.Name;
+
+		// Measure, then fill back-to-front. One char[] and one string, no intermediate concatenation.
+		var length = -1;
+		for (var segment = @namespace; segment is not null && !segment.IsGlobalNamespace; segment = segment.ContainingNamespace)
+			length += segment.Name.Length + 1;
+
+		if (length <= 0)
+			return null;
+
+		var characters = new char[length];
+		var position = length;
+
+		for (var segment = @namespace; segment is not null && !segment.IsGlobalNamespace; segment = segment.ContainingNamespace)
+		{
+			var name = segment.Name;
+			position -= name.Length;
+			name.CopyTo(0, characters, position, name.Length);
+
+			if (position > 0)
+				characters[--position] = '.';
+		}
+
+		return new string(characters);
+	}
+
+	/// <summary>
 	/// Compares a dotted namespace string against a namespace symbol chain without allocating.
 	/// </summary>
 	internal static bool NamespaceMatches(string? expected, INamespaceSymbol? actual)
@@ -628,11 +675,7 @@ public readonly record struct TypeValueObject
 			return false;
 
 		var end = expected.Length;
-		for (
-			var segment = actual;
-			segment is not null && !segment.IsGlobalNamespace;
-			segment = segment.ContainingNamespace
-		)
+		for (var segment = actual; segment is not null && !segment.IsGlobalNamespace; segment = segment.ContainingNamespace)
 		{
 			var name = segment.Name;
 			var start = end - name.Length;
@@ -652,22 +695,30 @@ public readonly record struct TypeValueObject
 		return false;
 	}
 
+	/// <summary>
+	/// Compares the expected containing-type chain against a symbol chain without allocating.
+	/// </summary>
 	bool ContainingTypesMatch(INamedTypeSymbol? containingType)
 	{
-		var expectedCount = ContainingTypes.IsDefaultOrEmpty ? 0 : ContainingTypes.Length;
+		// Fast path: neither side is nested, which is the majority of comparisons.
+		if (containingType is null)
+			return ContainingTypes.IsDefaultOrEmpty;
+
+		if (ContainingTypes.IsDefaultOrEmpty)
+			return false;
 
 		// Walk the symbol chain innermost-first against the expected chain in reverse.
-		var index = expectedCount - 1;
+		var index = ContainingTypes.Length - 1;
 		for (var symbol = containingType; symbol is not null; symbol = symbol.ContainingType, index--)
 		{
 			if (index < 0)
 				return false;
 
 			var expected = ContainingTypes[index];
-			if (
-				!string.Equals(expected.Name, symbol.Name, StringComparison.Ordinal)
-				|| expected.GenericArity != symbol.Arity
-			)
+			if (expected.GenericArity != symbol.Arity)
+				return false;
+
+			if (!string.Equals(expected.Name, symbol.Name, StringComparison.Ordinal))
 				return false;
 		}
 
@@ -691,10 +742,7 @@ public readonly record struct TypeValueObject
 		return true;
 	}
 
-	static bool TypeArgumentsEqual(
-		ImmutableArray<TypeReferenceOptions> left,
-		ImmutableArray<TypeReferenceOptions> right
-	)
+	static bool TypeArgumentsEqual(ImmutableArray<TypeReferenceOptions> left, ImmutableArray<TypeReferenceOptions> right)
 	{
 		var leftCount = left.IsDefaultOrEmpty ? 0 : left.Length;
 		var rightCount = right.IsDefaultOrEmpty ? 0 : right.Length;
@@ -704,30 +752,76 @@ public readonly record struct TypeValueObject
 
 		for (var index = 0; index < leftCount; index++)
 		{
-			if (!left[index].Equals(right[index]))
+			if (!Equals(left[index], right[index]))
 				return false;
 		}
 
 		return true;
 	}
 
+	/// <summary>
+	/// Builds the containing-type chain from a symbol: one length pass, one fill pass, one allocation.
+	/// </summary>
 	static ImmutableArray<ContainingType> BuildContainingTypes(INamedTypeSymbol typeSymbol)
 	{
-		if (typeSymbol.ContainingType is null)
+		var containing = typeSymbol.ContainingType;
+		if (containing is null)
 			return [];
 
-		var chain = ImmutableArray.CreateBuilder<ContainingType>();
-		for (var containing = typeSymbol.ContainingType; containing is not null; containing = containing.ContainingType)
-			chain.Add(new ContainingType(containing.Name, containing.Arity));
+		var depth = 0;
+		for (var symbol = containing; symbol is not null; symbol = symbol.ContainingType)
+			depth++;
 
-		chain.Reverse();
+		var builder = ImmutableArray.CreateBuilder<ContainingType>(depth);
+		builder.Count = depth;
 
-		return chain.ToImmutable();
+		// The symbol chain runs innermost-first; the stored chain is outermost-first, so fill backwards
+		// rather than appending and reversing.
+		var index = depth - 1;
+		for (var symbol = containing; symbol is not null; symbol = symbol.ContainingType)
+			builder[index--] = new ContainingType(symbol.Name, symbol.Arity);
+
+		return builder.MoveToImmutable();
+	}
+
+	/// <summary>
+	/// Builds the containing-type chain from a runtime type, and reports how many generic arguments the
+	/// containing types consume from the flattened argument list.
+	/// </summary>
+	/// <remarks>
+	/// Arity is parsed from the metadata name rather than obtained from <c>GetGenericArguments()</c>, which
+	/// allocates a <see cref="Type"/> array on every call and was previously invoked twice per link.
+	/// </remarks>
+	static ImmutableArray<ContainingType> BuildContainingTypes(Type type, out int consumed)
+	{
+		consumed = 0;
+
+		var declaring = type.DeclaringType;
+		if (declaring is null)
+			return [];
+
+		var depth = 0;
+		for (var link = declaring; link is not null; link = link.DeclaringType)
+			depth++;
+
+		var builder = ImmutableArray.CreateBuilder<ContainingType>(depth);
+		builder.Count = depth;
+
+		var index = depth - 1;
+		for (var link = declaring; link is not null; link = link.DeclaringType)
+		{
+			var arity = ParseArity(link.Name);
+			builder[index--] = new ContainingType(StripArity(link.Name), arity);
+			consumed += arity;
+		}
+
+		return builder.MoveToImmutable();
 	}
 
 	static ImmutableArray<TypeReferenceOptions> BuildArguments(INamedTypeSymbol typeSymbol)
 	{
-		if (typeSymbol.TypeArguments.Length == 0)
+		var arguments = typeSymbol.TypeArguments;
+		if (arguments.Length == 0)
 			return [];
 
 		// An unbound or original definition carries its own type parameters as arguments; treat it as open.
@@ -737,39 +831,14 @@ public readonly record struct TypeValueObject
 		)
 			return [];
 
-		var builder = ImmutableArray.CreateBuilder<TypeReferenceOptions>(typeSymbol.TypeArguments.Length);
-		foreach (var argument in typeSymbol.TypeArguments)
+		var builder = ImmutableArray.CreateBuilder<TypeReferenceOptions>(arguments.Length);
+		foreach (var argument in arguments)
 		{
 			// Only genuinely unrepresentable arguments (function pointers, error types) widen to the definition.
 			if (!TypeReferenceOptions.TryCreate(argument, out var value))
 				return [];
 
 			builder.Add(value);
-		}
-
-		return builder.MoveToImmutable();
-	}
-
-	static ImmutableArray<ContainingType> BuildContainingTypes(Type type, out int consumed)
-	{
-		consumed = 0;
-
-		if (type.DeclaringType is null)
-			return [];
-
-		var chain = new List<Type>();
-		for (var declaring = type.DeclaringType; declaring is not null; declaring = declaring.DeclaringType)
-			chain.Add(declaring);
-
-		chain.Reverse();
-
-		var builder = ImmutableArray.CreateBuilder<ContainingType>(chain.Count);
-		foreach (var link in chain)
-		{
-			var arity = GetOwnArity(link);
-			builder.Add(new ContainingType(StripArity(link.Name), arity));
-
-			consumed += arity;
 		}
 
 		return builder.MoveToImmutable();
@@ -792,25 +861,37 @@ public readonly record struct TypeValueObject
 		return builder.MoveToImmutable();
 	}
 
-	static int GetOwnArity(Type type)
+	/// <summary>
+	/// Reads the generic arity encoded in a CLR metadata name's backtick suffix.
+	/// </summary>
+	/// <remarks>
+	/// The suffix records the type's <i>own</i> arity, excluding parameters inherited from containing types —
+	/// <c>Outer&lt;T&gt;.Inner</c> is <c>Inner</c> and <c>Outer&lt;T&gt;.Inner&lt;U&gt;</c> is <c>Inner`1</c> —
+	/// which is exactly the value needed, and it costs no allocation.
+	/// </remarks>
+	internal static int ParseArity(string metadataName)
 	{
-		if (!type.IsGenericType && !type.IsGenericTypeDefinition)
+		var separator = metadataName.LastIndexOf('`');
+		if (separator < 0 || separator == metadataName.Length - 1)
 			return 0;
 
-		var total = type.GetGenericArguments().Length;
-		var declaring = type.DeclaringType;
-		var outer =
-			declaring is not null && (declaring.IsGenericType || declaring.IsGenericTypeDefinition)
-				? declaring.GetGenericArguments().Length
-				: 0;
+		var arity = 0;
+		for (var index = separator + 1; index < metadataName.Length; index++)
+		{
+			var character = metadataName[index];
+			if (character < '0' || character > '9')
+				return 0;
 
-		return total - outer;
+			arity = (arity * 10) + (character - '0');
+		}
+
+		return arity;
 	}
 
 	static string StripArity(string metadataName)
 	{
-		var aritySeparator = metadataName.IndexOf('`');
+		var separator = metadataName.IndexOf('`');
 
-		return aritySeparator < 0 ? metadataName : metadataName.Substring(0, aritySeparator);
+		return separator < 0 ? metadataName : metadataName.Substring(0, separator);
 	}
 }

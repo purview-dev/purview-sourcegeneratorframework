@@ -18,12 +18,16 @@ public static class TypeSyntaxFacts
 	/// </summary>
 	/// <param name="typeSyntax">The syntax to peel.</param>
 	/// <param name="core">The innermost name or predefined type.</param>
-	/// <param name="modifiers">The significant modifiers, outermost-first. Nullable annotations are omitted.</param>
+	/// <param name="modifiers">
+	/// The significant modifiers, outermost-first, or <see langword="null"/> when the type carries none.
+	/// Nullable annotations are omitted. The list is allocated lazily because this method runs in the
+	/// predicate stage against every candidate node, and the overwhelming majority of types are uncomposed.
+	/// </param>
 	/// <returns><see langword="false"/> for tuples, function pointers and other unrepresentable forms.</returns>
-	public static bool TryGetCore(TypeSyntax? typeSyntax, out TypeSyntax core, out List<TypeModifier> modifiers)
+	public static bool TryGetCore(TypeSyntax? typeSyntax, out TypeSyntax core, out List<TypeModifier>? modifiers)
 	{
 		core = null!;
-		modifiers = [];
+		modifiers = null;
 
 		while (true)
 		{
@@ -47,6 +51,8 @@ public static class TypeSyntaxFacts
 				case ArrayTypeSyntax arrayType:
 				{
 					// `int[][,]` parses as a single node with a rank-specifier list, outermost-first.
+					modifiers ??= new List<TypeModifier>(arrayType.RankSpecifiers.Count);
+
 					foreach (var rankSpecifier in arrayType.RankSpecifiers)
 						modifiers.Add(TypeModifier.Array(rankSpecifier.Rank));
 
@@ -56,6 +62,7 @@ public static class TypeSyntaxFacts
 				}
 
 				case PointerTypeSyntax pointerType:
+					modifiers ??= [];
 					modifiers.Add(TypeModifier.PointerModifier);
 					typeSyntax = pointerType.ElementType;
 
@@ -283,46 +290,5 @@ public static class TypeSyntaxFacts
 			VariableDeclaratorSyntax declarator => semanticModel.GetDeclaredSymbol(declarator, cancellationToken),
 			_ => semanticModel.GetDeclaredSymbol(node, cancellationToken),
 		};
-	}
-
-	/// <summary>
-	/// Strips annotation and reference wrappers from a type syntax, rejecting composed forms that a
-	/// <see cref="TypeValueObject"/> cannot represent.
-	/// </summary>
-	/// <remarks>
-	/// <see cref="NullableTypeSyntax"/> is unwrapped, so <c>string?</c> yields <c>string</c>. For a value type
-	/// this over-approximates — <c>int?</c> is <c>System.Nullable&lt;int&gt;</c>, not <c>int</c> — which is
-	/// acceptable for a predicate and is corrected by the semantic overloads.
-	/// </remarks>
-	public static bool TryUnwrap(TypeSyntax? typeSyntax, out TypeSyntax core)
-	{
-		core = null!;
-
-		while (true)
-		{
-			switch (typeSyntax)
-			{
-				case null:
-					return false;
-
-				case RefTypeSyntax refType:
-					typeSyntax = refType.Type;
-					continue;
-
-				case NullableTypeSyntax nullableType:
-					typeSyntax = nullableType.ElementType;
-					continue;
-
-				case ArrayTypeSyntax:
-				case PointerTypeSyntax:
-				case FunctionPointerTypeSyntax:
-				case TupleTypeSyntax:
-					return false;
-
-				default:
-					core = typeSyntax;
-					return true;
-			}
-		}
 	}
 }

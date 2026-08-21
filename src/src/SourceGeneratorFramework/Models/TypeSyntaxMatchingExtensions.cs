@@ -41,7 +41,7 @@ public static class TypeSyntaxMatchingExtensions
 			return false;
 
 		// A bare named type identity accepts no array or pointer composition.
-		if (modifiers.Count > 0)
+		if (modifiers is { Count: > 0 })
 			return false;
 
 		return CoreMatchesNamedType(type, core);
@@ -69,32 +69,46 @@ public static class TypeSyntaxMatchingExtensions
 	/// <c>Nullable&lt;int&gt;</c> from a nullable reference annotation. Array ranks and pointer depth are
 	/// compared exactly.
 	/// </remarks>
-	public static bool CouldMatchTypeReference(this in TypeReferenceOptions reference, SyntaxNode? node)
+	public static bool CouldMatchTypeReference(this TypeReferenceOptions? reference, SyntaxNode? node)
 	{
-		if (node is not TypeSyntax typeSyntax)
+		if (reference is null || node is not TypeSyntax typeSyntax)
 			return false;
 
 		if (!TypeSyntaxFacts.TryGetCore(typeSyntax, out var core, out var written))
 			return false;
 
-		// Compare the significant modifiers, outermost-first on both sides.
-		var expected = new List<TypeModifier>();
-		if (!reference.Modifiers.IsDefaultOrEmpty)
+		// Compare the significant modifiers, outermost-first on both sides. This runs in the predicate stage
+		// for every candidate node, so the comparison is done in place rather than by materialising a list.
+		var modifiers = reference.Modifiers;
+		var expectedCount = 0;
+
+		if (!modifiers.IsDefaultOrEmpty)
 		{
-			for (var index = reference.Modifiers.Length - 1; index >= 0; index--)
+			foreach (var modifier in modifiers)
 			{
-				if (reference.Modifiers[index].Kind != TypeModifierKind.Nullable)
-					expected.Add(reference.Modifiers[index]);
+				if (modifier.Kind != TypeModifierKind.Nullable)
+					expectedCount++;
 			}
 		}
 
-		if (expected.Count != written.Count)
+		var writtenCount = written?.Count ?? 0;
+		if (expectedCount != writtenCount)
 			return false;
 
-		for (var index = 0; index < expected.Count; index++)
+		if (expectedCount > 0)
 		{
-			if (expected[index].Kind != written[index].Kind || expected[index].Rank != written[index].Rank)
-				return false;
+			// Stored innermost-first, written outermost-first, so walk the stored side in reverse.
+			var writtenIndex = 0;
+			for (var index = modifiers.Length - 1; index >= 0; index--)
+			{
+				var modifier = modifiers[index];
+				if (modifier.Kind == TypeModifierKind.Nullable)
+					continue;
+
+				var actual = written![writtenIndex++];
+				if (modifier.Kind != actual.Kind || modifier.Rank != actual.Rank)
+					return false;
+			}
 		}
 
 		return reference.Kind switch
@@ -115,11 +129,11 @@ public static class TypeSyntaxMatchingExtensions
 	/// Determines whether the node resolves to this composed reference.
 	/// </summary>
 	public static bool MatchesTypeReference(
-		this in TypeReferenceOptions reference,
+		this TypeReferenceOptions? reference,
 		SyntaxNode? node,
 		SemanticModel semanticModel,
 		CancellationToken cancellationToken = default
-	) => reference.Matches(TypeSyntaxFacts.ResolveType(node, semanticModel, cancellationToken));
+	) => reference?.Matches(TypeSyntaxFacts.ResolveType(node, semanticModel, cancellationToken)) ?? false;
 
 	// ---------------------------------------------------------------------------------------------
 	// Declarations
@@ -190,11 +204,11 @@ public static class TypeSyntaxMatchingExtensions
 	/// Determines whether the declared member's type is this composed reference.
 	/// </summary>
 	public static bool MatchesDeclaredType(
-		this in TypeReferenceOptions reference,
+		this TypeReferenceOptions? reference,
 		SyntaxNode? node,
 		SemanticModel semanticModel,
 		CancellationToken cancellationToken = default
-	) => reference.Matches(TypeSyntaxFacts.ResolveDeclaredSymbol(node, semanticModel, cancellationToken));
+	) => reference?.Matches(TypeSyntaxFacts.ResolveDeclaredSymbol(node, semanticModel, cancellationToken)) ?? false;
 
 	// ---------------------------------------------------------------------------------------------
 	// Attributes
