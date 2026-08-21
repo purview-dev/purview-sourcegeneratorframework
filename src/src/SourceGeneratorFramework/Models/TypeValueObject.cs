@@ -112,8 +112,11 @@ public readonly record struct TypeValueObject
 	/// </summary>
 	public TypeValueObject(string typeName, string? @namespace)
 	{
-		Name = typeName ?? throw new ArgumentNullException(nameof(typeName));
-		Namespace = string.IsNullOrEmpty(@namespace) ? null : @namespace;
+		if (string.IsNullOrWhiteSpace(typeName))
+			throw new ArgumentException("Type name cannot be null, empty or whitespace.", nameof(typeName));
+
+		Name = typeName;
+		Namespace = string.IsNullOrWhiteSpace(@namespace) ? null : @namespace;
 		GenericArity = 0;
 		ContainingTypes = [];
 		TypeArguments = [];

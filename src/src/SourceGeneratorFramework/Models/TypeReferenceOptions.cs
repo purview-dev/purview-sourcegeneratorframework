@@ -251,7 +251,7 @@ public sealed record TypeReferenceOptions
 						)
 							current = nullable.TypeArguments[0];
 						else if (current.IsValueType)
-							return false;
+							return current.NullableAnnotation == NullableAnnotation.Annotated;
 
 						break;
 

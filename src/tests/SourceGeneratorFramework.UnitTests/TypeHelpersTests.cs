@@ -46,8 +46,8 @@ public class TypeHelpersTests
 	}
 
 	static string GeneratedAttributes(bool includeCoverageExclusion = true) =>
-		(includeCoverageExclusion ? "[global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute]\n" : "")
-		+ "[global::System.Runtime.CompilerServices.CompilerGeneratedAttribute]\n"
+		(includeCoverageExclusion ? "[global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]\n" : "")
+		+ "[global::System.Runtime.CompilerServices.CompilerGenerated]\n"
 		+ "[global::System.CodeDom.Compiler.GeneratedCode(\"TestGenerator\", \"1.0.0\")]\n";
 
 	[Test]

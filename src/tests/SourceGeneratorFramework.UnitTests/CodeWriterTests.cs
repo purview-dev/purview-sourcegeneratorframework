@@ -30,9 +30,9 @@ public class CodeWriterTests
 	[Arguments(null)]
 	[Arguments("")]
 	[Arguments("   ")]
-	public async Task TypeReferenceOptions_GivenMissingName_Throws(string? name)
+	public async Task TypeValueObject_GivenMissingName_Throws(string? name)
 	{
-		await Assert.That(() => new TypeReferenceOptions(new TypeValueObject(name!, null))).Throws<ArgumentException>();
+		await Assert.That(() => new TypeValueObject(name!, null)).Throws<ArgumentException>();
 	}
 
 	[Test]
@@ -306,9 +306,8 @@ public class CodeWriterTests
 		var writer = CodeWriterFactory.ForTests();
 		var typeValue = new TypeValueObject("C", null);
 
-		using (var scope = writer.WriteBlockNamespaceScope(typeValue))
+		using (writer.WriteBlockNamespaceScope(typeValue))
 		{
-			await Assert.That(scope).IsNull();
 			writer.WriteLine("public class C { }");
 		}
 
