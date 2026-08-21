@@ -4,6 +4,29 @@ using Microsoft.CodeAnalysis;
 namespace Purview.SourceGeneratorFramework.Models;
 
 /// <summary>
+/// Represents a single link in a nested type's containing-type chain.
+/// </summary>
+/// <remarks>
+/// Deliberately minimal: only the name and the containing type's own generic arity are needed to identify
+/// and render a link in the chain, or to match it against a declaration or symbol. Unlike
+/// <see cref="TypeValueObject"/> it carries no namespace, generic arguments or further nesting, so building
+/// a chain never recurses into argument resolution.
+/// </remarks>
+public readonly record struct ContainingType(string Name, int GenericArity)
+{
+	/// <summary>
+	/// Gets the CLR metadata name, including the generic arity suffix when required.
+	/// </summary>
+	public string MetadataName => GenericArity == 0 ? Name : $"{Name}`{GenericArity}";
+
+	/// <summary>
+	/// Gets the type name suitable for use in generated code, using open placeholders for any generic
+	/// parameters since a containing link does not track the constructed argument shapes.
+	/// </summary>
+	public string RenderTypeName => GenericArity == 0 ? Name : $"{Name}<{new string(',', GenericArity - 1)}>";
+}
+
+/// <summary>
 /// Represents a semantic reference to a named type, independent of any single compilation.
 /// </summary>
 /// <remarks>
@@ -59,7 +82,7 @@ public readonly record struct TypeValueObject
 
 		Name = StripArity(type.Name);
 		Namespace = string.IsNullOrEmpty(type.Namespace) ? null : type.Namespace;
-		ContainingTypes = BuildContainingTypes(type, allArguments, out var consumed);
+		ContainingTypes = BuildContainingTypes(type, out var consumed);
 		GenericArity = GetOwnArity(type);
 		TypeArguments = type.IsGenericTypeDefinition ? [] : BuildArguments(allArguments, consumed, GenericArity);
 	}
@@ -184,11 +207,10 @@ public readonly record struct TypeValueObject
 	/// Gets the chain of containing types, outermost first, for a nested type.
 	/// </summary>
 	/// <remarks>
-	/// Each entry carries only a name, arity and — where known — type arguments. Its own
-	/// <see cref="Namespace"/> is always <see langword="null"/>, because the namespace belongs to the chain
-	/// as a whole.
+	/// Each entry is a lightweight <see cref="ContainingType"/> carrying only a name and its own generic
+	/// arity; the namespace belongs to the chain as a whole and lives on this value instead.
 	/// </remarks>
-	public ImmutableArray<TypeValueObject> ContainingTypes { get; init; }
+	public ImmutableArray<ContainingType> ContainingTypes { get; init; }
 
 	/// <summary>
 	/// Gets the number of generic parameters declared by the type itself, excluding those inherited from
@@ -449,12 +471,12 @@ public readonly record struct TypeValueObject
 			throw new InvalidOperationException($"Cannot nest a type inside the special type '{SpecialType}'.");
 
 		var existing = ContainingTypes.IsDefaultOrEmpty ? 0 : ContainingTypes.Length;
-		var chain = ImmutableArray.CreateBuilder<TypeValueObject>(existing + 1);
+		var chain = ImmutableArray.CreateBuilder<ContainingType>(existing + 1);
 
 		if (existing > 0)
 			chain.AddRange(ContainingTypes);
 
-		chain.Add(this with { Namespace = null, ContainingTypes = [] });
+		chain.Add(new ContainingType(Name, GenericArity));
 
 		return new TypeValueObject
 		{
@@ -652,7 +674,7 @@ public readonly record struct TypeValueObject
 		return index == -1;
 	}
 
-	static bool ContainingTypesEqual(ImmutableArray<TypeValueObject> left, ImmutableArray<TypeValueObject> right)
+	static bool ContainingTypesEqual(ImmutableArray<ContainingType> left, ImmutableArray<ContainingType> right)
 	{
 		var leftCount = left.IsDefaultOrEmpty ? 0 : left.Length;
 		var rightCount = right.IsDefaultOrEmpty ? 0 : right.Length;
@@ -689,25 +711,14 @@ public readonly record struct TypeValueObject
 		return true;
 	}
 
-	static ImmutableArray<TypeValueObject> BuildContainingTypes(INamedTypeSymbol typeSymbol)
+	static ImmutableArray<ContainingType> BuildContainingTypes(INamedTypeSymbol typeSymbol)
 	{
 		if (typeSymbol.ContainingType is null)
 			return [];
 
-		var chain = ImmutableArray.CreateBuilder<TypeValueObject>();
+		var chain = ImmutableArray.CreateBuilder<ContainingType>();
 		for (var containing = typeSymbol.ContainingType; containing is not null; containing = containing.ContainingType)
-		{
-			chain.Add(
-				new TypeValueObject
-				{
-					Name = containing.Name,
-					Namespace = null,
-					ContainingTypes = [],
-					GenericArity = containing.Arity,
-					TypeArguments = BuildArguments(containing),
-				}
-			);
-		}
+			chain.Add(new ContainingType(containing.Name, containing.Arity));
 
 		chain.Reverse();
 
@@ -739,14 +750,12 @@ public readonly record struct TypeValueObject
 		return builder.MoveToImmutable();
 	}
 
-	static ImmutableArray<TypeValueObject> BuildContainingTypes(Type type, Type[] allArguments, out int consumed)
+	static ImmutableArray<ContainingType> BuildContainingTypes(Type type, out int consumed)
 	{
 		consumed = 0;
 
 		if (type.DeclaringType is null)
 			return [];
-
-		return [];
 
 		var chain = new List<Type>();
 		for (var declaring = type.DeclaringType; declaring is not null; declaring = declaring.DeclaringType)
@@ -754,20 +763,11 @@ public readonly record struct TypeValueObject
 
 		chain.Reverse();
 
-		var builder = ImmutableArray.CreateBuilder<TypeValueObject>(chain.Count);
+		var builder = ImmutableArray.CreateBuilder<ContainingType>(chain.Count);
 		foreach (var link in chain)
 		{
 			var arity = GetOwnArity(link);
-			builder.Add(
-				new TypeValueObject
-				{
-					Name = StripArity(link.Name),
-					Namespace = null,
-					ContainingTypes = [],
-					GenericArity = arity,
-					TypeArguments = type.IsGenericTypeDefinition ? [] : BuildArguments(allArguments, consumed, arity),
-				}
-			);
+			builder.Add(new ContainingType(StripArity(link.Name), arity));
 
 			consumed += arity;
 		}
