@@ -14,14 +14,16 @@
 		<Project Path="src/SourceGeneratorFramework.Testing.TUnit/SourceGeneratorFramework.Testing.TUnit.csproj" />
 		<Project Path="src/SourceGeneratorFramework.Testing/SourceGeneratorFramework.Testing.csproj" />
 		<Project Path="src/SourceGeneratorFramework/SourceGeneratorFramework.csproj" />
+		<Project Path="src/SourceGeneratorShared/SourceGeneratorShared.csproj" />
 	</Folder>
 	<Folder Name="/src/examples/">
 		<Project Path="src/SourceGeneratorFramework.ExampleGenerator/SourceGeneratorFramework.ExampleGenerator.csproj" />
 	</Folder>
 	<Folder Name="/tests/">
 		<Project Path="tests/SourceGeneratorFramework.Analyzers.UnitTests/SourceGeneratorFramework.Analyzers.UnitTests.csproj" />
-		<Project Path="tests/SourceGeneratorFramework.UnitTests/SourceGeneratorFramework.UnitTests.csproj" />
 		<Project Path="tests/SourceGeneratorFramework.Generators.UnitTests/SourceGeneratorFramework.Generators.UnitTests.csproj" />
+		<Project Path="tests/SourceGeneratorFramework.UnitTests/SourceGeneratorFramework.UnitTests.csproj" />
+		<Project Path="tests/SourceGeneratorShared.UnitTests/SourceGeneratorShared.UnitTests.csproj" />
 	</Folder>
 	<Folder Name="/tests/examples/">
 		<Project Path="tests/SourceGeneratorFramework.ExampleGenerator.UnitTests/SourceGeneratorFramework.ExampleGenerator.UnitTests.csproj" />

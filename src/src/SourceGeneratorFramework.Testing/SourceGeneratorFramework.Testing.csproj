@@ -5,6 +5,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\SourceGeneratorGenerator\SourceGeneratorGenerator.csproj" />
 		<ProjectReference Include="..\SourceGeneratorFramework\SourceGeneratorFramework.csproj" />
 	</ItemGroup>
 

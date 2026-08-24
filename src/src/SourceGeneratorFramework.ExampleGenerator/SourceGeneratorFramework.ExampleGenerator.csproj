@@ -6,13 +6,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile
-			Include="..\SourceGeneratorFramework\Extensions\System\Runtime\CompilerServices\IsExternalInit.cs"
-			Link="Extensions\System\Runtime\CompilerServices\IsExternalInit.cs"
-		/>
-	</ItemGroup>
-
-	<ItemGroup>
 		<ProjectReference Include="..\SourceGeneratorFramework\SourceGeneratorFramework.csproj" />
 		<ProjectReference
 			Include="..\SourceGeneratorFramework.Generators\SourceGeneratorFramework.Generators.csproj"

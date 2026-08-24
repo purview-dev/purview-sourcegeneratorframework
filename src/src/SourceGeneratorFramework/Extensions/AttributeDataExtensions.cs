@@ -1,6 +1,4 @@
-using Microsoft.CodeAnalysis;
-
-namespace Purview.SourceGeneratorFramework.Extensions;
+namespace Purview.SourceGeneratorFramework;
 
 /// <summary>
 /// Provides extension methods for extracting values from <see cref="AttributeData"/>.
@@ -184,6 +182,60 @@ public static partial class AttributeDataExtensions
 			}
 
 			return false;
+		}
+
+		/// <summary>
+		/// Gets the display name of an enum named argument, returning the default if the argument is not present or not an enum.
+		/// </summary>
+		public string? GetEnumNamedArgument(string name, string? defaultValue = null)
+		{
+			if (
+				attribute.TryGetNamedArgument<TypedConstant>(name, out var value)
+				&& !value.IsNull
+				&& value.Kind == TypedConstantKind.Enum
+			)
+			{
+				return value.ToEnumString();
+			}
+
+			// Return the default value if the named argument is not present or not an enum.
+			return defaultValue;
+		}
+
+		/// <summary>
+		/// Gets the display name of an enum constructor argument by parameter name, returning the default if the argument is not present or not an enum.
+		/// </summary>
+		public string? GetEnumConstructorArgument(string name, string? defaultValue = null)
+		{
+			if (
+				attribute.TryGetConstructorArgument<TypedConstant>(name, out var value)
+				&& !value.IsNull
+				&& value.Kind == TypedConstantKind.Enum
+			)
+			{
+				return value.ToEnumString();
+			}
+
+			// Return the default value if the constructor argument is not present or not an enum.
+			return defaultValue;
+		}
+
+		/// <summary>
+		/// Gets the display name of an enum constructor argument by index, returning the default if the argument is not present or not an enum.
+		/// </summary>
+		public string? GetEnumConstructorArgument(int index, string? defaultValue = null)
+		{
+			if (
+				attribute.TryGetConstructorArgument<TypedConstant>(index, out var value)
+				&& !value.IsNull
+				&& value.Kind == TypedConstantKind.Enum
+			)
+			{
+				return value.ToEnumString();
+			}
+
+			// Return the default value if the constructor argument is not present or not an enum.
+			return defaultValue;
 		}
 	}
 

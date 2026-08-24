@@ -19,6 +19,7 @@
 			OutputItemType="Analyzer"
 			Targets="GetSourceGeneratorAnalyzerFiles"
 		/>
+		<ProjectReference Include="..\SourceGeneratorShared\SourceGeneratorShared.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

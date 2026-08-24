@@ -21,10 +21,16 @@ tests solutionOrProject=solution configuration=build_configuration filter=defaul
     echo "Running tests for {{ BLUE }}{{ solutionOrProject }}{{ NORMAL }} with configuration {{ YELLOW }}{{ configuration }}{{ NORMAL }} and filter {{ GREEN }}{{ filter }}{{ NORMAL }}"
     dotnet test {{ solutionOrProject }} -c {{ configuration }} --treenode-filter "{{ filter }}" {{ args }}
 
-# Run tests with the specified configuration, defaulting to "Release"
+# Clean all projects with the specified configuration, defaulting to "Release"
 clean solutionOrProject=solution configuration=build_configuration *args:
     echo "Cleaning {{ BLUE }}{{ solutionOrProject }}{{ NORMAL }} with configuration {{ YELLOW }}{{ configuration }}{{ NORMAL }}"
     dotnet clean {{ solutionOrProject }} -c {{ configuration }} {{ args }}
+
+# Clean all projects, across Debug and Release configurations
+clean-all *args:
+    echo "Cleaning all projects with configuration"
+    dotnet clean {{ solution }} -c Release {{ args }}
+    dotnet clean {{ solution }} -c Debug {{ args }}
 
 # Run tests with the specified configuration, defaulting to "Release"
 restore solutionOrProject=solution:
