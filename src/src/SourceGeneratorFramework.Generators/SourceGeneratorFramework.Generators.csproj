@@ -11,5 +11,16 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
 		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
+		<PackageReference Include="System.Collections.Immutable" VersionOverride="9.0.0" />
 	</ItemGroup>
+
+	<Target Name="GetSourceGeneratorAnalyzerFiles" DependsOnTargets="Build" Returns="@(SourceGeneratorAnalyzerFile)">
+		<ItemGroup>
+			<SourceGeneratorAnalyzerFile Include="$(TargetPath)" />
+			<SourceGeneratorAnalyzerFile
+				Include="@(ReferenceCopyLocalPaths)"
+				Condition="'%(ReferenceCopyLocalPaths.Filename)%(ReferenceCopyLocalPaths.Extension)' == 'Purview.SourceGeneratorFramework.Shared.dll'"
+			/>
+		</ItemGroup>
+	</Target>
 </Project>

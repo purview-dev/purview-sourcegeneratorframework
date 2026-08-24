@@ -5,6 +5,8 @@
 		<DisableSourceLink>true</DisableSourceLink>
 		<AssemblyName>$(NamespacePrefix).Shared</AssemblyName>
 		<RootNamespace>$(NamespacePrefix)</RootNamespace>
+		<IsPackable>false</IsPackable>
+		<PackageId>$(NamespacePrefix).Shared</PackageId>
 	</PropertyGroup>
 
 	<ItemGroup>

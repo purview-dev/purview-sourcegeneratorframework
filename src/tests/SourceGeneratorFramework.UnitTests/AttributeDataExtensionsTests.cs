@@ -3,7 +3,6 @@ using System.Diagnostics.CodeAnalysis;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Purview.SourceGeneratorFramework.Extensions;
 
 namespace Purview.SourceGeneratorFramework;
 

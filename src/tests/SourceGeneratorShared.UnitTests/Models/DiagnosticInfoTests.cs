@@ -2,9 +2,8 @@ using System.Globalization;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
-using Purview.SourceGeneratorFramework.Models;
 
-namespace Purview.SourceGeneratorFramework;
+namespace Purview.SourceGeneratorFramework.Models;
 
 public class DiagnosticInfoTests
 {

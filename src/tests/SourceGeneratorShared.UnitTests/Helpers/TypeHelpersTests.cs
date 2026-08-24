@@ -1,10 +1,8 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Purview.SourceGeneratorFramework.Helpers;
-using Purview.SourceGeneratorFramework.Models;
 
-namespace Purview.SourceGeneratorFramework;
+namespace Purview.SourceGeneratorFramework.Helpers;
 
 public class TypeHelpersTests
 {

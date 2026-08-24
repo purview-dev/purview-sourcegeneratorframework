@@ -1,3 +1,5 @@
+using Microsoft.CodeAnalysis;
+
 namespace Purview.SourceGeneratorFramework;
 
 /// <summary>
@@ -37,7 +39,7 @@ public static partial class AttributeDataExtensions
 			{
 				if (string.Equals(namedArg.Key, name, StringComparison.Ordinal))
 				{
-					value = As<T>(namedArg.Value);
+					value = namedArg.Value.As<T>();
 					return true;
 				}
 			}
@@ -113,7 +115,7 @@ public static partial class AttributeDataExtensions
 				return false;
 			}
 
-			value = As<T>(attribute.ConstructorArguments[index]);
+			value = attribute.ConstructorArguments[index].As<T>();
 			return true;
 		}
 

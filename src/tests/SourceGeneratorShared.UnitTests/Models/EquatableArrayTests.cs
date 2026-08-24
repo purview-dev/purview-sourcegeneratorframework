@@ -1,7 +1,6 @@
 using System.Collections.Immutable;
-using Purview.SourceGeneratorFramework.Models;
 
-namespace Purview.SourceGeneratorFramework;
+namespace Purview.SourceGeneratorFramework.Models;
 
 public class EquatableArrayTests
 {

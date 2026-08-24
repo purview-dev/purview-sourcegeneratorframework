@@ -1,9 +1,8 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Purview.SourceGeneratorFramework.Logging;
-using Purview.SourceGeneratorFramework.Models;
 
-namespace Purview.SourceGeneratorFramework;
+namespace Purview.SourceGeneratorFramework.Models;
 
 public class GenerationContextTests
 {

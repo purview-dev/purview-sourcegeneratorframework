@@ -1,7 +1,6 @@
 using Microsoft.CodeAnalysis;
-using Purview.SourceGeneratorFramework.Helpers;
 
-namespace Purview.SourceGeneratorFramework;
+namespace Purview.SourceGeneratorFramework.Helpers;
 
 public class KnownLangTypesTests
 {

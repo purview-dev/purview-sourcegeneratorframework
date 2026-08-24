@@ -1,5 +1,11 @@
+using System.Collections.Immutable;
+using System.ComponentModel;
+using System.Globalization;
+using Microsoft.CodeAnalysis;
+
 namespace Purview.SourceGeneratorFramework;
 
+[EditorBrowsable(EditorBrowsableState.Never)]
 public static partial class TypedConstantsExtensions
 {
 	extension(TypedConstant constant)
@@ -67,29 +73,29 @@ public static partial class TypedConstantsExtensions
 				return default;
 			}
 		}
-	}
 
-	/// <summary>
-	/// Converts the typed constant to a fully-qualified enum member display string (e.g. "Namespace.Type.Member").
-	/// </summary>
-	public string? ToEnumString()
-	{
-		if (constant.IsNull || constant.Kind != TypedConstantKind.Enum)
-			return null;
-
-		var type = constant.Type;
-		if (type is null)
-			return null;
-
-		var typeName = TypeHelpers.ToFullyQualifiedDisplayString(type);
-		var value = constant.Value;
-
-		foreach (var field in type.GetMembers().OfType<IFieldSymbol>())
+		/// <summary>
+		/// Converts the typed constant to a fully-qualified enum member display string (e.g. "Namespace.Type.Member").
+		/// </summary>
+		public string? ToEnumString()
 		{
-			if (field.HasConstantValue && field.ConstantValue?.Equals(value) == true)
-				return $"{typeName}.{field.Name}";
-		}
+			if (constant.IsNull || constant.Kind != TypedConstantKind.Enum)
+				return null;
 
-		return $"{typeName}.{Convert.ToString(value, CultureInfo.InvariantCulture)}";
+			var type = constant.Type;
+			if (type is null)
+				return null;
+
+			var typeName = TypeHelpers.ToFullyQualifiedDisplayString(type);
+			var value = constant.Value;
+
+			foreach (var field in type.GetMembers().OfType<IFieldSymbol>())
+			{
+				if (field.HasConstantValue && field.ConstantValue?.Equals(value) == true)
+					return $"{typeName}.{field.Name}";
+			}
+
+			return $"{typeName}.{Convert.ToString(value, CultureInfo.InvariantCulture)}";
+		}
 	}
 }

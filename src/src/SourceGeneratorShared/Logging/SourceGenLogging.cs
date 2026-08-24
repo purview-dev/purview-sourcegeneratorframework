@@ -22,7 +22,7 @@ public static class SourceGenLogging
 
 	// Uses BCL-only argument types so the testing framework can explicitly register the same sink
 	// with a framework copy embedded in a generator assembly.
-	internal static IDisposable RegisterSinkCore(string sessionId, Action<string, int> sink)
+	public static IDisposable RegisterSinkCore(string sessionId, Action<string, int> sink)
 	{
 		if (string.IsNullOrWhiteSpace(sessionId))
 			throw new ArgumentException("Logging session ID cannot be null or whitespace.", nameof(sessionId));
@@ -35,7 +35,7 @@ public static class SourceGenLogging
 		return new SinkRegistration(sessionId);
 	}
 
-	internal static ISourceGenLogger? CreateLogger(string? sessionId) =>
+	public static ISourceGenLogger? CreateLogger(string? sessionId) =>
 		string.IsNullOrWhiteSpace(sessionId) || !Sinks.ContainsKey(sessionId!) ? null : new SourceGenLogger(sessionId!);
 
 	internal static void Write(

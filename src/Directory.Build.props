@@ -28,7 +28,7 @@
 
 	<Import Sdk="Purview.DotNetProjectSdk" Project="Sdk.props" />
 
-	<PropertyGroup Condition="'$(IsTestProject)' == 'true'">
+	<PropertyGroup Condition="'$(IsTestProject)' == 'true' OR '$(IsSharedTestingProject)' == 'true'">
 		<!-- Test projects aren't executable so we need to remove .NET Standard 2.1 -->
 		<TargetFrameworks>$(TestingTargetFrameworks)</TargetFrameworks>
 	</PropertyGroup>

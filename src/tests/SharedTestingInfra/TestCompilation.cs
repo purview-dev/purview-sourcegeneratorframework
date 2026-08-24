@@ -1,13 +1,14 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Purview.SourceGeneratorFramework.Testing;
 
-namespace Purview.SourceGeneratorFramework.Infra;
+namespace Purview.SourceGeneratorFramework;
 
 /// <summary>
 /// Builds compilations for symbol- and syntax-level matching tests.
 /// </summary>
-static class TestCompilation
+public static class TestCompilation
 {
 	// Basic.Reference.Assemblies provides a single, unambiguous reference set. Building references from
 	// AppDomain.CurrentDomain.GetAssemblies() makes GetTypeByMetadataName return null for types that are

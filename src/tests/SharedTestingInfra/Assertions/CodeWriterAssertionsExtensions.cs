@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using TUnit.Assertions.Attributes;
 
-namespace Purview.SourceGeneratorFramework.Infra.Assertions;
+namespace Purview.SourceGeneratorFramework.Assertions;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
 public static partial class CodeWriterAssertionsExtensions

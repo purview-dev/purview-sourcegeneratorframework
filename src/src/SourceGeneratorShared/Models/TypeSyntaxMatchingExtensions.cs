@@ -41,10 +41,7 @@ public static class TypeSyntaxMatchingExtensions
 			return false;
 
 		// A bare named type identity accepts no array or pointer composition.
-		if (modifiers is { Count: > 0 })
-			return false;
-
-		return CoreMatchesNamedType(type, core);
+		return modifiers is { Count: > 0 } ? false : CoreMatchesNamedType(type, core);
 	}
 
 	/// <summary>
@@ -111,6 +108,7 @@ public static class TypeSyntaxMatchingExtensions
 			}
 		}
 
+#pragma warning disable IDE0072 // Add missing cases
 		return reference.Kind switch
 		{
 			TypeReferenceKind.Named => CoreMatchesNamedType(reference.Type, core),
@@ -123,6 +121,7 @@ public static class TypeSyntaxMatchingExtensions
 			TypeReferenceKind.Dynamic => core is IdentifierNameSyntax { Identifier.ValueText: "dynamic" },
 			_ => false,
 		};
+#pragma warning restore IDE0072 // Add missing cases
 	}
 
 	/// <summary>
@@ -163,6 +162,7 @@ public static class TypeSyntaxMatchingExtensions
 		if (!DeclaredContainingTypesMatch(type, node))
 			return false;
 
+		// The namespace is the only part of a declaration that cannot be determined from the node alone, so
 		return string.Equals(type.Namespace, TypeSyntaxFacts.GetDeclaredNamespace(node), StringComparison.Ordinal);
 	}
 
@@ -182,6 +182,7 @@ public static class TypeSyntaxMatchingExtensions
 		if (semanticModel == null)
 			throw new ArgumentNullException(nameof(semanticModel));
 
+		// The declared symbol is always a named type, so the cast is safe.
 		return type.Matches(semanticModel.GetDeclaredSymbol(declaration, cancellationToken) as ITypeSymbol);
 	}
 
@@ -243,6 +244,7 @@ public static class TypeSyntaxMatchingExtensions
 		if (type.GenericArity != TypeSyntaxFacts.GetArity(simpleName))
 			return false;
 
+		// The qualifier is optional, so the match is always possible if none is written.
 		return QualifierMatches(type, qualifier);
 	}
 
@@ -259,6 +261,7 @@ public static class TypeSyntaxMatchingExtensions
 		if (semanticModel == null)
 			throw new ArgumentNullException(nameof(semanticModel));
 
+		// The attribute application is always a method symbol, so the cast is safe.
 		return node switch
 		{
 			AttributeSyntax attribute => type.Matches(
@@ -332,6 +335,7 @@ public static class TypeSyntaxMatchingExtensions
 		if (type.GenericArity != TypeSyntaxFacts.GetArity(simpleName))
 			return false;
 
+		// The qualifier is optional, so the match is always possible if none is written.
 		return QualifierMatches(type, qualifier);
 	}
 

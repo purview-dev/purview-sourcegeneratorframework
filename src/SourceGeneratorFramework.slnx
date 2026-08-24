@@ -20,6 +20,7 @@
 		<Project Path="src/SourceGeneratorFramework.ExampleGenerator/SourceGeneratorFramework.ExampleGenerator.csproj" />
 	</Folder>
 	<Folder Name="/tests/">
+		<Project Path="tests/SharedTestingInfra/SharedTestingInfra.csproj" Id="9ffd38cd-d83d-4ebf-830f-1302054c6ddb" />
 		<Project Path="tests/SourceGeneratorFramework.Analyzers.UnitTests/SourceGeneratorFramework.Analyzers.UnitTests.csproj" />
 		<Project Path="tests/SourceGeneratorFramework.Generators.UnitTests/SourceGeneratorFramework.Generators.UnitTests.csproj" />
 		<Project Path="tests/SourceGeneratorFramework.UnitTests/SourceGeneratorFramework.UnitTests.csproj" />
