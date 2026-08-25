@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Purview.SourceGeneratorFramework.Examples;
 using Purview.SourceGeneratorFramework.Helpers;
 using Purview.SourceGeneratorFramework.Testing.TUnit;
@@ -114,13 +115,10 @@ public class ServiceRegistrationGeneratorTests
 			source,
 			new ServiceRegistrationTestOptions
 			{
-				AnalyzerConfigOptions =
+				AnalyzerConfigOptions = new Dictionary<string, string>
 				{
-					[
-						IncrementalPipeline.BuildProperty
-							+ ServiceRegistrationGeneratorPropertyLibrary.EmitServiceRegistrationInfo
-					] = "true",
-				},
+					{ IncrementalPipeline.BuildProperty + PropertyLibrary.EmitServiceRegistrationInfo, "true" },
+				}.ToImmutableDictionary(),
 			},
 			cancellationToken
 		);

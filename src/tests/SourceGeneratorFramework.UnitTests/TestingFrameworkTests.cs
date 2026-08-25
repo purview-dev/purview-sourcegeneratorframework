@@ -241,7 +241,7 @@ namespace Test
 	)
 	{
 		var runner = new SourceGeneratorTestRunner<OptionsGenerator>();
-		var options = new SourceGeneratorTestOptions { AnalyzerConfigOptions = { ["CustomOption"] = "enabled" } };
+		var options = new SourceGeneratorTestOptions().WithAnalyzerConfigOptions(("CustomOption", "enabled"));
 
 		var result = await runner.RunAsync("public sealed class Input { }", options, cancellationToken);
 
@@ -277,14 +277,12 @@ namespace Test
 		var originalDefault = SourceGeneratorTestOptions.Default;
 		try
 		{
-			SourceGeneratorTestOptions.Default = originalDefault with
-			{
-				AnalyzerConfigOptions = new Dictionary<string, string> { ["Shared"] = "default" },
-			};
+			SourceGeneratorTestOptions.Default = originalDefault.WithAnalyzerConfigOptions(("Shared", "default"));
 
 			var first = new CustomSourceGeneratorTestOptions();
 			var second = new CustomSourceGeneratorTestOptions();
-			first.AnalyzerConfigOptions["OnlyFirst"] = "value";
+
+			first = first.WithAnalyzerConfigOptions(("OnlyFirst", "value"));
 
 			await Assert.That(first.AnalyzerConfigOptions["Shared"]).IsEqualTo("default");
 			await Assert.That(second.AnalyzerConfigOptions.ContainsKey("OnlyFirst")).IsFalse();

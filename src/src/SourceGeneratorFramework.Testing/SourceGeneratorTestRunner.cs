@@ -3,9 +3,9 @@ using System.Collections.Immutable;
 using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Diagnostics;
 using Purview.SourceGeneratorFramework.Helpers;
 using Purview.SourceGeneratorFramework.Logging;
-using Purview.SourceGeneratorFramework.Models;
 using Purview.SourceGeneratorFramework.Testing.Models;
 
 namespace Purview.SourceGeneratorFramework.Testing;
@@ -34,9 +34,19 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		CancellationToken cancellationToken = default
 	)
 	{
-		options ??= new SourceGeneratorTestOptions();
+		options ??= new();
+		if (options.AnalyzerOptions is not null && options.CompilationWithAnalyzersOptions is not null)
+		{
+			throw new ArgumentException(
+				$"{nameof(options.AnalyzerOptions)} and {nameof(options.CompilationWithAnalyzersOptions)} cannot be provided at the same time.",
+				nameof(options)
+			);
+		}
 
 		ConcurrentBag<LogEntry> logEntries = [];
+
+		if (!options.AdditionalSources.IsDefaultOrEmpty)
+			sources = sources.Concat(options.AdditionalSources);
 
 		var syntaxTrees = sources
 			.Select(source =>
@@ -61,6 +71,8 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 			out _,
 			cancellationToken
 		);
+
+		var analyzerCompilationRun = await GetAnalyzerResultsAsync(options, outputCompilation, cancellationToken);
 		var result = driver.GetRunResult();
 
 		Assembly? assembly = null;
@@ -75,10 +87,53 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		return new(
 			result,
 			new(outputCompilation, assembly, compilationDiagnostics),
+			analyzerCompilationRun,
 			result.GeneratedTrees,
 			excludedGeneratedSource,
 			[.. logEntries]
 		);
+	}
+
+	static async Task<AnalyzerCompilationRunResult?> GetAnalyzerResultsAsync(
+		SourceGeneratorTestOptions options,
+		Compilation outputCompilation,
+		CancellationToken cancellationToken
+	)
+	{
+		if (options.AnalyzerTypes.IsDefaultOrEmpty)
+			return null;
+
+		var analyzers = options
+			.AnalyzerTypes.Select(static type =>
+			{
+#pragma warning disable CA2208 // Instantiate argument exceptions correctly
+				if (type.GetConstructors().All(c => c.GetParameters().Length > 0))
+				{
+					throw new ArgumentException(
+						$"Analyzer type {type.FullName} must have a parameterless constructor.",
+						nameof(options.AnalyzerTypes)
+					);
+				}
+
+				if (!typeof(DiagnosticAnalyzer).IsAssignableFrom(type))
+				{
+					throw new ArgumentException(
+						$"Analyzer type {type.FullName} must be a DiagnosticAnalyzer.",
+						nameof(options.AnalyzerTypes)
+					);
+				}
+#pragma warning restore CA2208 // Instantiate argument exceptions correctly
+
+				return (Activator.CreateInstance(type) as DiagnosticAnalyzer)!;
+			})
+			.ToImmutableArray();
+
+		var compilationWithAnalyzers = options.CompilationWithAnalyzersOptions is not null
+			? outputCompilation.WithAnalyzers(analyzers, options.CompilationWithAnalyzersOptions)
+			: outputCompilation.WithAnalyzers(analyzers, options.AnalyzerOptions);
+
+		var analyzerDiagnostics = await compilationWithAnalyzers.GetAnalyzerDiagnosticsAsync(cancellationToken);
+		return new(compilationWithAnalyzers, analyzerDiagnostics);
 	}
 
 	static string PrepareSource(string source, SourceGeneratorTestOptions options)
@@ -104,7 +159,7 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 			parseOptions: new(options.LanguageVersion)
 		);
 
-		var analyzerOptions = new Dictionary<string, string>(options.AnalyzerConfigOptions)
+		Dictionary<string, string> analyzerOptions = new(options.AnalyzerConfigOptions)
 		{
 			[IncrementalPipeline.BuildProperty + GenerationContext.ValidateCodeWriterScopesBuildProperty] =
 				options.ValidateCodeWriterScopes ? "true" : "false",
@@ -112,17 +167,24 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 				? "true"
 				: "false",
 		};
+
 		foreach (var (key, value) in options.AnalyzerConfigOptions)
 		{
 			if (!key.StartsWith(IncrementalPipeline.BuildProperty, StringComparison.Ordinal))
 				analyzerOptions.TryAdd(IncrementalPipeline.BuildProperty + key, value);
 		}
+
 		if (loggingSessionId is not null)
+		{
 			analyzerOptions[IncrementalPipeline.BuildProperty + GenerationContext.LoggingSessionIdBuildProperty] =
 				loggingSessionId;
+		}
+
 		if (options.DisableSourceGeneratorPropertyName is not null && options.DisableSourceGeneratorValue is not null)
+		{
 			analyzerOptions[IncrementalPipeline.BuildProperty + options.DisableSourceGeneratorPropertyName] =
 				options.DisableSourceGeneratorValue.Value.ToString();
+		}
 
 		if (analyzerOptions.Count > 0)
 			driver = driver.WithUpdatedAnalyzerConfigOptions(new TestAnalyzerConfigOptionsProvider(analyzerOptions));

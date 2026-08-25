@@ -1,8 +1,8 @@
 using Microsoft.CodeAnalysis;
 
-namespace Purview.SourceGeneratorFramework.Models;
+namespace Purview.SourceGeneratorFramework;
 
-public sealed class TypeReferenceOptionsTests
+public sealed class TypeReferenceTests
 {
 	// ---------------------------------------------------------------------------------------------
 	// Rendering
@@ -11,7 +11,7 @@ public sealed class TypeReferenceOptionsTests
 	[Test]
 	public async Task RenderFullName_RendersComposedSuffixesInSourceOrder()
 	{
-		var int32 = new TypeValueObject(SpecialType.System_Int32);
+		var int32 = new TypeIdentity(SpecialType.System_Int32);
 
 		await Assert.That(int32.AsTypeReference().RenderFullName).IsEqualTo("int");
 		await Assert.That(int32.MakeArray().RenderFullName).IsEqualTo("int[]");
@@ -28,9 +28,9 @@ public sealed class TypeReferenceOptionsTests
 	[Test]
 	public async Task RenderFullName_GivenTypeParameterOrDynamic_RendersCore()
 	{
-		await Assert.That(TypeReferenceOptions.ForTypeParameter("TKey").RenderFullName).IsEqualTo("TKey");
-		await Assert.That(TypeReferenceOptions.ForTypeParameter("TKey").MakeArray().RenderFullName).IsEqualTo("TKey[]");
-		await Assert.That(TypeReferenceOptions.Dynamic.RenderFullName).IsEqualTo("dynamic");
+		await Assert.That(TypeReference.ForTypeParameter("TKey").RenderFullName).IsEqualTo("TKey");
+		await Assert.That(TypeReference.ForTypeParameter("TKey").MakeArray().RenderFullName).IsEqualTo("TKey[]");
+		await Assert.That(TypeReference.Dynamic.RenderFullName).IsEqualTo("dynamic");
 	}
 
 	// ---------------------------------------------------------------------------------------------
@@ -52,7 +52,7 @@ public sealed class TypeReferenceOptionsTests
 	{
 		var symbol = TestCompilation.FieldType(fieldDeclaration);
 
-		await Assert.That(TypeReferenceOptions.TryCreate(symbol, out var reference)).IsTrue();
+		await Assert.That(TypeReference.TryCreate(symbol, out var reference)).IsTrue();
 		await Assert.That(reference.RenderFullName).IsEqualTo(expected);
 		await Assert.That(reference.Matches(symbol)).IsTrue();
 	}
@@ -62,7 +62,7 @@ public sealed class TypeReferenceOptionsTests
 	{
 		var symbol = TestCompilation.FieldType("public string? Value;");
 
-		await Assert.That(TypeReferenceOptions.TryCreate(symbol, out var reference)).IsTrue();
+		await Assert.That(TypeReference.TryCreate(symbol, out var reference)).IsTrue();
 		await Assert.That(reference.IsNullable).IsTrue();
 		await Assert.That(reference.RenderFullName).IsEqualTo("string?");
 	}
@@ -72,7 +72,7 @@ public sealed class TypeReferenceOptionsTests
 	{
 		var symbol = TestCompilation.FieldType("public string?[]? Value;");
 
-		await Assert.That(TypeReferenceOptions.TryCreate(symbol, out var reference)).IsTrue();
+		await Assert.That(TypeReference.TryCreate(symbol, out var reference)).IsTrue();
 		await Assert.That(reference.RenderFullName).IsEqualTo("string?[]?");
 	}
 
@@ -81,7 +81,7 @@ public sealed class TypeReferenceOptionsTests
 	{
 		var symbol = TestCompilation.FieldType("public Missing.Thing Value;");
 
-		await Assert.That(TypeReferenceOptions.TryCreate(symbol, out _)).IsFalse();
+		await Assert.That(TypeReference.TryCreate(symbol, out _)).IsFalse();
 	}
 
 	[Test]
@@ -90,7 +90,7 @@ public sealed class TypeReferenceOptionsTests
 	[Arguments(typeof(int?), "int?")]
 	public async Task TryCreate_GivenRuntimeType_RoundTrips(Type type, string expected)
 	{
-		await Assert.That(TypeReferenceOptions.TryCreate(type, out var reference)).IsTrue();
+		await Assert.That(TypeReference.TryCreate(type, out var reference)).IsTrue();
 		await Assert.That(reference.RenderFullName).IsEqualTo(expected);
 	}
 
@@ -101,7 +101,7 @@ public sealed class TypeReferenceOptionsTests
 	[Test]
 	public async Task Matches_GivenArrayRankMismatch_ReturnsFalse()
 	{
-		var reference = new TypeValueObject(SpecialType.System_Int32).MakeArray();
+		var reference = new TypeIdentity(SpecialType.System_Int32).MakeArray();
 
 		await Assert.That(reference.Matches(TestCompilation.FieldType("public int[] Value = null!;"))).IsTrue();
 		await Assert.That(reference.Matches(TestCompilation.FieldType("public int[,] Value = null!;"))).IsFalse();
@@ -111,7 +111,7 @@ public sealed class TypeReferenceOptionsTests
 	[Test]
 	public async Task Matches_GivenNullableValueType_IsEnforced()
 	{
-		var nullable = new TypeValueObject(SpecialType.System_Int32).MakeNullable();
+		var nullable = new TypeIdentity(SpecialType.System_Int32).MakeNullable();
 
 		await Assert.That(nullable.Matches(TestCompilation.FieldType("public int? Value;"))).IsTrue();
 		await Assert.That(nullable.Matches(TestCompilation.FieldType("public int Value;"))).IsFalse();
@@ -120,7 +120,7 @@ public sealed class TypeReferenceOptionsTests
 	[Test]
 	public async Task Matches_GivenNullableReferenceType_IgnoresAnnotation()
 	{
-		var nullable = new TypeValueObject(SpecialType.System_String).MakeNullable();
+		var nullable = new TypeIdentity(SpecialType.System_String).MakeNullable();
 
 		// Annotation is metadata, not identity: both spellings resolve to System.String.
 		await Assert.That(nullable.Matches(TestCompilation.FieldType("public string? Value;"))).IsTrue();
@@ -132,9 +132,9 @@ public sealed class TypeReferenceOptionsTests
 	{
 		var symbol = TestCompilation.FieldType("public T Value = default!;");
 
-		await Assert.That(TypeReferenceOptions.ForTypeParameter("T").Matches(symbol)).IsTrue();
-		await Assert.That(TypeReferenceOptions.ForTypeParameter("TOther").Matches(symbol)).IsFalse();
-		await Assert.That(TypeReferenceOptions.Dynamic.Matches(symbol)).IsFalse();
+		await Assert.That(TypeReference.ForTypeParameter("T").Matches(symbol)).IsTrue();
+		await Assert.That(TypeReference.ForTypeParameter("TOther").Matches(symbol)).IsFalse();
+		await Assert.That(TypeReference.Dynamic.Matches(symbol)).IsFalse();
 	}
 
 	[Test]
@@ -142,8 +142,8 @@ public sealed class TypeReferenceOptionsTests
 	{
 		var symbol = TestCompilation.FieldType("public dynamic Value = null!;");
 
-		await Assert.That(TypeReferenceOptions.Dynamic.Matches(symbol)).IsTrue();
-		await Assert.That(new TypeValueObject(SpecialType.System_Object).AsTypeReference().Matches(symbol)).IsFalse();
+		await Assert.That(TypeReference.Dynamic.Matches(symbol)).IsTrue();
+		await Assert.That(new TypeIdentity(SpecialType.System_Object).AsTypeReference().Matches(symbol)).IsFalse();
 	}
 
 	[Test]
@@ -162,7 +162,7 @@ public sealed class TypeReferenceOptionsTests
 		);
 
 		var holder = compilation.GetTypeByMetadataName("Sample.Holder")!;
-		var reference = new TypeValueObject(SpecialType.System_Int32).MakeArray();
+		var reference = new TypeIdentity(SpecialType.System_Int32).MakeArray();
 
 		await Assert.That(reference.Matches(holder.GetMembers("Field").Single())).IsTrue();
 		await Assert.That(reference.Matches(holder.GetMembers("Other").Single())).IsFalse();
@@ -175,7 +175,7 @@ public sealed class TypeReferenceOptionsTests
 	[Test]
 	public async Task Equality_DistinguishesModifierOrder()
 	{
-		var int32 = new TypeValueObject(SpecialType.System_Int32);
+		var int32 = new TypeIdentity(SpecialType.System_Int32);
 
 		await Assert.That(int32.MakeNullable().MakeArray()).IsNotEqualTo(int32.MakeArray().Nullable());
 		await Assert.That(int32.MakeArray()).IsEqualTo(int32.MakeArray());
@@ -186,7 +186,7 @@ public sealed class TypeReferenceOptionsTests
 	[Test]
 	public async Task Equals_GivenPlainNamedType_MatchesUnderlyingValueObject()
 	{
-		var int32 = new TypeValueObject(SpecialType.System_Int32);
+		var int32 = new TypeIdentity(SpecialType.System_Int32);
 
 		await Assert.That(int32.AsTypeReference().Equals(int32)).IsTrue();
 		await Assert.That(int32.MakeArray().Equals(int32)).IsFalse();
@@ -196,7 +196,7 @@ public sealed class TypeReferenceOptionsTests
 	[Test]
 	public async Task ImplicitConversion_FromNamedType_ProducesPlainReference()
 	{
-		TypeReferenceOptions reference = new TypeValueObject("Order", "Sample");
+		TypeReference reference = new TypeIdentity("Order", "Sample");
 
 		await Assert.That(reference.Kind).IsEqualTo(TypeReferenceKind.Named);
 		await Assert.That(reference.IsPlainNamedType).IsTrue();
@@ -206,13 +206,13 @@ public sealed class TypeReferenceOptionsTests
 	[Test]
 	public async Task Append_GivenEmptyReference_Throws()
 	{
-		await Assert.That(void () => _ = TypeReferenceOptions.Empty.MakeArray()).Throws<InvalidOperationException>();
+		await Assert.That(void () => _ = TypeReference.Empty.MakeArray()).Throws<InvalidOperationException>();
 	}
 
 	[Test]
 	public async Task MakeArray_GivenInvalidRank_Throws()
 	{
-		var int32 = new TypeValueObject(SpecialType.System_Int32);
+		var int32 = new TypeIdentity(SpecialType.System_Int32);
 
 		await Assert.That(void () => _ = int32.MakeArray(0)).Throws<ArgumentOutOfRangeException>();
 	}

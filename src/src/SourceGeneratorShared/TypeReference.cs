@@ -2,7 +2,7 @@ using System.Collections.Immutable;
 using System.Text;
 using Microsoft.CodeAnalysis;
 
-namespace Purview.SourceGeneratorFramework.Models;
+namespace Purview.SourceGeneratorFramework;
 
 /// <summary>
 /// A structured reference to a type as it appears at a use site: a named type, generic parameter or
@@ -10,13 +10,13 @@ namespace Purview.SourceGeneratorFramework.Models;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <see cref="TypeValueObject"/> models type <i>identity</i>; this models a type <i>reference</i>. Anything
+/// <see cref="TypeIdentity"/> models type <i>identity</i>; this models a type <i>reference</i>. Anything
 /// a use site can spell that identity cannot — <c>T</c>, <c>int[]</c>, <c>byte*</c>, <c>string?</c> — is
-/// expressed here, which is why <see cref="TypeValueObject.TypeArguments"/> is a collection of these.
+/// expressed here, which is why <see cref="TypeIdentity.TypeArguments"/> is a collection of these.
 /// </para>
 /// <para>
 /// <b>This is a reference type by necessity, not by preference.</b> As a struct it would embed a
-/// <see cref="TypeValueObject"/> by value while <see cref="TypeValueObject"/> holds an
+/// <see cref="TypeIdentity"/> by value while <see cref="TypeIdentity"/> holds an
 /// <see cref="ImmutableArray{T}"/> of these — a mutual value-type layout cycle. The C# compiler accepts that
 /// (no CS0523, because <see cref="ImmutableArray{T}"/>'s only field is an array reference) but the CLR type
 /// loader rejects it at runtime with a <see cref="TypeLoadException"/>: see dotnet/runtime#11259. Making one
@@ -28,13 +28,20 @@ namespace Purview.SourceGeneratorFramework.Models;
 /// the annotated and unannotated symbol, because annotation is metadata rather than identity. Nullable
 /// <i>value</i> types are enforced, because <c>int?</c> is a genuinely different type from <c>int</c>.
 /// </para>
+/// <para>
+/// A named reference inherits its generic comparison behavior from <see cref="TypeIdentity"/>. A reference
+/// wrapping an open generic definition matches constructed symbols of that definition; a reference wrapping a
+/// constructed identity validates its arguments. Reference modifiers are always significant, so an open
+/// <c>List&lt;&gt;</c> reference does not make <c>List&lt;int&gt;[]</c> match unless the reference also has the array
+/// modifier.
+/// </para>
 /// </remarks>
-public sealed record TypeReferenceOptions
+public sealed record TypeReference
 {
 	/// <summary>
 	/// Initializes a new, empty reference. Prefer the named factories.
 	/// </summary>
-	TypeReferenceOptions()
+	TypeReference()
 	{
 		Kind = TypeReferenceKind.None;
 		Modifiers = [];
@@ -43,10 +50,10 @@ public sealed record TypeReferenceOptions
 	/// <summary>
 	/// Initializes a new reference to the given named type.
 	/// </summary>
-	public TypeReferenceOptions(TypeValueObject type)
+	public TypeReference(TypeIdentity typeIdentity)
 	{
 		Kind = TypeReferenceKind.Named;
-		Type = type;
+		Identity = typeIdentity;
 		Modifiers = [];
 	}
 
@@ -57,7 +64,7 @@ public sealed record TypeReferenceOptions
 	public TypeReferenceKind Kind { get; init; }
 
 	/// <summary>Gets the named type, when <see cref="Kind"/> is <see cref="TypeReferenceKind.Named"/>.</summary>
-	public TypeValueObject Type { get; init; }
+	public TypeIdentity Identity { get; init; }
 
 	/// <summary>
 	/// Gets the generic parameter name, when <see cref="Kind"/> is <see cref="TypeReferenceKind.TypeParameter"/>.
@@ -71,7 +78,7 @@ public sealed record TypeReferenceOptions
 
 	/// <summary>
 	/// Gets a value indicating whether this is an unmodified reference to a named type, and therefore
-	/// interchangeable with a bare <see cref="TypeValueObject"/>.
+	/// interchangeable with a bare <see cref="TypeIdentity"/>.
 	/// </summary>
 	public bool IsPlainNamedType => Kind == TypeReferenceKind.Named && Modifiers.IsDefaultOrEmpty;
 
@@ -96,7 +103,7 @@ public sealed record TypeReferenceOptions
 		{
 			var core = Kind switch
 			{
-				TypeReferenceKind.Named => Type.RenderFullName,
+				TypeReferenceKind.Named => Identity.RenderFullName,
 				TypeReferenceKind.TypeParameter => TypeParameterName ?? string.Empty,
 				TypeReferenceKind.Dynamic => "dynamic",
 				_ => string.Empty,
@@ -105,7 +112,7 @@ public sealed record TypeReferenceOptions
 			if (Modifiers.IsDefaultOrEmpty)
 				return core;
 
-			var builder = new StringBuilder(core);
+			StringBuilder builder = new(core);
 
 			// `?` and `*` read innermost-first, but a run of array declarators reads outermost-first:
 			// `int[][,]` is a rank-1 array of rank-2 arrays. Each contiguous array run is therefore emitted
@@ -133,40 +140,57 @@ public sealed record TypeReferenceOptions
 		}
 	}
 
+	/// <summary>
+	/// Gets the fully-qualified type name for use in an attribute application.
+	/// </summary>
+	/// <exception cref="InvalidOperationException">
+	/// Thrown when this is not an unmodified named type. C# attributes cannot be arrays, pointers, nullable
+	/// types, type parameters, or <see langword="dynamic"/>.
+	/// </exception>
+	public string RenderAttributeName
+	{
+		get
+		{
+			if (!IsPlainNamedType)
+				throw new InvalidOperationException("An attribute type must be an unmodified named type.");
+
+			// The attribute type name is the same as the named type's full name, but with the "Attribute" suffix
+			return Identity.RenderAttributeName;
+		}
+	}
+
 	/// <inheritdoc />
 	public override string ToString() => RenderFullName;
 
 	/// <summary>
 	/// Implicitly converts a named type to an unmodified reference.
 	/// </summary>
-	public static implicit operator TypeReferenceOptions(TypeValueObject type) => new(type);
+	public static implicit operator TypeReference(TypeIdentity type) => new(type);
 
 	/// <summary>
 	/// Implicitly converts a reference to its rendered name.
 	/// </summary>
-	public static implicit operator string(TypeReferenceOptions? reference) =>
-		reference?.RenderFullName ?? string.Empty;
+	public static implicit operator string(TypeReference? reference) => reference?.RenderFullName ?? string.Empty;
 
 	/// <summary>
 	/// Implicitly converts a reference to its underlying type value object, discarding any modifiers.
 	/// </summary>
-	public static implicit operator TypeValueObject(TypeReferenceOptions? reference) =>
-		reference?.Type ?? TypeValueObject.Empty;
+	public static implicit operator TypeIdentity(TypeReference? reference) => reference?.Identity ?? TypeIdentity.Empty;
 
 	// ---------------------------------------------------------------------------------------------
 	// Composition
 	// ---------------------------------------------------------------------------------------------
 
 	/// <summary>Appends a nullable annotation.</summary>
-	public TypeReferenceOptions Nullable() => Append(TypeModifier.Nullable);
+	public TypeReference Nullable() => Append(TypeModifier.Nullable);
 
 	/// <summary>Appends an array of the given rank.</summary>
-	public TypeReferenceOptions MakeArray(int rank = 1) => Append(TypeModifier.Array(rank));
+	public TypeReference MakeArray(int rank = 1) => Append(TypeModifier.Array(rank));
 
 	/// <summary>Appends a pointer indirection.</summary>
-	public TypeReferenceOptions MakePointer() => Append(TypeModifier.PointerModifier);
+	public TypeReference MakePointer() => Append(TypeModifier.PointerModifier);
 
-	TypeReferenceOptions Append(TypeModifier modifier)
+	TypeReference Append(TypeModifier modifier)
 	{
 		if (Kind == TypeReferenceKind.None)
 			throw new InvalidOperationException("Cannot compose modifiers onto an empty type reference.");
@@ -192,6 +216,10 @@ public sealed record TypeReferenceOptions
 	/// <summary>
 	/// Determines whether the given type symbol is this composed reference.
 	/// </summary>
+	/// <remarks>
+	/// For named types, open-versus-constructed generic matching is performed by
+	/// <see cref="TypeIdentity.Matches(ITypeSymbol?)"/> after this reference's modifiers have been consumed.
+	/// </remarks>
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0072:Add missing cases")]
 	public bool Matches(ITypeSymbol? other)
 	{
@@ -228,7 +256,8 @@ public sealed record TypeReferenceOptions
 						// Nullable value types are a distinct type and must be unwrapped; nullable reference
 						// annotations are metadata and are deliberately ignored.
 						if (
-							current is INamedTypeSymbol { SpecialType: SpecialType.System_Nullable_T } nullable
+							current is INamedTypeSymbol nullable
+							&& nullable.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T
 							&& nullable.TypeArguments.Length == 1
 						)
 							current = nullable.TypeArguments[0];
@@ -245,7 +274,7 @@ public sealed record TypeReferenceOptions
 
 		return Kind switch
 		{
-			TypeReferenceKind.Named => Type.Matches(current),
+			TypeReferenceKind.Named => Identity.Matches(current),
 			TypeReferenceKind.TypeParameter => current is ITypeParameterSymbol parameter
 				&& string.Equals(TypeParameterName, parameter.Name, StringComparison.Ordinal),
 			TypeReferenceKind.Dynamic => current is IDynamicTypeSymbol,
@@ -265,7 +294,7 @@ public sealed record TypeReferenceOptions
 	/// <summary>
 	/// Determines whether this reference is an unmodified reference to the given named type.
 	/// </summary>
-	public bool Equals(TypeValueObject other) => IsPlainNamedType && Type.Equals(other);
+	public bool Equals(TypeIdentity other) => IsPlainNamedType && Identity.Equals(other);
 
 	/// <summary>
 	/// Determines whether the specified reference describes the same composed type.
@@ -275,7 +304,7 @@ public sealed record TypeReferenceOptions
 	/// <see cref="ImmutableArray{T}"/> by its default comparer, which is reference equality on the underlying
 	/// array rather than structural equality of the modifiers.
 	/// </remarks>
-	public bool Equals(TypeReferenceOptions? other)
+	public bool Equals(TypeReference? other)
 	{
 		if (ReferenceEquals(this, other))
 			return true;
@@ -286,7 +315,7 @@ public sealed record TypeReferenceOptions
 		if (!string.Equals(TypeParameterName, other.TypeParameterName, StringComparison.Ordinal))
 			return false;
 
-		if (Kind == TypeReferenceKind.Named && !Type.Equals(other.Type))
+		if (Kind == TypeReferenceKind.Named && !Identity.Equals(other.Identity))
 			return false;
 
 		var count = Modifiers.IsDefaultOrEmpty ? 0 : Modifiers.Length;
@@ -315,7 +344,7 @@ public sealed record TypeReferenceOptions
 				^ (TypeParameterName is null ? 0 : StringComparer.Ordinal.GetHashCode(TypeParameterName));
 
 			if (Kind == TypeReferenceKind.Named)
-				hashCode = (hashCode * 397) ^ Type.GetHashCode();
+				hashCode = (hashCode * 397) ^ Identity.GetHashCode();
 
 			if (!Modifiers.IsDefaultOrEmpty)
 			{
@@ -332,13 +361,13 @@ public sealed record TypeReferenceOptions
 	// ---------------------------------------------------------------------------------------------
 
 	/// <summary>Gets the empty reference.</summary>
-	public static readonly TypeReferenceOptions Empty = new();
+	public static readonly TypeReference Empty = new();
 
 	/// <summary>Gets a reference to <see langword="dynamic"/>.</summary>
-	public static TypeReferenceOptions Dynamic { get; } = new() { Kind = TypeReferenceKind.Dynamic, Modifiers = [] };
+	public static TypeReference Dynamic { get; } = new() { Kind = TypeReferenceKind.Dynamic, Modifiers = [] };
 
 	/// <summary>Creates a reference to an open generic parameter.</summary>
-	public static TypeReferenceOptions ForTypeParameter(string name)
+	public static TypeReference ForTypeParameter(string name)
 	{
 		if (name == null)
 			throw new ArgumentNullException(nameof(name));
@@ -353,11 +382,11 @@ public sealed record TypeReferenceOptions
 	}
 
 	/// <summary>Creates a reference from a runtime type.</summary>
-	public static TypeReferenceOptions Create<T>() => Create(typeof(T));
+	public static TypeReference Create<T>() => Create(typeof(T));
 
 	/// <summary>Creates a reference from a runtime type.</summary>
 	/// <exception cref="ArgumentException">Thrown when the type cannot be represented.</exception>
-	public static TypeReferenceOptions Create(Type type)
+	public static TypeReference Create(Type type)
 	{
 		if (type == null)
 			throw new ArgumentNullException(nameof(type));
@@ -371,7 +400,7 @@ public sealed record TypeReferenceOptions
 
 	/// <summary>Creates a reference from a type symbol.</summary>
 	/// <exception cref="ArgumentException">Thrown when the symbol cannot be represented.</exception>
-	public static TypeReferenceOptions Create(ITypeSymbol typeSymbol)
+	public static TypeReference Create(ITypeSymbol typeSymbol)
 	{
 		if (typeSymbol == null)
 			throw new ArgumentNullException(nameof(typeSymbol));
@@ -394,7 +423,7 @@ public sealed record TypeReferenceOptions
 	/// </summary>
 	/// <returns><see langword="false"/> for unresolved, function-pointer and other unrepresentable symbols.</returns>
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0010:Add missing cases")]
-	public static bool TryCreate(ITypeSymbol? typeSymbol, out TypeReferenceOptions value)
+	public static bool TryCreate(ITypeSymbol? typeSymbol, out TypeReference value)
 	{
 		value = Empty;
 
@@ -403,14 +432,15 @@ public sealed record TypeReferenceOptions
 
 		// Fast path: the overwhelmingly common case is an unmodified named type.
 		if (
-			typeSymbol is INamedTypeSymbol { SpecialType: not SpecialType.System_Nullable_T } named
+			typeSymbol is INamedTypeSymbol named
+			&& named.OriginalDefinition.SpecialType != SpecialType.System_Nullable_T
 			&& named.NullableAnnotation != NullableAnnotation.Annotated
 		)
 		{
-			if (!TypeValueObject.TryCreate(named, out var plain))
+			if (!TypeIdentity.TryCreate(named, out var plain))
 				return false;
 
-			value = new TypeReferenceOptions(plain);
+			value = new TypeReference(plain);
 
 			return true;
 		}
@@ -438,8 +468,9 @@ public sealed record TypeReferenceOptions
 
 					continue;
 
-				case INamedTypeSymbol { SpecialType: SpecialType.System_Nullable_T } nullable
-					when nullable.TypeArguments.Length == 1:
+				case INamedTypeSymbol nullable
+					when nullable.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T
+						&& nullable.TypeArguments.Length == 1:
 					modifiers.Add(TypeModifier.Nullable);
 					current = nullable.TypeArguments[0];
 
@@ -464,10 +495,10 @@ public sealed record TypeReferenceOptions
 				return true;
 
 			default:
-				if (!TypeValueObject.TryCreate(current, out var namedType))
+				if (!TypeIdentity.TryCreate(current, out var namedType))
 					return false;
 
-				value = new TypeReferenceOptions(namedType) { Modifiers = modifiers.ToImmutable() };
+				value = new TypeReference(namedType) { Modifiers = modifiers.ToImmutable() };
 
 				return true;
 		}
@@ -477,7 +508,7 @@ public sealed record TypeReferenceOptions
 	/// Attempts to create a reference from a runtime type, peeling arrays, pointers and nullability into
 	/// modifiers.
 	/// </summary>
-	public static bool TryCreate(Type? type, out TypeReferenceOptions value)
+	public static bool TryCreate(Type? type, out TypeReference value)
 	{
 		value = Empty;
 
@@ -529,10 +560,10 @@ public sealed record TypeReferenceOptions
 			return true;
 		}
 
-		if (!TypeValueObject.TryCreate(current, out var namedType))
+		if (!TypeIdentity.TryCreate(current, out var namedType))
 			return false;
 
-		value = new TypeReferenceOptions(namedType) { Modifiers = modifiers.ToImmutable() };
+		value = new TypeReference(namedType) { Modifiers = modifiers.ToImmutable() };
 
 		return true;
 	}

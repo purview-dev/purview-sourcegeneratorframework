@@ -68,7 +68,7 @@ public class IncrementalPipelineTests2
 			var isDisabled = IncrementalPipeline.IsDisabledValueProvider(context, "DisableTestGenerator");
 			var targets = IncrementalPipeline.ForAttributeWithMetadataName(
 				context,
-				new TypeValueObject("TestAttribute", "Test"),
+				new TypeIdentity("TestAttribute", "Test"),
 				static (ctx, ct) =>
 				{
 					var symbol = ctx.SemanticModel.GetDeclaredSymbol(ctx.TargetNode, ct);
@@ -153,7 +153,7 @@ public class IncrementalPipelineTests2
 		{
 			var targets = IncrementalPipeline.ForAttributeWithMetadataName(
 				context,
-				new TypeValueObject("TestAttribute", "Test"),
+				new TypeIdentity("TestAttribute", "Test"),
 				static (ctx, ct) =>
 				{
 					var symbol = ctx.SemanticModel.GetDeclaredSymbol(ctx.TargetNode, ct);

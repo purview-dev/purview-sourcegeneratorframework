@@ -44,7 +44,7 @@ static class AttributeDataModelLibrary
 		{
 			diagnostics.Add(
 				DiagnosticInfo.Create(
-					AttributeDataModelDiagnosticDescriptors.TargetAttributeNotResolved,
+					DiagnosticLibrary.TargetAttributeNotResolved,
 					structSymbol.Locations.FirstOrDefault(static loc => loc.IsInSource),
 					structSymbol.Name
 				)
@@ -55,12 +55,12 @@ static class AttributeDataModelLibrary
 
 		var firstArgument = generateAttribute.ConstructorArguments[0].Value;
 		ITypeSymbol? targetAttributeType = null;
-		TypeValueObject targetAttribute;
+		TypeIdentity targetAttribute;
 
 		if (firstArgument is ITypeSymbol typeSymbol)
 		{
 			targetAttributeType = typeSymbol;
-			targetAttribute = new TypeValueObject(typeSymbol);
+			targetAttribute = new TypeIdentity(typeSymbol);
 		}
 		else if (firstArgument is string targetAttributeName)
 		{
@@ -70,7 +70,7 @@ static class AttributeDataModelLibrary
 		{
 			diagnostics.Add(
 				DiagnosticInfo.Create(
-					AttributeDataModelDiagnosticDescriptors.TargetAttributeNotResolved,
+					DiagnosticLibrary.TargetAttributeNotResolved,
 					structSymbol.Locations.FirstOrDefault(static loc => loc.IsInSource),
 					structSymbol.Name
 				)
@@ -94,7 +94,7 @@ static class AttributeDataModelLibrary
 		{
 			diagnostics.Add(
 				DiagnosticInfo.Create(
-					AttributeDataModelDiagnosticDescriptors.AutoDiscoverRequiresType,
+					DiagnosticLibrary.AutoDiscoverRequiresType,
 					structSymbol.Locations.FirstOrDefault(static loc => loc.IsInSource)
 				)
 			);
@@ -195,7 +195,7 @@ static class AttributeDataModelLibrary
 			{
 				diagnostics.Add(
 					DiagnosticInfo.Create(
-						AttributeDataModelDiagnosticDescriptors.PropertyTypeNotSupported,
+						DiagnosticLibrary.PropertyTypeNotSupported,
 						parameter.Locations.FirstOrDefault(static loc => loc.IsInSource),
 						propertyName,
 						TypeHelpers.ToFullyQualifiedDisplayString(propertyType)
@@ -216,7 +216,7 @@ static class AttributeDataModelLibrary
 			{
 				diagnostics.Add(
 					DiagnosticInfo.Create(
-						AttributeDataModelDiagnosticDescriptors.NestedModelNotGenerated,
+						DiagnosticLibrary.NestedModelNotGenerated,
 						parameter.Locations.FirstOrDefault(static loc => loc.IsInSource),
 						TypeHelpers.ToFullyQualifiedDisplayString(propertyType)
 					)
@@ -227,7 +227,7 @@ static class AttributeDataModelLibrary
 			{
 				diagnostics.Add(
 					DiagnosticInfo.Create(
-						AttributeDataModelDiagnosticDescriptors.TypeArgumentPropertyTypeInvalid,
+						DiagnosticLibrary.TypeArgumentPropertyTypeInvalid,
 						parameter.Locations.FirstOrDefault(static loc => loc.IsInSource),
 						propertyName,
 						TypeHelpers.ToFullyQualifiedDisplayString(propertyType)
@@ -239,7 +239,7 @@ static class AttributeDataModelLibrary
 			{
 				diagnostics.Add(
 					DiagnosticInfo.Create(
-						AttributeDataModelDiagnosticDescriptors.IsEnumRequiresStringType,
+						DiagnosticLibrary.IsEnumRequiresStringType,
 						parameter.Locations.FirstOrDefault(static loc => loc.IsInSource),
 						propertyName,
 						TypeHelpers.ToFullyQualifiedDisplayString(propertyType)
@@ -548,7 +548,7 @@ static class AttributeDataModelLibrary
 				{
 					diagnostics.Add(
 						DiagnosticInfo.Create(
-							AttributeDataModelDiagnosticDescriptors.PropertyTypeNotSupported,
+							DiagnosticLibrary.PropertyTypeNotSupported,
 							Location.None,
 							propertyName,
 							TypeHelpers.ToFullyQualifiedDisplayString(parameter.Type)
@@ -605,7 +605,7 @@ static class AttributeDataModelLibrary
 			{
 				diagnostics.Add(
 					DiagnosticInfo.Create(
-						AttributeDataModelDiagnosticDescriptors.PropertyTypeNotSupported,
+						DiagnosticLibrary.PropertyTypeNotSupported,
 						Location.None,
 						propertyName,
 						TypeHelpers.ToFullyQualifiedDisplayString(property.Type)
@@ -676,7 +676,7 @@ static class AttributeDataModelLibrary
 
 			diagnostics.Add(
 				DiagnosticInfo.Create(
-					AttributeDataModelDiagnosticDescriptors.DefaultValueNotSupported,
+					DiagnosticLibrary.DefaultValueNotSupported,
 					Location.None,
 					defaultValue.ToString() ?? "null",
 					TypeHelpers.ToFullyQualifiedDisplayString(originalType)
@@ -831,7 +831,7 @@ static class AttributeDataModelLibrary
 			: GetAttribute(namedType, GeneratorTypeLibrary.Attirbutes.GenerateAttribute) is not null;
 	}
 
-	static AttributeData? GetAttribute(ISymbol symbol, TypeValueObject attributeType)
+	static AttributeData? GetAttribute(ISymbol symbol, TypeIdentity attributeType)
 	{
 		foreach (var attribute in symbol.GetAttributes())
 		{
@@ -842,15 +842,15 @@ static class AttributeDataModelLibrary
 		return null;
 	}
 
-	static TypeValueObject ParseTypeValueObject(string fullyQualifiedName)
+	static TypeIdentity ParseTypeValueObject(string fullyQualifiedName)
 	{
 		var lastDot = fullyQualifiedName.LastIndexOf('.');
 		if (lastDot < 0)
-			return new TypeValueObject(fullyQualifiedName, null);
+			return new TypeIdentity(fullyQualifiedName, null);
 
 		var typeName = fullyQualifiedName.Substring(lastDot + 1);
 		var namespaceName = fullyQualifiedName.Substring(0, lastDot);
-		return new TypeValueObject(typeName, namespaceName);
+		return new TypeIdentity(typeName, namespaceName);
 	}
 
 	static T? GetNamedArgument<T>(AttributeData attributeData, string name, T? defaultValue)

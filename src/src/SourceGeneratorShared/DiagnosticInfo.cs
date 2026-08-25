@@ -2,7 +2,7 @@ using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 
-namespace Purview.SourceGeneratorFramework.Models;
+namespace Purview.SourceGeneratorFramework;
 
 /// <summary>
 /// A serializable representation of a <see cref="Diagnostic"/> that can be carried through incremental source generator pipelines.
@@ -37,38 +37,6 @@ public sealed record DiagnosticInfo(
 	/// <exception cref="ArgumentNullException"></exception>
 	public static DiagnosticInfo Create(DiagnosticDescriptor descriptor, params object[] messageArgs) =>
 		Create(descriptor, location: null, additionalLocations: null, messageArgs: messageArgs);
-
-	/// <summary>
-	/// Creates a <see cref="DiagnosticInfo"/> from a descriptor and a target symbol descriptor.
-	/// </summary>
-	/// <param name="descriptor">The diagnostic descriptor.</param>
-	/// <param name="target">The target symbol descriptor.</param>
-	/// <param name="messageArgs">The message arguments.</param>
-	/// <returns>A <see cref="DiagnosticInfo"/> instance.</returns>
-	/// <exception cref="ArgumentNullException"></exception>
-	public static DiagnosticInfo Create(
-		DiagnosticDescriptor descriptor,
-		TargetSymbolDescriptor target,
-		params object[] messageArgs
-	)
-	{
-		if (target is null)
-			throw new ArgumentNullException(nameof(target));
-
-		var location = target.Declaration?.GetLocation();
-		ImmutableArray<Location> additionalLocations = [];
-		if (location is null)
-		{
-			location = target.Symbol.Locations.FirstOrDefault(static loc => loc.IsInSource) is { } firstLocation
-				? location = firstLocation
-				: location = null;
-			additionalLocations = [.. target.Symbol.Locations.Skip(1).Where(static loc => loc.IsInSource)];
-		}
-		else
-			additionalLocations = [.. target.Symbol.Locations.Where(static loc => loc.IsInSource)];
-
-		return Create(descriptor, location, additionalLocations: additionalLocations, messageArgs);
-	}
 
 	/// <summary>
 	/// Creates a <see cref="DiagnosticInfo"/> from a descriptor and optional location.

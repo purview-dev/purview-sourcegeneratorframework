@@ -1,4 +1,4 @@
-namespace Purview.SourceGeneratorFramework.Models;
+namespace Purview.SourceGeneratorFramework;
 
 /// <summary>
 /// Represents the result of an incremental source generator transform, carrying either a value, diagnostics, or both.

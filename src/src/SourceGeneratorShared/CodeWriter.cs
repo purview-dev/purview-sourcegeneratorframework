@@ -804,7 +804,7 @@ public sealed partial class CodeWriter
 	/// <param name="bodyWriter">The action that writes the namespace body.</param>
 	/// <returns>The current writer.</returns>
 	/// <example><code>writer.WriteBlockNamespace(new TypeValueObject("C", "Example").AsTypeReference(), body =&gt; body.WriteLine("class C { }"));</code></example>
-	public CodeWriter WriteBlockNamespace(TypeReferenceOptions typeReference, Action<CodeWriter> bodyWriter)
+	public CodeWriter WriteBlockNamespace(TypeReference typeReference, Action<CodeWriter> bodyWriter)
 	{
 		if (bodyWriter is null)
 			throw new ArgumentNullException(nameof(bodyWriter));
@@ -821,8 +821,8 @@ public sealed partial class CodeWriter
 	/// <param name="typeReference">The type reference whose namespace will be used, or a value with no namespace to return an empty scope.</param>
 	/// <returns>The namespace body scope, or an empty scope when no namespace is supplied.</returns>
 	/// <example><code>using (writer.WriteBlockNamespaceScope(new TypeValueObject("C", "Example").AsTypeReference())) writer.WriteLine("class C { }");</code></example>
-	public IDisposable WriteBlockNamespaceScope(TypeReferenceOptions? typeReference) =>
-		typeReference is null ? NoOpScope.Instance : WriteBlockNamespaceScope(typeReference.Type.Namespace);
+	public IDisposable WriteBlockNamespaceScope(TypeReference? typeReference) =>
+		typeReference is null ? NoOpScope.Instance : WriteBlockNamespaceScope(typeReference.Identity.Namespace);
 
 	/// <summary>Writes a block-scoped namespace and invokes a callback for its body.</summary>
 	/// <param name="namespaceName">The namespace, or <see langword="null"/> to omit the wrapper.</param>
@@ -857,8 +857,8 @@ public sealed partial class CodeWriter
 	/// <param name="typeReference">The type reference whose namespace will be used, or a value with no namespace to write nothing.</param>
 	/// <returns>The current writer.</returns>
 	/// <example><code>writer.WriteFileScopedNamespace(new TypeValueObject("C", "Example").AsTypeReference());</code></example>
-	public CodeWriter WriteFileScopedNamespace(TypeReferenceOptions? typeReference) =>
-		typeReference is null ? this : WriteFileScopedNamespace(typeReference.Type.Namespace);
+	public CodeWriter WriteFileScopedNamespace(TypeReference? typeReference) =>
+		typeReference is null ? this : WriteFileScopedNamespace(typeReference.Identity.Namespace);
 
 	/// <summary>
 	/// Writes a class declaration from structured options and returns its body scope.
@@ -920,7 +920,7 @@ public sealed partial class CodeWriter
 		if (targets == 0 || (targets & ~AttributeTargets.All) != 0)
 			throw new ArgumentOutOfRangeException(nameof(targets), targets, "Invalid attribute targets.");
 
-		AttributeDeclarationOptions attributeUsage = new(new TypeValueObject("AttributeUsageAttribute", "System"))
+		AttributeDeclarationOptions attributeUsage = new(new TypeIdentity("AttributeUsageAttribute", "System"))
 		{
 			Arguments =
 			[
@@ -933,7 +933,7 @@ public sealed partial class CodeWriter
 		return WriteClass(
 			declaration with
 			{
-				BaseType = declaration.BaseType ?? new TypeValueObject("Attribute", "System"),
+				BaseType = declaration.BaseType ?? new TypeIdentity("Attribute", "System"),
 				Attributes = declaration.Attributes.Insert(0, attributeUsage),
 				IncludeEmbeddedAttribute = declaration.IncludeEmbeddedAttribute ?? true,
 			},
@@ -1262,8 +1262,10 @@ public sealed partial class CodeWriter
 	{
 		if (bodyWriter is null)
 			throw new ArgumentNullException(nameof(bodyWriter));
+
 		using (WriteTypeScope(declaration))
 			bodyWriter(this);
+
 		return this;
 	}
 
@@ -1286,7 +1288,7 @@ public sealed partial class CodeWriter
 		else if (declaration.Accessibility is { } accessibility)
 			WriteAccessibility(accessibility).Write(' ');
 
-		Write(declaration.Reference.Type.Name);
+		Write(declaration.Reference.Identity.Name);
 		if (declaration.WriteParametersOnSeparateLines)
 			WriteParameterList(declaration.Parameters, writeOnSeparateLines: true, writeWhenEmpty: true);
 		else
@@ -1509,7 +1511,7 @@ public sealed partial class CodeWriter
 		string methodName,
 		IEnumerable<MethodCallArgumentOptions> arguments,
 		string? receiver = null,
-		IEnumerable<TypeReferenceOptions>? genericArguments = null,
+		IEnumerable<TypeReference>? genericArguments = null,
 		bool writeArgumentsOnSeparateLines = false
 	) =>
 		WriteMethodCall(
@@ -1532,7 +1534,7 @@ public sealed partial class CodeWriter
 		string methodName,
 		IEnumerable<MethodCallArgumentOptions> arguments,
 		string? receiver = null,
-		IEnumerable<TypeReferenceOptions>? genericArguments = null,
+		IEnumerable<TypeReference>? genericArguments = null,
 		bool writeArgumentsOnSeparateLines = false
 	) =>
 		WriteMethodCallCore(
@@ -1558,7 +1560,7 @@ public sealed partial class CodeWriter
 		string methodName,
 		IEnumerable<string?> arguments,
 		string? receiver = null,
-		IEnumerable<TypeReferenceOptions>? genericArguments = null,
+		IEnumerable<TypeReference>? genericArguments = null,
 		bool writeArgumentsOnSeparateLines = false
 	) => WriteMethodCallCore(methodName, arguments, receiver, genericArguments, writeArgumentsOnSeparateLines, false);
 
@@ -1566,7 +1568,7 @@ public sealed partial class CodeWriter
 		string methodName,
 		IEnumerable<string?> arguments,
 		string? receiver,
-		IEnumerable<TypeReferenceOptions>? genericArguments,
+		IEnumerable<TypeReference>? genericArguments,
 		bool writeArgumentsOnSeparateLines,
 		bool isAwaited
 	)
@@ -1762,7 +1764,7 @@ public sealed partial class CodeWriter
 
 	/// <summary>Writes a throw statement.</summary>
 	/// <example><code>writer.WriteThrow("new InvalidOperationException()");</code></example>
-	public CodeWriter WriteThrow(TypeReferenceOptions exceptionType, string? message = null)
+	public CodeWriter WriteThrow(TypeReference exceptionType, string? message = null)
 	{
 		if (exceptionType.IsNullOrEmpty())
 			throw new ArgumentException("Exception type cannot be null or empty.", nameof(exceptionType));
@@ -2097,7 +2099,7 @@ public sealed partial class CodeWriter
 		return length;
 	}
 
-	static TypeReferenceOptions GetParameterType(ParameterDeclarationOptions parameter) => parameter.Reference;
+	static TypeReference GetParameterType(ParameterDeclarationOptions parameter) => parameter.Reference;
 
 	static string RenderCallArgument(MethodCallArgumentOptions argument)
 	{
@@ -2132,7 +2134,7 @@ public sealed partial class CodeWriter
 		var target = attribute.Target ?? defaultTarget;
 		if (target is not null)
 			Write(target).Write(": ");
-		Write(TypeHelpers.GetTypeName(attribute.Reference.Type.RenderFullName));
+		Write(attribute.Reference.RenderAttributeName);
 		if (!attribute.Arguments.IsDefaultOrEmpty)
 		{
 			Write('(');
@@ -2152,7 +2154,7 @@ public sealed partial class CodeWriter
 
 	static int GetAttributeLength(AttributeDeclarationOptions attribute)
 	{
-		var length = attribute.Reference.Type.RenderAttributeName.Length + 2;
+		var length = attribute.Reference.RenderAttributeName.Length + 2;
 		if (attribute.Target is not null)
 			length += attribute.Target.Length + 2;
 		if (attribute.Arguments.IsDefaultOrEmpty)
@@ -2421,7 +2423,7 @@ public sealed partial class CodeWriter
 		}
 	}
 
-	static bool HasNonEmptyTypeReferences(ImmutableArray<TypeReferenceOptions> types)
+	static bool HasNonEmptyTypeReferences(ImmutableArray<TypeReference> types)
 	{
 		for (var index = 0; !types.IsDefaultOrEmpty && index < types.Length; index++)
 		{
@@ -2575,7 +2577,7 @@ public sealed partial class CodeWriter
 		if (
 			declaration.Kind == TypeDeclarationKind.Enum
 			&& declaration.EnumUnderlyingType is not null
-			&& string.IsNullOrWhiteSpace(declaration.EnumUnderlyingType.Type.Name)
+			&& string.IsNullOrWhiteSpace(declaration.EnumUnderlyingType.Identity.Name)
 		)
 			throw new ArgumentException("Enum underlying type cannot be whitespace.", nameof(declaration));
 		if (declaration.Kind == TypeDeclarationKind.Delegate)
@@ -2769,7 +2771,7 @@ public sealed partial class CodeWriter
 		{
 			if (
 				string.IsNullOrWhiteSpace(parameters[index].Name)
-				|| string.IsNullOrWhiteSpace(parameters[index].Reference.Type.Name)
+				|| string.IsNullOrWhiteSpace(parameters[index].Reference.Identity.Name)
 			)
 				throw new ArgumentException(message, parameterName);
 			else
@@ -2780,7 +2782,7 @@ public sealed partial class CodeWriter
 		}
 	}
 
-	CodeWriter WriteTypeReference(TypeReferenceOptions reference)
+	CodeWriter WriteTypeReference(TypeReference reference)
 	{
 		if (reference.IsEmpty)
 			return this;
@@ -2811,21 +2813,24 @@ public sealed partial class CodeWriter
 		return this;
 	}
 
-	static int GetTypeReferenceLength(TypeReferenceOptions type) => type.IsEmpty ? 0 : type.RenderFullName.Length;
+	static int GetTypeReferenceLength(TypeReference type) => type.IsEmpty ? 0 : type.RenderFullName.Length;
 
-	static void ValidateTypeReference(TypeReferenceOptions reference, string parameterName)
+	static void ValidateTypeReference(TypeReference reference, string parameterName)
 	{
 		if (reference.IsEmpty)
 			return;
 
-		var type = reference.Type;
+		var type = reference.Identity;
 		if (string.IsNullOrWhiteSpace(type.Name))
 			throw new ArgumentException("Type name cannot be null or whitespace.", parameterName);
 		if (type.GenericArity < 0)
 			throw new ArgumentException("Generic arity cannot be negative.", parameterName);
-		if (type.GenericArity != 0 && !type.TypeArguments.IsDefaultOrEmpty)
+		if (
+			!type.TypeArguments.IsDefaultOrEmpty
+			&& (type.GenericArity == 0 || type.TypeArguments.Length != type.GenericArity)
+		)
 			throw new ArgumentException(
-				"A type cannot have both open generic arity and concrete generic arguments.",
+				"A constructed generic type must have one type argument for each declared generic parameter.",
 				parameterName
 			);
 		for (var index = 0; !type.TypeArguments.IsDefaultOrEmpty && index < type.TypeArguments.Length; index++)

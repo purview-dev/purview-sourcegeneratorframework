@@ -2,7 +2,7 @@ using Microsoft.CodeAnalysis;
 
 namespace Purview.SourceGeneratorFramework.Generators.Model;
 
-static class AttributeDataModelDiagnosticDescriptors
+static class DiagnosticLibrary
 {
 	public static readonly DiagnosticDescriptor TargetAttributeNotResolved = new(
 		"ADM0001",

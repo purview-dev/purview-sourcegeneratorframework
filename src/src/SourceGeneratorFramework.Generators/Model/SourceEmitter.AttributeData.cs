@@ -21,9 +21,8 @@ partial class SourceEmitter
 					bodyWriter
 						.XmlSummary("Initializes the attribute for the target attribute type.")
 						.WriteConstructor(
-							new(GeneratorTypeLibrary.Attirbutes.GenerateAttribute)
+							new(GeneratorTypeLibrary.Attirbutes.GenerateAttribute, TypeDeclarationAccessibility.Public)
 							{
-								Accessibility = TypeDeclarationAccessibility.Public,
 								Parameters = [new("targetAttribute", PurviewTypeLibrary.System.Type)],
 							},
 							constructorWriter =>
@@ -35,9 +34,8 @@ partial class SourceEmitter
 					bodyWriter
 						.XmlSummary("Initializes the attribute for the target attribute name.")
 						.WriteConstructor(
-							new(GeneratorTypeLibrary.Attirbutes.GenerateAttribute)
+							new(GeneratorTypeLibrary.Attirbutes.GenerateAttribute, TypeDeclarationAccessibility.Public)
 							{
-								Accessibility = TypeDeclarationAccessibility.Public,
 								Parameters = [new("targetAttributeName", PurviewTypeLibrary.System.String)],
 							},
 							constructorWriter =>
@@ -49,27 +47,32 @@ partial class SourceEmitter
 					bodyWriter
 						.XmlSummary("Gets the attribute type represented by the generated model.")
 						.WriteProperty(
-							new("TargetAttribute", PurviewTypeLibrary.System.Type.MakeNullable())
-							{
-								Accessibility = TypeDeclarationAccessibility.Public,
-							}
+							new(
+								"TargetAttribute",
+								PurviewTypeLibrary.System.Type.MakeNullable(),
+								TypeDeclarationAccessibility.Public
+							)
 						);
 
 					bodyWriter
 						.XmlSummary("Gets the attribute type name represented by the generated model.")
 						.WriteProperty(
-							new("TargetAttributeName", PurviewTypeLibrary.System.String.MakeNullable())
-							{
-								Accessibility = TypeDeclarationAccessibility.Public,
-							}
+							new(
+								"TargetAttributeName",
+								PurviewTypeLibrary.System.String.MakeNullable(),
+								TypeDeclarationAccessibility.Public
+							)
 						);
 
 					bodyWriter
 						.XmlSummary("Gets or sets whether derived attribute types are accepted.")
 						.WriteProperty(
-							new("MatchByInheritance", PurviewTypeLibrary.System.Boolean)
+							new(
+								"MatchByInheritance",
+								PurviewTypeLibrary.System.Boolean,
+								TypeDeclarationAccessibility.Public
+							)
 							{
-								Accessibility = TypeDeclarationAccessibility.Public,
 								IsInitOnly = true,
 							}
 						);
@@ -77,9 +80,8 @@ partial class SourceEmitter
 					bodyWriter
 						.XmlSummary("Gets or sets whether the attribute should be automatically discovered.")
 						.WriteProperty(
-							new("AutoDiscover", PurviewTypeLibrary.System.Boolean)
+							new("AutoDiscover", PurviewTypeLibrary.System.Boolean, TypeDeclarationAccessibility.Public)
 							{
-								Accessibility = TypeDeclarationAccessibility.Public,
 								IsInitOnly = true,
 							}
 						);
@@ -106,9 +108,8 @@ partial class SourceEmitter
 							$"Initializes a new instance of the <see cref=\"{GeneratorTypeLibrary.Attirbutes.PropertyAttribute}\"/> class."
 						)
 						.WriteConstructor(
-							new(GeneratorTypeLibrary.Attirbutes.PropertyAttribute)
+							new(GeneratorTypeLibrary.Attirbutes.PropertyAttribute, TypeDeclarationAccessibility.Public)
 							{
-								Accessibility = TypeDeclarationAccessibility.Public,
 								Parameters =
 								[
 									new("defaultValue", PurviewTypeLibrary.System.Object.MakeNullable())
@@ -123,9 +124,12 @@ partial class SourceEmitter
 					bodyWriter
 						.XmlSummary("Gets or sets an optional named-property mapping.")
 						.WriteProperty(
-							new("Name", PurviewTypeLibrary.System.String.MakeNullable())
+							new(
+								"Name",
+								PurviewTypeLibrary.System.String.MakeNullable(),
+								TypeDeclarationAccessibility.Public
+							)
 							{
-								Accessibility = TypeDeclarationAccessibility.Public,
 								IsInitOnly = true,
 							}
 						);
@@ -133,9 +137,12 @@ partial class SourceEmitter
 					bodyWriter
 						.XmlSummary("Gets or sets the value used when the named argument is not specified.")
 						.WriteProperty(
-							new("DefaultValue", PurviewTypeLibrary.System.Object.MakeNullable())
+							new(
+								"DefaultValue",
+								PurviewTypeLibrary.System.Object.MakeNullable(),
+								TypeDeclarationAccessibility.Public
+							)
 							{
-								Accessibility = TypeDeclarationAccessibility.Public,
 								IsInitOnly = true,
 							}
 						);
@@ -145,9 +152,8 @@ partial class SourceEmitter
 							"Gets or sets a value indicating whether the property represents an enum whose type is not known to the generator."
 						)
 						.WriteProperty(
-							new("IsEnum", PurviewTypeLibrary.System.Boolean)
+							new("IsEnum", PurviewTypeLibrary.System.Boolean, TypeDeclarationAccessibility.Public)
 							{
-								Accessibility = TypeDeclarationAccessibility.Public,
 								IsInitOnly = true,
 							}
 						);
@@ -173,57 +179,65 @@ partial class SourceEmitter
 						.XmlSummary(
 							$"Initializes a new instance of the <see cref=\"{GeneratorTypeLibrary.Attirbutes.ArgumentAttribute}\"/> class."
 						)
+						.XmlParam(
+							"name",
+							"The name of the constructor parameter. If this value is not specified, the parameter name will be used."
+						)
+						.XmlParam("defaultValue", "The default value of the constructor parameter.")
 						.WriteConstructor(
-							new(GeneratorTypeLibrary.Attirbutes.ArgumentAttribute)
+							new(GeneratorTypeLibrary.Attirbutes.ArgumentAttribute, TypeDeclarationAccessibility.Public)
 							{
-								Accessibility = TypeDeclarationAccessibility.Public,
+								Parameters =
+								[
+									new("name", PurviewTypeLibrary.System.String.MakeNullable())
+									{
+										DefaultValue = "null",
+									},
+									new("defaultValue", PurviewTypeLibrary.System.Object.MakeNullable())
+									{
+										DefaultValue = "null",
+									},
+								],
 							},
-							bodyWriter => bodyWriter.Comment("Empty")
+							writerBody =>
+								writer.WriteAssignment("Name", "name").WriteAssignment("DefaultValue", "defaultValue")
 						);
 
-					bodyWriter.WriteConstructor(
-						new(GeneratorTypeLibrary.Attirbutes.ArgumentAttribute)
-						{
-							Accessibility = TypeDeclarationAccessibility.Public,
-							Parameters =
-							[
-								new("name", PurviewTypeLibrary.System.String),
-								new("defaultValue", PurviewTypeLibrary.System.Object.MakeNullable())
-								{
-									DefaultValue = "null",
-								},
-							],
-						},
-						writerBody =>
-							writer
-								.WriteLine(
-									"Name = name ?? throw new global::System.ArgumentNullException(nameof(name));"
-								)
-								.WriteLine("DefaultValue = defaultValue;")
-					);
-
-					bodyWriter.WriteConstructor(
-						new(GeneratorTypeLibrary.Attirbutes.ArgumentAttribute)
-						{
-							Accessibility = TypeDeclarationAccessibility.Public,
-							Parameters =
-							[
-								new("index", PurviewTypeLibrary.System.Int32),
-								new("defaultValue", PurviewTypeLibrary.System.Object.MakeNullable())
-								{
-									DefaultValue = "null",
-								},
-							],
-						},
-						writerBody => writer.WriteLine("Index = index;").WriteLine("DefaultValue = defaultValue;")
-					);
+					bodyWriter
+						.XmlSummary(
+							$"Initializes a new instance of the <see cref=\"{GeneratorTypeLibrary.Attirbutes.ArgumentAttribute}\"/> class."
+						)
+						.XmlParam("index", "The index of the constructor parameter.")
+						.XmlParam("defaultValue", "The default value of the constructor parameter.")
+						.WriteConstructor(
+							new(GeneratorTypeLibrary.Attirbutes.ArgumentAttribute, TypeDeclarationAccessibility.Public)
+							{
+								Parameters =
+								[
+									new("index", PurviewTypeLibrary.System.Int32),
+									new("defaultValue", PurviewTypeLibrary.System.Object.MakeNullable())
+									{
+										DefaultValue = "null",
+									},
+								],
+							},
+							writerBody => writer.WriteLine("Index = index;").WriteLine("DefaultValue = defaultValue;")
+						);
 
 					bodyWriter
 						.XmlSummary("Gets or sets the constructor parameter name.")
+						.XmlRemarks(
+							"If the <see cref=\"Index\" /> property is -1, this value will be used to match the constructor parameter.",
+							"The property uses a camel-case comparison to match the parameter name.",
+							$"A property name of {CodeWriter.XmlInlineCode("MyProperty")} will match a constructor parameter named {CodeWriter.XmlInlineCode("myProperty")}."
+						)
 						.WriteProperty(
-							new("Name", PurviewTypeLibrary.System.String.MakeNullable())
+							new(
+								"Name",
+								PurviewTypeLibrary.System.String.MakeNullable(),
+								TypeDeclarationAccessibility.Public
+							)
 							{
-								Accessibility = TypeDeclarationAccessibility.Public,
 								IsInitOnly = true,
 							}
 						);
@@ -231,9 +245,8 @@ partial class SourceEmitter
 					bodyWriter
 						.XmlSummary("Gets or sets the constructor argument index.")
 						.WriteProperty(
-							new("Index", PurviewTypeLibrary.System.Int32)
+							new("Index", PurviewTypeLibrary.System.Int32, TypeDeclarationAccessibility.Public)
 							{
-								Accessibility = TypeDeclarationAccessibility.Public,
 								IsInitOnly = true,
 								Initializer = "-1",
 							}
@@ -242,9 +255,12 @@ partial class SourceEmitter
 					bodyWriter
 						.XmlSummary("Gets or sets the value used when the constructor argument is not specified.")
 						.WriteProperty(
-							new("DefaultValue", PurviewTypeLibrary.System.Object.MakeNullable())
+							new(
+								"DefaultValue",
+								PurviewTypeLibrary.System.Object.MakeNullable(),
+								TypeDeclarationAccessibility.Public
+							)
 							{
-								Accessibility = TypeDeclarationAccessibility.Public,
 								IsInitOnly = true,
 							}
 						);
@@ -254,9 +270,8 @@ partial class SourceEmitter
 							"Gets or sets a value indicating whether the argument represents an enum whose type is not known to the generator."
 						)
 						.WriteProperty(
-							new("IsEnum", PurviewTypeLibrary.System.Boolean)
+							new("IsEnum", PurviewTypeLibrary.System.Boolean, TypeDeclarationAccessibility.Public)
 							{
-								Accessibility = TypeDeclarationAccessibility.Public,
 								IsInitOnly = true,
 							}
 						);
@@ -311,19 +326,21 @@ partial class SourceEmitter
 					bodyWriter
 						.XmlSummary("Initializes a new instance marking the first type argument.")
 						.WriteConstructor(
-							new(GeneratorTypeLibrary.Attirbutes.GenericTypeArgumentAttribute)
-							{
-								Accessibility = TypeDeclarationAccessibility.Public,
-							},
+							new(
+								GeneratorTypeLibrary.Attirbutes.GenericTypeArgumentAttribute,
+								TypeDeclarationAccessibility.Public
+							),
 							constructorWriter => constructorWriter.Comment("Empty")
 						);
 
 					bodyWriter
 						.XmlSummary("Initializes a new instance marking the type argument at the specified index.")
 						.WriteConstructor(
-							new(GeneratorTypeLibrary.Attirbutes.GenericTypeArgumentAttribute)
+							new(
+								GeneratorTypeLibrary.Attirbutes.GenericTypeArgumentAttribute,
+								TypeDeclarationAccessibility.Public
+							)
 							{
-								Accessibility = TypeDeclarationAccessibility.Public,
 								Parameters = [new("index", PurviewTypeLibrary.System.Int32)],
 							},
 							constructorWriter => constructorWriter.WriteLine("Index = index;")
@@ -334,9 +351,11 @@ partial class SourceEmitter
 							"Initializes a new instance marking the type argument with the specified type parameter name."
 						)
 						.WriteConstructor(
-							new(GeneratorTypeLibrary.Attirbutes.GenericTypeArgumentAttribute)
+							new(
+								GeneratorTypeLibrary.Attirbutes.GenericTypeArgumentAttribute,
+								TypeDeclarationAccessibility.Public
+							)
 							{
-								Accessibility = TypeDeclarationAccessibility.Public,
 								Parameters = [new("name", PurviewTypeLibrary.System.String)],
 							},
 							constructorWriter =>
@@ -348,9 +367,12 @@ partial class SourceEmitter
 					bodyWriter
 						.XmlSummary("Gets or sets the type parameter name.")
 						.WriteProperty(
-							new("Name", PurviewTypeLibrary.System.String.MakeNullable())
+							new(
+								"Name",
+								PurviewTypeLibrary.System.String.MakeNullable(),
+								TypeDeclarationAccessibility.Public
+							)
 							{
-								Accessibility = TypeDeclarationAccessibility.Public,
 								IsInitOnly = true,
 							}
 						);
@@ -358,9 +380,8 @@ partial class SourceEmitter
 					bodyWriter
 						.XmlSummary("Gets or sets the type argument index.")
 						.WriteProperty(
-							new("Index", PurviewTypeLibrary.System.Int32)
+							new("Index", PurviewTypeLibrary.System.Int32, TypeDeclarationAccessibility.Public)
 							{
-								Accessibility = TypeDeclarationAccessibility.Public,
 								IsInitOnly = true,
 								Initializer = "-1",
 							}

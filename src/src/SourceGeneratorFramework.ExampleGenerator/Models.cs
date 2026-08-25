@@ -55,3 +55,23 @@ public readonly partial record struct GenerateServiceAttributeData(
 		string? Lifetime,
 	[Property] string? Name
 );
+
+/// <summary>
+/// Describes a discovered service target.
+/// </summary>
+readonly record struct ServiceTarget(string TypeName, string ClassName, string Name, string LifetimeMemberName)
+{
+	/// <summary>
+	/// An empty <see cref="ServiceTarget"/>.
+	/// </summary>
+	public static readonly ServiceTarget Empty;
+}
+
+/// <summary>
+/// Aggregated generation inputs for the service registration generator.
+/// </summary>
+readonly record struct ServiceRegistrationGenerationModel(
+	GenerationContext Context,
+	EquatableArray<ServiceTarget> Targets,
+	bool EmitServiceInfo = false
+);

@@ -1,9 +1,9 @@
 namespace Purview.SourceGeneratorFramework.ExampleGenerator;
 
 /// <summary>
-/// Provides <see cref="TypeValueObject"/> instances used by the service registration generator.
+/// Provides <see cref="TypeIdentity"/> instances used by the service registration generator.
 /// </summary>
-static class ServiceRegistrationGeneratorTypeLibrary
+static class TypeLibrary
 {
 	/// <summary>
 	/// Common types from the <c>Microsoft.Extensions.DependencyInjection</c> namespace.
@@ -23,7 +23,7 @@ static class ServiceRegistrationGeneratorTypeLibrary
 				/// <summary>
 				/// <c>Microsoft.Extensions.DependencyInjection.IServiceCollection</c>.
 				/// </summary>
-				public static readonly TypeValueObject IServiceCollection = new(
+				public static readonly TypeIdentity IServiceCollection = new(
 					"IServiceCollection",
 					"Microsoft.Extensions.DependencyInjection"
 				);
@@ -31,7 +31,7 @@ static class ServiceRegistrationGeneratorTypeLibrary
 				/// <summary>
 				/// <c>Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions</c>.
 				/// </summary>
-				public static readonly TypeValueObject ServiceCollectionServiceExtensions = new(
+				public static readonly TypeIdentity ServiceCollectionServiceExtensions = new(
 					"ServiceCollectionServiceExtensions",
 					"Microsoft.Extensions.DependencyInjection"
 				);
@@ -42,7 +42,7 @@ static class ServiceRegistrationGeneratorTypeLibrary
 	/// <summary>
 	/// The <c>[GenerateService]</c> attribute type.
 	/// </summary>
-	public static readonly TypeValueObject GenerateServiceAttribute = new(
+	public static readonly TypeIdentity GenerateServiceAttribute = new(
 		"GenerateServiceAttribute",
 		"Purview.SourceGeneratorFramework.Examples"
 	);
@@ -50,7 +50,7 @@ static class ServiceRegistrationGeneratorTypeLibrary
 	/// <summary>
 	/// The <c>ServiceLifetime</c> enum type.
 	/// </summary>
-	public static readonly TypeValueObject ServiceLifetime = new(
+	public static readonly TypeIdentity ServiceLifetime = new(
 		"ServiceLifetime",
 		"Purview.SourceGeneratorFramework.Examples"
 	);
@@ -58,7 +58,7 @@ static class ServiceRegistrationGeneratorTypeLibrary
 	/// <summary>
 	/// The static <c>ServiceCollectionExtensions</c> class.
 	/// </summary>
-	public static readonly TypeValueObject ServiceCollectionExtensions = new(
+	public static readonly TypeIdentity ServiceCollectionExtensions = new(
 		"ServiceCollectionExtensions",
 		"Purview.SourceGeneratorFramework.Examples"
 	);
@@ -66,8 +66,5 @@ static class ServiceRegistrationGeneratorTypeLibrary
 	/// <summary>
 	/// The static <c>ServiceInfo</c> class.
 	/// </summary>
-	public static readonly TypeValueObject ServiceInfo = new(
-		"ServiceInfo",
-		"Purview.SourceGeneratorFramework.Examples"
-	);
+	public static readonly TypeIdentity ServiceInfo = new("ServiceInfo", "Purview.SourceGeneratorFramework.Examples");
 }

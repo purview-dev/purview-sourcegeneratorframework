@@ -1,6 +1,6 @@
 using Microsoft.CodeAnalysis;
 
-namespace Purview.SourceGeneratorFramework.Models;
+namespace Purview.SourceGeneratorFramework;
 
 /// <summary>
 /// Resolves the type carried by any symbol, so that matching can be applied uniformly to members.

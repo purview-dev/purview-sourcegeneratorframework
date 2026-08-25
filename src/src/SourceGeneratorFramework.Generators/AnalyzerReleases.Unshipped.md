@@ -10,4 +10,3 @@
 | ADM0007 | AutoDiscovery | Error | Auto-discovery requires a target attribute type |
 | ADM0008 | TypeArgument | Error | Type argument property type must be a symbol type |
 | ADM0009 | Property | Error | IsEnum property must be a string type |
-| PSG0001 | LoggingSupport | Warning | Source generator must be partial |

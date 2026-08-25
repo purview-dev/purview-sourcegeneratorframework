@@ -6,7 +6,7 @@ sealed record AttributeDataModelTarget(
 	TypeDeclarationAccessibility? Accessibility,
 	bool IsRecord,
 	bool IsReadOnly,
-	TypeValueObject TargetAttribute,
+	TypeIdentity TargetAttribute,
 	bool MatchByInheritance,
 	bool AutoDiscover,
 	EquatableArray<string> PrimaryConstructorArguments,

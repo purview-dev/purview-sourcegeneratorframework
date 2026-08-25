@@ -5,7 +5,8 @@ using Microsoft.CodeAnalysis.CSharp;
 
 namespace Purview.SourceGeneratorFramework.Generators;
 
-public class AttributeDataModelGeneratorTests : TUnitSourceGeneratorTestBase<AttributeDataModelGenerator>
+public class AttributeDataModelGeneratorTests
+	: TUnitSourceGeneratorTestBase<AttributeDataModelGenerator, AttributeDataModelTestOptions>
 {
 	[Test]
 	public async Task Generate_RequiredAttributeData_DefaultNamedAndNestedModel(CancellationToken cancellationToken)
@@ -213,15 +214,14 @@ public class AttributeDataModelGeneratorTests : TUnitSourceGeneratorTestBase<Att
 	public async Task Generate_AutoDiscover_DiscoversNamedArguments(CancellationToken cancellationToken)
 	{
 		var source = """
-			using Purview.SourceGeneratorFramework.Generators;
-			using System.ComponentModel.DataAnnotations;
+using Purview.SourceGeneratorFramework.Generators;
+using System.ComponentModel.DataAnnotations;
 
-			namespace Test
-			{
-				[Generate(typeof(RequiredAttribute), AutoDiscover = true)]
-				public readonly partial record struct RequiredAttributeData;
-			}
-			""";
+namespace Test;
+
+[Generate(typeof(RequiredAttribute), AutoDiscover = true)]
+public readonly partial record struct RequiredAttributeData;
+""";
 
 		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
@@ -706,7 +706,7 @@ public class AttributeDataModelGeneratorTests : TUnitSourceGeneratorTestBase<Att
 
 		var result = await GenerateAsync(
 			source,
-			new SourceGeneratorTestOptions { CompileToAssembly = false },
+			new() { CompileToAssembly = false },
 			cancellationToken: cancellationToken
 		);
 

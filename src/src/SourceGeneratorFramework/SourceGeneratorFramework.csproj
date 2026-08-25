@@ -9,6 +9,7 @@
 		<NoWarn>$(NoWarn);CS1591;</NoWarn>
 		<AssemblyName>$(RootNamespace)</AssemblyName>
 		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+		<TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeSourceGeneratorShared</TargetsForTfmSpecificContentInPackage>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -19,11 +20,45 @@
 			OutputItemType="Analyzer"
 			Targets="GetSourceGeneratorAnalyzerFiles"
 		/>
-		<ProjectReference Include="..\SourceGeneratorShared\SourceGeneratorShared.csproj" />
+		<ProjectReference
+			Include="..\SourceGeneratorShared\SourceGeneratorShared.csproj"
+			PrivateAssets="all"
+			Pack="false"
+		/>
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
 		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
 	</ItemGroup>
+
+	<Target Name="IncludeSourceGeneratorShared">
+		<MSBuild
+			Projects="..\SourceGeneratorShared\SourceGeneratorShared.csproj"
+			Targets="GetTargetPath"
+			Properties="Configuration=$(Configuration);TargetFramework=netstandard2.0"
+		>
+			<Output TaskParameter="TargetOutputs" ItemName="_SourceGeneratorSharedAssembly" />
+		</MSBuild>
+
+		<ItemGroup>
+			<_SourceGeneratorSharedPackageFile Include="@(_SourceGeneratorSharedAssembly)" />
+			<_SourceGeneratorSharedPackageFile Include="@(_SourceGeneratorSharedAssembly->'%(RootDir)%(Directory)%(Filename).pdb')" />
+			<_SourceGeneratorSharedPackageFile Include="@(_SourceGeneratorSharedAssembly->'%(RootDir)%(Directory)%(Filename).xml')" />
+
+			<TfmSpecificPackageFile
+				Include="@(_SourceGeneratorSharedPackageFile)"
+				Condition="Exists('%(_SourceGeneratorSharedPackageFile.Identity)')"
+			>
+				<PackagePath>lib/$(TargetFramework)/</PackagePath>
+			</TfmSpecificPackageFile>
+
+			<TfmSpecificPackageFile
+				Include="@(_SourceGeneratorSharedPackageFile)"
+				Condition="'%(Filename)%(Extension)' != 'Purview.SourceGeneratorFramework.Shared.dll' AND Exists('%(_SourceGeneratorSharedPackageFile.Identity)')"
+			>
+				<PackagePath>analyzers/dotnet/cs/</PackagePath>
+			</TfmSpecificPackageFile>
+		</ItemGroup>
+	</Target>
 </Project>

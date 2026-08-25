@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Immutable;
 
-namespace Purview.SourceGeneratorFramework.Models;
+namespace Purview.SourceGeneratorFramework;
 
 /// <summary>
 /// An immutable, equatable wrapper around <see cref="ImmutableArray{T}"/> that is safe to use in incremental source generator pipelines.

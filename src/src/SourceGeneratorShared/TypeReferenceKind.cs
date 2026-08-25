@@ -1,14 +1,14 @@
-namespace Purview.SourceGeneratorFramework.Models;
+namespace Purview.SourceGeneratorFramework;
 
 /// <summary>
-/// Identifies what a <see cref="TypeReferenceOptions"/> refers to at its core, beneath any modifiers.
+/// Identifies what a <see cref="TypeReference"/> refers to at its core, beneath any modifiers.
 /// </summary>
 public enum TypeReferenceKind
 {
 	/// <summary>No type. The default, uninitialised state.</summary>
 	None = 0,
 
-	/// <summary>A named type described by a <see cref="TypeValueObject"/>.</summary>
+	/// <summary>A named type described by a <see cref="TypeIdentity"/>.</summary>
 	Named = 1,
 
 	/// <summary>An open generic parameter, identified by name.</summary>

@@ -29,7 +29,9 @@ public static partial class DiagnosticAssertions
 		if (expected is null)
 			return AssertionResult.Failed($"expected {nameof(DiagnosticDescriptor)} is null");
 
-		var matchingDiagnostic = diagnostic.DriverResult.Diagnostics.FirstOrDefault(d => d.Id == expected.Id);
+		var matchingDiagnostic =
+			diagnostic.DriverResult.Diagnostics.FirstOrDefault(d => d.Id == expected.Id)
+			?? diagnostic.AnalyzerResult?.Diagnostics.FirstOrDefault(d => d.Id == expected.Id);
 		return matchingDiagnostic is null
 			? (AssertionResult<Diagnostic>)
 				AssertionResult.Failed($"expected to contain diagnostic with Id {expected.Id}")
@@ -61,7 +63,9 @@ public static partial class DiagnosticAssertions
 		if (expected is null)
 			return AssertionResult.Failed($"expected {nameof(DiagnosticDescriptor)} is null");
 
-		var matchingDiagnostic = diagnostic.DriverResult.Diagnostics.Where(d => d.Id == expected.Id);
+		var matchingDiagnostic = diagnostic
+			.DriverResult.Diagnostics.Where(d => d.Id == expected.Id)
+			.Concat(diagnostic.AnalyzerResult?.Diagnostics.Where(d => d.Id == expected.Id) ?? []);
 		return matchingDiagnostic is null
 			? (AssertionResult<IEnumerable<Diagnostic>>)
 				AssertionResult.Failed($"expected to contain {count} diagnostic(s) with Id {expected.Id}")
@@ -85,7 +89,10 @@ public static partial class DiagnosticAssertions
 		if (string.IsNullOrWhiteSpace(expected))
 			return AssertionResult.Failed($"expected {nameof(DiagnosticDescriptor.Id)} is null/ empty/ whitespace");
 
-		var matchedDiagnotics = diagnostic.DriverResult.Diagnostics.FirstOrDefault(d => d.Id == expected);
+		var matchedDiagnotics =
+			diagnostic.DriverResult.Diagnostics.FirstOrDefault(d => d.Id == expected)
+			?? diagnostic.AnalyzerResult?.Diagnostics.FirstOrDefault(d => d.Id == expected);
+		;
 		return matchedDiagnotics is null
 			? (AssertionResult<Diagnostic>)AssertionResult.Failed($"expected to contain diagnostic with Id {expected}")
 			: AssertionResult<Diagnostic>.Passed(matchedDiagnotics);
@@ -115,7 +122,9 @@ public static partial class DiagnosticAssertions
 		if (string.IsNullOrWhiteSpace(expected))
 			return AssertionResult.Failed($"expected {nameof(DiagnosticDescriptor.Id)} is null/ empty/ whitespace");
 
-		var matchedDiagnotics = diagnostic.DriverResult.Diagnostics.Where(d => d.Id == expected);
+		var matchedDiagnotics = diagnostic
+			.DriverResult.Diagnostics.Where(d => d.Id == expected)
+			.Concat(diagnostic.AnalyzerResult?.Diagnostics.Where(d => d.Id == expected) ?? []);
 		return matchedDiagnotics is null
 			? (AssertionResult<IEnumerable<Diagnostic>>)
 				AssertionResult.Failed($"expected to contain {count} diagnostic(s) with Id {expected}")
@@ -139,7 +148,8 @@ public static partial class DiagnosticAssertions
 		return expected is null
 			? AssertionResult.Failed($"expected {nameof(DiagnosticDescriptor)} is null")
 			: AssertionResult.FailIf(
-				result.DriverResult.Diagnostics.Any(d => d.Id == expected.Id),
+				result.DriverResult.Diagnostics.Any(d => d.Id == expected.Id)
+					|| result.AnalyzerResult?.Diagnostics.Any(d => d.Id == expected.Id) == true,
 				$"expected not to contain diagnostic with Id {expected.Id}"
 			);
 	}
@@ -161,7 +171,8 @@ public static partial class DiagnosticAssertions
 		return expected is null
 			? AssertionResult.Failed($"expected {nameof(DiagnosticDescriptor)} is null")
 			: AssertionResult.FailIf(
-				result.DriverResult.Diagnostics.Any(d => d.Id == expected),
+				result.DriverResult.Diagnostics.Any(d => d.Id == expected)
+					|| result.AnalyzerResult?.Diagnostics.Any(d => d.Id == expected) == true,
 				$"expected not to contain diagnostic with Id {expected}"
 			);
 	}
@@ -186,7 +197,10 @@ public static partial class DiagnosticAssertions
 		return startsWithValue is null
 			? AssertionResult.Failed($"expected {nameof(DiagnosticDescriptor)} is null")
 			: AssertionResult.FailIf(
-				result.DriverResult.Diagnostics.Any(d => d.Id.StartsWith(startsWithValue, StringComparison.Ordinal)),
+				result.DriverResult.Diagnostics.Any(d => d.Id.StartsWith(startsWithValue, StringComparison.Ordinal))
+					|| result.AnalyzerResult?.Diagnostics.Any(d =>
+						d.Id.StartsWith(startsWithValue, StringComparison.Ordinal)
+					) == true,
 				$"expected not to contain Diagnostic with Id starting with {startsWithValue}"
 			);
 	}
@@ -205,8 +219,28 @@ public static partial class DiagnosticAssertions
 
 		// Not null... process
 		return AssertionResult.FailIf(
-			result.DriverResult.Diagnostics.Any(static d => d.Severity == DiagnosticSeverity.Error),
+			result.DriverResult.Diagnostics.Any(static d => d.Severity == DiagnosticSeverity.Error)
+				|| result.AnalyzerResult?.Diagnostics.Any(static d => d.Severity == DiagnosticSeverity.Error) == true,
 			"expected no error diagnostics to be reported by the generator"
+		);
+	}
+
+	/// <summary>
+	/// Asserts that the <paramref name="result"/> does not contain any diagnostics.
+	/// </summary>
+	/// <param name="result">The result of the driver run to check for diagnostics.</param>
+	/// <returns>An <see cref="AssertionResult"/> indicating whether the assertion passed or failed.</returns>
+	[GenerateAssertion]
+	[EditorBrowsable(EditorBrowsableState.Never)]
+	public static AssertionResult HasNoDiagnostics(this DriverRunResult result)
+	{
+		if (result == null)
+			return AssertionResult.Failed($"expected {nameof(DriverRunResult)} is null");
+
+		// Not null... process
+		return AssertionResult.FailIf(
+			result.DriverResult.Diagnostics.Any() || result.AnalyzerResult?.Diagnostics.Any() == true,
+			"expected no diagnostics to be reported by the generator"
 		);
 	}
 }

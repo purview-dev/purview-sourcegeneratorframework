@@ -8,7 +8,7 @@ public readonly record struct ObjectCreationOptions
 	/// <summary>Creates an object-creation expression.</summary>
 	/// <param name="reference">The type to instantiate.</param>
 	/// <param name="arguments">The constructor arguments; strings are implicitly supported.</param>
-	public ObjectCreationOptions(TypeReferenceOptions reference, params MethodCallArgumentOptions[] arguments)
+	public ObjectCreationOptions(TypeReference reference, params MethodCallArgumentOptions[] arguments)
 	{
 		if (reference.IsNullOrEmpty())
 			throw new ArgumentException("Object-creation type cannot be empty.", nameof(reference));
@@ -18,7 +18,7 @@ public readonly record struct ObjectCreationOptions
 	}
 
 	/// <summary>Gets the type to instantiate.</summary>
-	public TypeReferenceOptions Reference { get; }
+	public TypeReference Reference { get; }
 
 	/// <summary>Gets the constructor arguments.</summary>
 	public ImmutableArray<MethodCallArgumentOptions> Arguments { get; }

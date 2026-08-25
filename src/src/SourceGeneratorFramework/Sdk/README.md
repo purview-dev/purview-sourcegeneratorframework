@@ -306,6 +306,51 @@ Enable auto-discovery with `[GenerateAttributeDataModel(typeof(MyAttribute), Aut
 
 See [`SourceGeneratorFramework.Testing.Generators`](../SourceGeneratorFramework.Testing.Generators) for full documentation and additional examples.
 
+## Generic type identities and references
+
+`TypeIdentity` distinguishes an open generic definition from a constructed generic type:
+
+```csharp
+var openDictionary = new TypeIdentity(typeof(Dictionary<,>));
+
+var stringToIntDictionary = openDictionary.MakeGeneric(
+    new TypeIdentity(typeof(string)),
+    new TypeIdentity(typeof(int))
+);
+
+TypeReference openReference = openDictionary.AsTypeReference();
+TypeReference typedReference = stringToIntDictionary.AsTypeReference();
+```
+
+Use the open identity when any construction is acceptable. Its `Matches(ITypeSymbol)` method—and
+`TypeHelpers.Is`/`IsDerivedFromExpectedBase`—matches symbols such as `Dictionary<string, int>` and
+`Dictionary<Guid, Widget>` by generic definition and arity. Use the constructed identity when the
+arguments matter.
+
+Structural equality remains exact: an open identity is not equal to a constructed identity, and
+`Dictionary<string, int>` is not equal to `Dictionary<string, long>`. Symbol matching is
+deliberately asymmetric: an open expected identity can match a constructed symbol.
+
+String arguments to `MakeGeneric` are literal type names, not wildcards:
+
+```csharp
+// Describes ResourceKitBase<TResource>, where the argument is literally named TResource.
+var resourceKitBase = new TypeIdentity("ResourceKitBase", "Example");
+var parameterized = resourceKitBase.MakeGeneric("TResource");
+
+// Describes the open List<> definition and matches any List<T> construction.
+var openList = new TypeIdentity(typeof(List<>));
+```
+
+For contract-aware comparisons, a constructed expected argument may be an interface or base type.
+`TypeHelpers.Is` and the symbol overload of `IsDerivedFromExpectedBase` accept an actual generic
+argument that implements or inherits from that expected contract. The syntax-only overload cannot
+inspect semantic relationships; it compares only the declared base type name.
+
+`TypeReference` adds use-site composition—nullable annotations, arrays, pointers, generic
+parameters and nested constructions—around a `TypeIdentity`. It preserves the identity's generic
+matching behavior, but its modifiers must also match.
+
 ## Structured member declarations
 
 Methods, properties, fields, and constructors use immutable value-type declaration options. The

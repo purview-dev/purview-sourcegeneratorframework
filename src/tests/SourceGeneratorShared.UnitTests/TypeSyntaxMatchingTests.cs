@@ -1,9 +1,8 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Purview.SourceGeneratorFramework.Helpers;
 
-namespace Purview.SourceGeneratorFramework.Models;
+namespace Purview.SourceGeneratorFramework;
 
 public sealed class TypeSyntaxMatchingTests
 {
@@ -24,9 +23,9 @@ public sealed class TypeSyntaxMatchingTests
 
 		var declaration = root.DescendantNodes().OfType<ClassDeclarationSyntax>().Single();
 
-		await Assert.That(new TypeValueObject("Order", "Sample.Domain").CouldMatchDeclaration(declaration)).IsTrue();
-		await Assert.That(new TypeValueObject("Order", "Sample").CouldMatchDeclaration(declaration)).IsFalse();
-		await Assert.That(new TypeValueObject("Order", null).CouldMatchDeclaration(declaration)).IsFalse();
+		await Assert.That(new TypeIdentity("Order", "Sample.Domain").CouldMatchDeclaration(declaration)).IsTrue();
+		await Assert.That(new TypeIdentity("Order", "Sample").CouldMatchDeclaration(declaration)).IsFalse();
+		await Assert.That(new TypeIdentity("Order", null).CouldMatchDeclaration(declaration)).IsFalse();
 	}
 
 	[Test]
@@ -51,12 +50,12 @@ public sealed class TypeSyntaxMatchingTests
 			.OfType<ClassDeclarationSyntax>()
 			.Single(node => node.Identifier.ValueText == "Inner");
 
-		var value = (new TypeValueObject("Outer", "Sample.Domain") with { GenericArity = 1 }).Nested("Inner");
-		var wrongArity = new TypeValueObject("Outer", "Sample.Domain").Nested("Inner");
+		var value = (new TypeIdentity("Outer", "Sample.Domain") with { GenericArity = 1 }).Nested("Inner");
+		var wrongArity = new TypeIdentity("Outer", "Sample.Domain").Nested("Inner");
 
 		await Assert.That(value.CouldMatchDeclaration(declaration)).IsTrue();
 		await Assert.That(wrongArity.CouldMatchDeclaration(declaration)).IsFalse();
-		await Assert.That(new TypeValueObject("Inner", "Sample.Domain").CouldMatchDeclaration(declaration)).IsFalse();
+		await Assert.That(new TypeIdentity("Inner", "Sample.Domain").CouldMatchDeclaration(declaration)).IsFalse();
 	}
 
 	[Test]
@@ -74,8 +73,8 @@ public sealed class TypeSyntaxMatchingTests
 		var declaration = root.DescendantNodes()
 			.First(node => node is BaseTypeDeclarationSyntax or DelegateDeclarationSyntax);
 
-		await Assert.That(new TypeValueObject("Target", "Sample").CouldMatchDeclaration(declaration)).IsTrue();
-		await Assert.That(new TypeValueObject("Other", "Sample").CouldMatchDeclaration(declaration)).IsFalse();
+		await Assert.That(new TypeIdentity("Target", "Sample").CouldMatchDeclaration(declaration)).IsTrue();
+		await Assert.That(new TypeIdentity("Other", "Sample").CouldMatchDeclaration(declaration)).IsFalse();
 	}
 
 	[Test]
@@ -89,13 +88,11 @@ public sealed class TypeSyntaxMatchingTests
 
 		await Assert
 			.That(
-				(new TypeValueObject("Projector", "Sample") with { GenericArity = 2 }).CouldMatchDeclaration(
-					declaration
-				)
+				(new TypeIdentity("Projector", "Sample") with { GenericArity = 2 }).CouldMatchDeclaration(declaration)
 			)
 			.IsTrue();
 
-		await Assert.That(new TypeValueObject("Projector", "Sample").CouldMatchDeclaration(declaration)).IsFalse();
+		await Assert.That(new TypeIdentity("Projector", "Sample").CouldMatchDeclaration(declaration)).IsFalse();
 	}
 
 	// ---------------------------------------------------------------------------------------------
@@ -121,10 +118,10 @@ public sealed class TypeSyntaxMatchingTests
 			.OfType<ClassDeclarationSyntax>()
 			.Single(node => node.Identifier.ValueText == "Inner");
 
-		var value = new TypeValueObject("Outer", "Sample.Domain").Nested("Inner");
+		var value = new TypeIdentity("Outer", "Sample.Domain").Nested("Inner");
 
 		await Assert.That(value.MatchesDeclaration(inner, model)).IsTrue();
-		await Assert.That(new TypeValueObject("Inner", "Sample.Domain").MatchesDeclaration(inner, model)).IsFalse();
+		await Assert.That(new TypeIdentity("Inner", "Sample.Domain").MatchesDeclaration(inner, model)).IsFalse();
 	}
 
 	// ---------------------------------------------------------------------------------------------
@@ -145,7 +142,7 @@ public sealed class TypeSyntaxMatchingTests
 	public async Task CouldMatchTypeReference_ChecksNameArityAndQualifier(string written, bool expected)
 	{
 		var typeSyntax = SyntaxFactory.ParseTypeName(written);
-		var value = new TypeValueObject("List", "System.Collections.Generic") with { GenericArity = 1 };
+		var value = new TypeIdentity("List", "System.Collections.Generic") with { GenericArity = 1 };
 
 		await Assert.That(value.CouldMatchTypeReference(typeSyntax)).IsEqualTo(expected);
 	}
@@ -157,7 +154,7 @@ public sealed class TypeSyntaxMatchingTests
 	public async Task CouldMatchTypeReference_GivenPredefinedType_MatchesKeyword(string written, bool expected)
 	{
 		var typeSyntax = SyntaxFactory.ParseTypeName(written);
-		var value = new TypeValueObject(SpecialType.System_Int32);
+		var value = new TypeIdentity(SpecialType.System_Int32);
 
 		await Assert.That(value.CouldMatchTypeReference(typeSyntax)).IsEqualTo(expected);
 	}
@@ -165,7 +162,7 @@ public sealed class TypeSyntaxMatchingTests
 	[Test]
 	public async Task CouldMatchTypeReference_GivenNamedType_RejectsComposedSyntax()
 	{
-		var value = new TypeValueObject("List", "System.Collections.Generic") with { GenericArity = 1 };
+		var value = new TypeIdentity("List", "System.Collections.Generic") with { GenericArity = 1 };
 
 		await Assert.That(value.CouldMatchTypeReference(SyntaxFactory.ParseTypeName("List<int>[]"))).IsFalse();
 		await Assert.That(value.CouldMatchTypeReference(SyntaxFactory.ParseTypeName("(List<int>, int)"))).IsFalse();
@@ -174,7 +171,7 @@ public sealed class TypeSyntaxMatchingTests
 	[Test]
 	public async Task CouldMatchTypeReference_GivenNestedTypeQualifier_ReturnsTrue()
 	{
-		var value = new TypeValueObject("Outer", "Sample").Nested("Inner");
+		var value = new TypeIdentity("Outer", "Sample").Nested("Inner");
 
 		await Assert.That(value.CouldMatchTypeReference(SyntaxFactory.ParseTypeName("Sample.Outer.Inner"))).IsTrue();
 		await Assert.That(value.CouldMatchTypeReference(SyntaxFactory.ParseTypeName("Outer.Inner"))).IsTrue();
@@ -193,7 +190,7 @@ public sealed class TypeSyntaxMatchingTests
 	[Arguments("int[][]", false)]
 	public async Task CouldMatchTypeReference_GivenArrayReference_ComparesRanks(string written, bool expected)
 	{
-		var reference = new TypeValueObject(SpecialType.System_Int32).MakeArray();
+		var reference = new TypeIdentity(SpecialType.System_Int32).MakeArray();
 
 		await Assert.That(reference.CouldMatchTypeReference(SyntaxFactory.ParseTypeName(written))).IsEqualTo(expected);
 	}
@@ -202,7 +199,7 @@ public sealed class TypeSyntaxMatchingTests
 	public async Task CouldMatchTypeReference_GivenJaggedArray_ComparesRunOrder()
 	{
 		// A rank-1 array of rank-2 arrays.
-		var reference = new TypeValueObject(SpecialType.System_Int32).MakeArray(2).MakeArray(1);
+		var reference = new TypeIdentity(SpecialType.System_Int32).MakeArray(2).MakeArray(1);
 
 		await Assert.That(reference.CouldMatchTypeReference(SyntaxFactory.ParseTypeName("int[][,]"))).IsTrue();
 		await Assert.That(reference.CouldMatchTypeReference(SyntaxFactory.ParseTypeName("int[,][]"))).IsFalse();
@@ -211,7 +208,7 @@ public sealed class TypeSyntaxMatchingTests
 	[Test]
 	public async Task CouldMatchTypeReference_IgnoresNullableAnnotationOnBothSides()
 	{
-		var reference = new TypeValueObject(SpecialType.System_String).MakeNullable();
+		var reference = new TypeIdentity(SpecialType.System_String).MakeNullable();
 
 		await Assert.That(reference.CouldMatchTypeReference(SyntaxFactory.ParseTypeName("string?"))).IsTrue();
 		await Assert.That(reference.CouldMatchTypeReference(SyntaxFactory.ParseTypeName("string"))).IsTrue();
@@ -221,12 +218,12 @@ public sealed class TypeSyntaxMatchingTests
 	public async Task CouldMatchTypeReference_GivenTypeParameterOrDynamic_MatchesCore()
 	{
 		await Assert
-			.That(TypeReferenceOptions.ForTypeParameter("T").CouldMatchTypeReference(SyntaxFactory.ParseTypeName("T")))
+			.That(TypeReference.ForTypeParameter("T").CouldMatchTypeReference(SyntaxFactory.ParseTypeName("T")))
 			.IsTrue();
 
 		await Assert
 			.That(
-				TypeReferenceOptions
+				TypeReference
 					.ForTypeParameter("T")
 					.MakeArray()
 					.CouldMatchTypeReference(SyntaxFactory.ParseTypeName("T[]"))
@@ -234,22 +231,18 @@ public sealed class TypeSyntaxMatchingTests
 			.IsTrue();
 
 		await Assert
-			.That(
-				TypeReferenceOptions
-					.ForTypeParameter("T")
-					.CouldMatchTypeReference(SyntaxFactory.ParseTypeName("TOther"))
-			)
+			.That(TypeReference.ForTypeParameter("T").CouldMatchTypeReference(SyntaxFactory.ParseTypeName("TOther")))
 			.IsFalse();
 
 		await Assert
-			.That(TypeReferenceOptions.Dynamic.CouldMatchTypeReference(SyntaxFactory.ParseTypeName("dynamic")))
+			.That(TypeReference.Dynamic.CouldMatchTypeReference(SyntaxFactory.ParseTypeName("dynamic")))
 			.IsTrue();
 	}
 
 	[Test]
 	public async Task CouldMatchTypeReference_GivenPointerReference_ComparesDepth()
 	{
-		var reference = new TypeValueObject(SpecialType.System_Byte).MakePointer();
+		var reference = new TypeIdentity(SpecialType.System_Byte).MakePointer();
 
 		await Assert.That(reference.CouldMatchTypeReference(SyntaxFactory.ParseTypeName("byte*"))).IsTrue();
 		await Assert.That(reference.CouldMatchTypeReference(SyntaxFactory.ParseTypeName("byte**"))).IsFalse();
@@ -280,8 +273,8 @@ public sealed class TypeSyntaxMatchingTests
 		var model = compilation.GetSemanticModel(root.SyntaxTree);
 		var declarations = root.DescendantNodes().OfType<VariableDeclarationSyntax>().ToArray();
 
-		var value = new TypeValueObject("List", "System.Collections.Generic").MakeGeneric(
-			new TypeValueObject(SpecialType.System_Int32)
+		var value = new TypeIdentity("List", "System.Collections.Generic").MakeGeneric(
+			new TypeIdentity(SpecialType.System_Int32)
 		);
 
 		await Assert.That(value.MatchesTypeReference(declarations[0].Type, model)).IsTrue();
@@ -305,7 +298,7 @@ public sealed class TypeSyntaxMatchingTests
 
 		var model = compilation.GetSemanticModel(root.SyntaxTree);
 		var declarations = root.DescendantNodes().OfType<VariableDeclarationSyntax>().ToArray();
-		var reference = new TypeValueObject(SpecialType.System_Int32).MakeArray();
+		var reference = new TypeIdentity(SpecialType.System_Int32).MakeArray();
 
 		await Assert.That(reference.MatchesTypeReference(declarations[0].Type, model)).IsTrue();
 		await Assert.That(reference.MatchesTypeReference(declarations[1].Type, model)).IsFalse();
@@ -331,7 +324,7 @@ public sealed class TypeSyntaxMatchingTests
 		);
 
 		var model = compilation.GetSemanticModel(root.SyntaxTree);
-		var guid = new TypeValueObject("Guid", "System");
+		var guid = new TypeIdentity("Guid", "System");
 
 		var field = root.DescendantNodes().OfType<FieldDeclarationSyntax>().First();
 		var property = root.DescendantNodes().OfType<PropertyDeclarationSyntax>().Single();
@@ -360,7 +353,7 @@ public sealed class TypeSyntaxMatchingTests
 		var (_, root) = TestCompilation.Parse($"namespace Sample;\n\n{attributeText}\npublic class Target {{ }}");
 
 		var attribute = root.DescendantNodes().OfType<AttributeSyntax>().Single();
-		var value = new TypeValueObject("SentinelAttribute", "Sample");
+		var value = new TypeIdentity("SentinelAttribute", "Sample");
 
 		await Assert.That(value.CouldMatchAttribute(attribute)).IsEqualTo(expected);
 	}
@@ -385,7 +378,7 @@ public sealed class TypeSyntaxMatchingTests
 		);
 
 		var model = compilation.GetSemanticModel(root.SyntaxTree);
-		var value = new TypeValueObject("SentinelAttribute", "Sample");
+		var value = new TypeIdentity("SentinelAttribute", "Sample");
 
 		var flagged = root.DescendantNodes()
 			.OfType<ClassDeclarationSyntax>()

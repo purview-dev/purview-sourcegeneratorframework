@@ -83,8 +83,8 @@ public abstract class SourceGeneratorTestBase<TGenerator, TOptions>(ITestOutput 
 		options ??= new();
 		options = options with { TestOutput = testOutput };
 
-		OnBeforeRun(sources, options, cancellationToken);
-		await OnBeforeRunAsync(sources, options, cancellationToken);
+		options = OnBeforeRun(sources, options, cancellationToken);
+		options = await OnBeforeRunAsync(sources, options, cancellationToken);
 
 		var result = await _runner.RunAsync(sources, options, cancellationToken);
 		if (options.ThrowOnGenerationException)
@@ -133,14 +133,11 @@ public abstract class SourceGeneratorTestBase<TGenerator, TOptions>(ITestOutput 
 	/// <param name="sources">The source code files to generate.</param>
 	/// <param name="options">The options to use for the generation.</param>
 	/// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
-	protected virtual void OnBeforeRun(
+	protected virtual TOptions OnBeforeRun(
 		IEnumerable<string> sources,
 		TOptions options,
 		CancellationToken cancellationToken
-	)
-	{
-		//
-	}
+	) => options;
 
 	/// <summary>
 	/// Called before the generator is run, allowing for customization of the sources and options.
@@ -148,9 +145,9 @@ public abstract class SourceGeneratorTestBase<TGenerator, TOptions>(ITestOutput 
 	/// <param name="sources">The source code files to generate.</param>
 	/// <param name="options">The options to use for the generation.</param>
 	/// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
-	protected virtual Task OnBeforeRunAsync(
+	protected virtual Task<TOptions> OnBeforeRunAsync(
 		IEnumerable<string> sources,
 		TOptions options,
 		CancellationToken cancellationToken
-	) => Task.CompletedTask;
+	) => Task.FromResult(options);
 }

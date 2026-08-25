@@ -23,11 +23,11 @@ public sealed record TypeDeclarationOptions
 	}
 
 	/// <summary>
-	/// Initializes a type declaration description from a <see cref="TypeValueObject"/>.
+	/// Initializes a type declaration description from a <see cref="TypeIdentity"/>.
 	/// </summary>
 	/// <param name="type">The type value object.</param>
 	/// <param name="accessibility">The optional accessibility modifier, or <see langword="null"/> to omit accessibility.</param>
-	public TypeDeclarationOptions(TypeValueObject type, TypeDeclarationAccessibility? accessibility = null)
+	public TypeDeclarationOptions(TypeIdentity type, TypeDeclarationAccessibility? accessibility = null)
 	{
 		Name = type.Name;
 		Accessibility = accessibility;
@@ -86,13 +86,13 @@ public sealed record TypeDeclarationOptions
 	/// Gets the optional base class or base record type.
 	/// </summary>
 	/// <remarks>Struct and record struct declarations cannot specify a base type.</remarks>
-	public TypeReferenceOptions? BaseType { get; init; }
+	public TypeReference? BaseType { get; init; }
 
 	/// <summary>Gets the optional enum underlying integral type.</summary>
-	public TypeReferenceOptions? EnumUnderlyingType { get; init; }
+	public TypeReference? EnumUnderlyingType { get; init; }
 
 	/// <summary>Gets the delegate return type.</summary>
-	public TypeReferenceOptions? DelegateReturnType { get; init; }
+	public TypeReference? DelegateReturnType { get; init; }
 
 	/// <summary>Gets the complete delegate parameter declarations.</summary>
 	public ImmutableArray<ParameterDeclarationOptions> DelegateParameters { get; init; } = [];
@@ -100,7 +100,7 @@ public sealed record TypeDeclarationOptions
 	/// <summary>
 	/// Gets the interfaces implemented by the generated type, or inherited by an interface.
 	/// </summary>
-	public ImmutableArray<TypeReferenceOptions> Interfaces { get; init; } = [];
+	public ImmutableArray<TypeReference> Interfaces { get; init; } = [];
 
 	/// <summary>
 	/// Gets the generic type parameters and their constraints.

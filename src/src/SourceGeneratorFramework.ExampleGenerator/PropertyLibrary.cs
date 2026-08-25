@@ -3,7 +3,7 @@ namespace Purview.SourceGeneratorFramework.ExampleGenerator;
 /// <summary>
 /// Provides compiler-visible property names used by the service registration generator.
 /// </summary>
-static class ServiceRegistrationGeneratorPropertyLibrary
+static class PropertyLibrary
 {
 	/// <summary>
 	/// When set to <see langword="true"/>, disables the service registration generator.

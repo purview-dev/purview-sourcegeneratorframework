@@ -1,6 +1,5 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Purview.SourceGeneratorFramework.Models;
 
 namespace Purview.SourceGeneratorFramework.Helpers;
 
@@ -41,7 +40,7 @@ public class SymbolResolverTests
 	public async Task Resolve_TypeValueObject_ReturnsSymbol()
 	{
 		var compilation = CreateCompilation();
-		var type = new TypeValueObject("Object", "System");
+		var type = new TypeIdentity("Object", "System");
 
 		var symbol = SymbolResolver.Resolve(compilation, type);
 

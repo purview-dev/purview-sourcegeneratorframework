@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 namespace Purview.SourceGeneratorFramework;
 
 /// <summary>
-/// Provides common <see cref="TypeValueObject"/> instances for use by source generators.
+/// Provides common <see cref="TypeIdentity"/> instances for use by source generators.
 /// </summary>
 public static class PurviewTypeLibrary
 {
@@ -18,112 +18,112 @@ public static class PurviewTypeLibrary
 		/// <summary>
 		/// <see cref="Attribute"/>.
 		/// </summary>
-		public static readonly TypeValueObject Attribute = TypeValueObject.Create<Attribute>();
+		public static readonly TypeIdentity Attribute = TypeIdentity.Create<Attribute>();
 
 		/// <summary>
 		/// <see cref="Type"/>.
 		/// </summary>
-		public static readonly TypeValueObject Type = TypeValueObject.Create<Type>();
+		public static readonly TypeIdentity Type = TypeIdentity.Create<Type>();
 
 		/// <summary>
 		/// <see cref="bool"/>.
 		/// </summary>
-		public static readonly TypeValueObject Boolean = TypeValueObject.Create<bool>();
+		public static readonly TypeIdentity Boolean = TypeIdentity.Create<bool>();
 
 		/// <summary>
 		/// <see cref="byte"/>.
 		/// </summary>
-		public static readonly TypeValueObject Byte = TypeValueObject.Create<byte>();
+		public static readonly TypeIdentity Byte = TypeIdentity.Create<byte>();
 
 		/// <summary>
 		/// <see cref="sbyte"/>.
 		/// </summary>
-		public static readonly TypeValueObject SByte = TypeValueObject.Create<sbyte>();
+		public static readonly TypeIdentity SByte = TypeIdentity.Create<sbyte>();
 
 		/// <summary>
 		/// <see cref="char"/>.
 		/// </summary>
-		public static readonly TypeValueObject Char = TypeValueObject.Create<char>();
+		public static readonly TypeIdentity Char = TypeIdentity.Create<char>();
 
 		/// <summary>
 		/// <see cref="decimal"/>.
 		/// </summary>
-		public static readonly TypeValueObject Decimal = TypeValueObject.Create<decimal>();
+		public static readonly TypeIdentity Decimal = TypeIdentity.Create<decimal>();
 
 		/// <summary>
 		/// <see cref="double"/>.
 		/// </summary>
-		public static readonly TypeValueObject Double = TypeValueObject.Create<double>();
+		public static readonly TypeIdentity Double = TypeIdentity.Create<double>();
 
 		/// <summary>
 		/// <see cref="float"/>.
 		/// </summary>
-		public static readonly TypeValueObject Float = TypeValueObject.Create<float>();
+		public static readonly TypeIdentity Float = TypeIdentity.Create<float>();
 
 		/// <summary>
 		/// <see cref="int"/>.
 		/// </summary>
-		public static readonly TypeValueObject Int32 = TypeValueObject.Create<int>();
+		public static readonly TypeIdentity Int32 = TypeIdentity.Create<int>();
 
 		/// <summary>
 		/// <see cref="uint"/>.
 		/// </summary>
-		public static readonly TypeValueObject UInt32 = TypeValueObject.Create<uint>();
+		public static readonly TypeIdentity UInt32 = TypeIdentity.Create<uint>();
 
 		/// <summary>
 		/// <see cref="long"/>.
 		/// </summary>
-		public static readonly TypeValueObject Int64 = TypeValueObject.Create<long>();
+		public static readonly TypeIdentity Int64 = TypeIdentity.Create<long>();
 
 		/// <summary>
 		/// <see cref="ulong"/>.
 		/// </summary>
-		public static readonly TypeValueObject UInt64 = TypeValueObject.Create<ulong>();
+		public static readonly TypeIdentity UInt64 = TypeIdentity.Create<ulong>();
 
 		/// <summary>
 		/// <see cref="short"/>.
 		/// </summary>
-		public static readonly TypeValueObject Int16 = TypeValueObject.Create<short>();
+		public static readonly TypeIdentity Int16 = TypeIdentity.Create<short>();
 
 		/// <summary>
 		/// <see cref="ushort"/>.
 		/// </summary>
-		public static readonly TypeValueObject UInt16 = TypeValueObject.Create<ushort>();
+		public static readonly TypeIdentity UInt16 = TypeIdentity.Create<ushort>();
 
 		/// <summary>
 		/// <see cref="string"/>.
 		/// </summary>
-		public static readonly TypeValueObject String = TypeValueObject.Create<string>();
+		public static readonly TypeIdentity String = TypeIdentity.Create<string>();
 
 		/// <summary>
 		/// <see cref="object"/>.
 		/// </summary>
-		public static readonly TypeValueObject Object = TypeValueObject.Create<object>();
+		public static readonly TypeIdentity Object = TypeIdentity.Create<object>();
 
 		/// <summary>
 		/// <see cref="void"/>.
 		/// </summary>
-		public static readonly TypeValueObject Void = new("void", null);
+		public static readonly TypeIdentity Void = new("void", null);
 
 		/// <summary>
 		/// <see cref="nint"/>.
 		/// </summary>
-		public static readonly TypeValueObject IntPtr = TypeValueObject.Create<nint>();
+		public static readonly TypeIdentity IntPtr = TypeIdentity.Create<nint>();
 
 		/// <summary>
 		/// <see cref="nuint"/>.
 		/// </summary>
-		public static readonly TypeValueObject UIntPtr = TypeValueObject.Create<nuint>();
+		public static readonly TypeIdentity UIntPtr = TypeIdentity.Create<nuint>();
 
 		/// <summary>
 		/// <see cref="global::System.Action"/>.
 		/// </summary>
-		public static readonly TypeValueObject Action = TypeValueObject.Create<Action>();
+		public static readonly TypeIdentity Action = TypeIdentity.Create<Action>();
 
 		/// <summary>
 		/// <see cref="Func{TResult}"/>.
 		/// </summary>
-		public static readonly TypeValueObject Func = new(nameof(Func), "System");
+		public static readonly TypeIdentity Func = new(nameof(Func), "System");
 	}
 
 	/// <summary>
@@ -143,7 +143,7 @@ public static class PurviewTypeLibrary
 			/// <summary>
 			/// <see cref="EmbeddedAttribute"/>.
 			/// </summary>
-			public static readonly TypeValueObject EmbeddedAttribute = new(
+			public static readonly TypeIdentity EmbeddedAttribute = new(
 				nameof(EmbeddedAttribute),
 				"Microsoft.CodeAnalysis"
 			);

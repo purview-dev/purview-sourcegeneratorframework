@@ -1,4 +1,4 @@
-namespace Purview.SourceGeneratorFramework.Models;
+namespace Purview.SourceGeneratorFramework;
 
 /// <summary>
 /// Identifies a single composition step applied to a type reference.

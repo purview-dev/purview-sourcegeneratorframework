@@ -6,40 +6,71 @@ namespace Purview.SourceGeneratorFramework.Helpers;
 
 public class TypeHelpersTests
 {
-	static async Task<INamedTypeSymbol> GetTypeSymbolAsync(string source, string typeName)
+	static async Task<INamedTypeSymbol> GetTypeSymbolAsync(
+		string source,
+		string typeName,
+		CancellationToken cancellationToken
+	)
 	{
-		var syntaxTree = CSharpSyntaxTree.ParseText(source);
+		var syntaxTree = CSharpSyntaxTree.ParseText(source, cancellationToken: cancellationToken);
 		var compilation = CSharpCompilation.Create(
 			"TestAssembly",
 			[syntaxTree],
 			[
 				MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
 				MetadataReference.CreateFromFile(typeof(IEnumerable<>).Assembly.Location),
+				MetadataReference.CreateFromFile(typeof(Dictionary<,>).Assembly.Location),
 			],
 			new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
 		);
 		var model = compilation.GetSemanticModel(syntaxTree);
-		var root = await syntaxTree.GetRootAsync();
+		var root = await syntaxTree.GetRootAsync(cancellationToken);
 		var typeDeclaration = root.DescendantNodes()
 			.OfType<TypeDeclarationSyntax>()
 			.First(t => t.Identifier.ValueText == typeName);
-		return model.GetDeclaredSymbol(typeDeclaration)!;
+		return model.GetDeclaredSymbol(typeDeclaration, cancellationToken)!;
 	}
 
-	static async Task<TargetSymbolDescriptor> GetTypeDescriptorAsync(string source, string typeName)
+	static INamedTypeSymbol GetTypeReferenceSymbol(string typeName, CancellationToken cancellationToken)
 	{
-		var syntaxTree = CSharpSyntaxTree.ParseText(source);
+		var syntaxTree = CSharpSyntaxTree.ParseText(
+			$"internal sealed class TypeReferenceHolder {{ public {typeName} Value {{ get; }} = default!; }}",
+			cancellationToken: cancellationToken
+		);
+		var compilation = CSharpCompilation.Create(
+			"TestAssembly",
+			[syntaxTree],
+			[
+				MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+				MetadataReference.CreateFromFile(typeof(Dictionary<,>).Assembly.Location),
+			],
+			new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+		);
+		var model = compilation.GetSemanticModel(syntaxTree);
+		var root = syntaxTree.GetRoot(cancellationToken);
+		var property = root.DescendantNodes().OfType<PropertyDeclarationSyntax>().Single();
+
+		return (INamedTypeSymbol)model.GetTypeInfo(property.Type, cancellationToken).Type!;
+	}
+
+	static (ITypeSymbol Symbol, TypeDeclarationSyntax Syntax) GetTypeDescriptor(
+		string source,
+		string typeName,
+		CancellationToken cancellationToken
+	)
+	{
+		var syntaxTree = CSharpSyntaxTree.ParseText(source, cancellationToken: cancellationToken);
 		var compilation = CSharpCompilation.Create(
 			"TestAssembly",
 			[syntaxTree],
 			[MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
 			new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
 		);
-		var root = await syntaxTree.GetRootAsync();
+		var root = syntaxTree.GetRoot(cancellationToken);
 		var declaration = root.DescendantNodes()
 			.OfType<TypeDeclarationSyntax>()
 			.Single(type => type.Identifier.ValueText == typeName);
-		var symbol = compilation.GetSemanticModel(syntaxTree).GetDeclaredSymbol(declaration)!;
+		var symbol = compilation.GetSemanticModel(syntaxTree).GetDeclaredSymbol(declaration, cancellationToken)!;
 		return new(symbol, declaration);
 	}
 
@@ -53,42 +84,54 @@ public class TypeHelpersTests
 		await Assert.That(TypeHelpers.IsAttribute("MyAttribute")).IsTrue();
 
 	[Test]
-	public async Task IsDerivedFromExpectedBase_GenericArgumentImplementsExpectedContract_ReturnsTrue()
+	public async Task IsDerivedFromExpectedBase_GenericArgumentImplementsExpectedContract_ReturnsTrue(
+		CancellationToken cancellationToken
+	)
 	{
 		// Arrange
 		const string source =
 			"namespace Testing { interface IResource { } class DefaultAspireResource : IResource { } class ResourceKitBase<T> where T : IResource { } class HostKit : ResourceKitBase<DefaultAspireResource> { } }";
-		var descriptor = await GetTypeDescriptorAsync(source, "HostKit");
-		var expectedBase = new TypeValueObject("ResourceKitBase", "Testing").MakeGeneric(
-			new TypeValueObject("IResource", "Testing")
+		var (Symbol, Syntax) = GetTypeDescriptor(source, "HostKit", cancellationToken);
+		var expectedBase = new TypeIdentity("ResourceKitBase", "Testing").MakeGeneric(
+			new TypeIdentity("IResource", "Testing")
 		);
 
 		// Act
-		var result = TypeHelpers.IsDerivedFromExpectedBase(descriptor, expectedBase);
+		var symbolResult = TypeHelpers.IsDerivedFromExpectedBase(Symbol, expectedBase);
+		var syntaxResult = TypeHelpers.IsDerivedFromExpectedBase(Syntax, expectedBase);
 
 		// Assert
-		await Assert.That(result).IsTrue();
+		await Assert.That(symbolResult).IsTrue();
+		await Assert.That(syntaxResult).IsTrue();
 	}
 
 	[Test]
-	public async Task IsDerivedFromExpectedBase_NameOnlyGenericBase_ReturnsTrueForConstructedBase()
+	public async Task IsDerivedFromExpectedBase_NameOnlyGenericBase_ReturnsTrueForConstructedBase(
+		CancellationToken cancellationToken
+	)
 	{
 		// Arrange
 		const string source =
 			"namespace Testing { interface IResource { } class DefaultAspireResource : IResource { } class ResourceKitBase<T> where T : IResource { } class HostKit : ResourceKitBase<DefaultAspireResource> { } }";
-		var descriptor = await GetTypeDescriptorAsync(source, "HostKit");
-		var expectedBase = new TypeValueObject("ResourceKitBase", "Testing");
+		var (Symbol, Syntax) = GetTypeDescriptor(source, "HostKit", cancellationToken);
+		var expectedBase = new TypeIdentity("ResourceKitBase", "Testing");
 
 		// Act
-		var result = TypeHelpers.IsDerivedFromExpectedBase(descriptor, expectedBase);
+		var symbolResult = TypeHelpers.IsDerivedFromExpectedBase(Symbol, expectedBase);
+		var syntaxResult = TypeHelpers.IsDerivedFromExpectedBase(Syntax, expectedBase);
 
 		// Assert
-		await Assert.That(result).IsTrue();
+		await Assert.That(symbolResult).IsTrue();
+		await Assert.That(syntaxResult).IsTrue();
 	}
 
 	[Test]
 	public async Task IsAttribute_TypeNameWithoutSuffix_ReturnsFalse() =>
 		await Assert.That(TypeHelpers.IsAttribute("MyClass")).IsFalse();
+
+	[Test]
+	public async Task IsAttribute_ConstructedGenericAttribute_ReturnsTrue() =>
+		await Assert.That(TypeHelpers.IsAttribute("global::Example.MarkerAttribute<string>")).IsTrue();
 
 	[Test]
 	public async Task GetTypeName_AttributeType_TrimsSuffix() =>
@@ -97,6 +140,23 @@ public class TypeHelpersTests
 	[Test]
 	public async Task GetTypeName_NonAttributeType_ReturnsOriginal() =>
 		await Assert.That(TypeHelpers.GetTypeName("MyClass")).IsEqualTo("MyClass");
+
+	[Test]
+	public async Task GetTypeName_ConstructedGenericAttribute_PreservesTypeArgumentsAndTrimsSuffix() =>
+		await Assert
+			.That(TypeHelpers.GetTypeName("global::Example.MarkerAttribute<string>"))
+			.IsEqualTo("global::Example.Marker<string>");
+
+	[Test]
+	public async Task TypeValueObject_RenderAttributeName_ConstructedGenericAttribute_PreservesTypeArguments()
+	{
+		var attribute = new TypeIdentity("MarkerAttribute", "Example").MakeGeneric(
+			new TypeIdentity(SpecialType.System_String)
+		);
+
+		await Assert.That(attribute.IsAttribute).IsTrue();
+		await Assert.That(attribute.RenderAttributeName).IsEqualTo("global::Example.Marker<string>");
+	}
 
 	[Test]
 	public async Task IsValidIdentifier_ValidIdentifier_ReturnsTrue()
@@ -115,27 +175,33 @@ public class TypeHelpersTests
 	}
 
 	[Test]
-	public async Task IsPartial_PartialClass_ReturnsTrue()
+	public async Task IsPartial_PartialClass_ReturnsTrue(CancellationToken cancellationToken)
 	{
 		var source = "public partial class MyClass { }";
-		var tree = CSharpSyntaxTree.ParseText(source);
-		var declaration = (await tree.GetRootAsync()).DescendantNodes().OfType<ClassDeclarationSyntax>().First();
+		var tree = CSharpSyntaxTree.ParseText(source, cancellationToken: cancellationToken);
+		var declaration = (await tree.GetRootAsync(cancellationToken))
+			.DescendantNodes()
+			.OfType<ClassDeclarationSyntax>()
+			.First();
 
 		await Assert.That(TypeHelpers.IsPartial(declaration)).IsTrue();
 	}
 
 	[Test]
-	public async Task IsPartial_NonPartialClass_ReturnsFalse()
+	public async Task IsPartial_NonPartialClass_ReturnsFalse(CancellationToken cancellationToken)
 	{
 		var source = "public class MyClass { }";
-		var tree = CSharpSyntaxTree.ParseText(source);
-		var declaration = (await tree.GetRootAsync()).DescendantNodes().OfType<ClassDeclarationSyntax>().First();
+		var tree = CSharpSyntaxTree.ParseText(source, cancellationToken: cancellationToken);
+		var declaration = (await tree.GetRootAsync(cancellationToken))
+			.DescendantNodes()
+			.OfType<ClassDeclarationSyntax>()
+			.First();
 
 		await Assert.That(TypeHelpers.IsPartial(declaration)).IsFalse();
 	}
 
 	[Test]
-	public async Task HasNonEmptyConstructors_WithParameterConstructor_ReturnsTrue()
+	public async Task HasNonEmptyConstructors_WithParameterConstructor_ReturnsTrue(CancellationToken cancellationToken)
 	{
 		var source = """
 			public class MyClass
@@ -143,14 +209,17 @@ public class TypeHelpersTests
 				public MyClass(int value) { }
 			}
 			""";
-		var tree = CSharpSyntaxTree.ParseText(source);
-		var declaration = (await tree.GetRootAsync()).DescendantNodes().OfType<ClassDeclarationSyntax>().First();
+		var tree = CSharpSyntaxTree.ParseText(source, cancellationToken: cancellationToken);
+		var declaration = (await tree.GetRootAsync(cancellationToken))
+			.DescendantNodes()
+			.OfType<ClassDeclarationSyntax>()
+			.First();
 
 		await Assert.That(TypeHelpers.HasNonEmptyConstructors(declaration, "MyClass")).IsTrue();
 	}
 
 	[Test]
-	public async Task HasNonEmptyConstructors_WithEmptyConstructor_ReturnsFalse()
+	public async Task HasNonEmptyConstructors_WithEmptyConstructor_ReturnsFalse(CancellationToken cancellationToken)
 	{
 		var source = """
 			public class MyClass
@@ -158,14 +227,17 @@ public class TypeHelpersTests
 				public MyClass() { }
 			}
 			""";
-		var tree = CSharpSyntaxTree.ParseText(source);
-		var declaration = (await tree.GetRootAsync()).DescendantNodes().OfType<ClassDeclarationSyntax>().First();
+		var tree = CSharpSyntaxTree.ParseText(source, cancellationToken: cancellationToken);
+		var declaration = (await tree.GetRootAsync(cancellationToken))
+			.DescendantNodes()
+			.OfType<ClassDeclarationSyntax>()
+			.First();
 
 		await Assert.That(TypeHelpers.HasNonEmptyConstructors(declaration, "MyClass")).IsFalse();
 	}
 
 	[Test]
-	public async Task HasAttribute_AttributedClass_ReturnsTrue()
+	public async Task HasAttribute_AttributedClass_ReturnsTrue(CancellationToken cancellationToken)
 	{
 		var source = """
 			using System;
@@ -173,46 +245,46 @@ public class TypeHelpersTests
 			[Serializable]
 			public class MyClass { }
 			""";
-		var symbol = await GetTypeSymbolAsync(source, "MyClass");
+		var symbol = await GetTypeSymbolAsync(source, "MyClass", cancellationToken);
 
 		await Assert.That(TypeHelpers.HasAttribute(symbol, "System.SerializableAttribute")).IsTrue();
 	}
 
 	[Test]
-	public async Task HasAttribute_MissingAttribute_ReturnsFalse()
+	public async Task HasAttribute_MissingAttribute_ReturnsFalse(CancellationToken cancellationToken)
 	{
 		var source = "public class MyClass { }";
-		var symbol = await GetTypeSymbolAsync(source, "MyClass");
+		var symbol = await GetTypeSymbolAsync(source, "MyClass", cancellationToken);
 
 		await Assert.That(TypeHelpers.HasAttribute(symbol, "System.SerializableAttribute")).IsFalse();
 	}
 
 	[Test]
-	public async Task InheritsFrom_DerivedClass_ReturnsTrue()
+	public async Task InheritsFrom_DerivedClass_ReturnsTrue(CancellationToken cancellationToken)
 	{
 		var source = """
 			public class Base { }
 			public class Derived : Base { }
 			""";
-		var symbol = await GetTypeSymbolAsync(source, "Derived");
+		var symbol = await GetTypeSymbolAsync(source, "Derived", cancellationToken);
 
 		await Assert.That(TypeHelpers.InheritsFrom(symbol, "Base")).IsTrue();
 	}
 
 	[Test]
-	public async Task InheritsFrom_UnrelatedClass_ReturnsFalse()
+	public async Task InheritsFrom_UnrelatedClass_ReturnsFalse(CancellationToken cancellationToken)
 	{
 		var source = """
 			public class Base { }
 			public class Other { }
 			""";
-		var symbol = await GetTypeSymbolAsync(source, "Other");
+		var symbol = await GetTypeSymbolAsync(source, "Other", cancellationToken);
 
 		await Assert.That(TypeHelpers.InheritsFrom(symbol, "Base")).IsFalse();
 	}
 
 	[Test]
-	public async Task Implements_IEnumerableT_ReturnsTrue()
+	public async Task Implements_IEnumerableT_ReturnsTrue(CancellationToken cancellationToken)
 	{
 		var source = """
 			using System.Collections.Generic;
@@ -222,45 +294,45 @@ public class TypeHelpersTests
 				System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => null;
 			}
 			""";
-		var symbol = await GetTypeSymbolAsync(source, "MyCollection");
+		var symbol = await GetTypeSymbolAsync(source, "MyCollection", cancellationToken);
 
 		await Assert.That(TypeHelpers.Implements(symbol, "System.Collections.Generic.IEnumerable`1")).IsTrue();
 	}
 
 	[Test]
-	public async Task ToFullyQualifiedDisplayString_ReturnsGlobalQualifiedName()
+	public async Task ToFullyQualifiedDisplayString_ReturnsGlobalQualifiedName(CancellationToken cancellationToken)
 	{
 		var source = "namespace Test { public class MyClass { } }";
-		var symbol = await GetTypeSymbolAsync(source, "MyClass");
+		var symbol = await GetTypeSymbolAsync(source, "MyClass", cancellationToken);
 
 		await Assert.That(TypeHelpers.ToFullyQualifiedDisplayString(symbol)).IsEqualTo("global::Test.MyClass");
 	}
 
 	[Test]
-	public async Task IsCollectionLike_List_ReturnsTrue()
+	public async Task IsCollectionLike_List_ReturnsTrue(CancellationToken cancellationToken)
 	{
 		var source = "using System.Collections.Generic; public class MyClass { public List<int> Items; }";
-		var symbol = await GetTypeSymbolAsync(source, "MyClass");
+		var symbol = await GetTypeSymbolAsync(source, "MyClass", cancellationToken);
 		var fieldSymbol = symbol.GetMembers("Items").OfType<IFieldSymbol>().First();
 
 		await Assert.That(TypeHelpers.IsCollectionLike(fieldSymbol.Type)).IsTrue();
 	}
 
 	[Test]
-	public async Task IsArray_Array_ReturnsTrue()
+	public async Task IsArray_Array_ReturnsTrue(CancellationToken cancellationToken)
 	{
 		var source = "using System; public class MyClass { public int[] Items; }";
-		var symbol = await GetTypeSymbolAsync(source, "MyClass");
+		var symbol = await GetTypeSymbolAsync(source, "MyClass", cancellationToken);
 		var fieldSymbol = symbol.GetMembers("Items").OfType<IFieldSymbol>().First();
 
 		await Assert.That(TypeHelpers.IsArray(fieldSymbol.Type)).IsTrue();
 	}
 
 	[Test]
-	public async Task TryGetElementType_List_ReturnsIntElement()
+	public async Task TryGetElementType_List_ReturnsIntElement(CancellationToken cancellationToken)
 	{
 		var source = "using System.Collections.Generic; public class MyClass { public List<int> Items; }";
-		var symbol = await GetTypeSymbolAsync(source, "MyClass");
+		var symbol = await GetTypeSymbolAsync(source, "MyClass", cancellationToken);
 		var fieldSymbol = symbol.GetMembers("Items").OfType<IFieldSymbol>().First();
 
 		var result = TypeHelpers.TryGetElementType(fieldSymbol.Type, out var elementType);
@@ -325,7 +397,9 @@ public class TypeHelpersTests
 	}
 
 	[Test]
-	public async Task CreatePartialTypeDeclarationOptions_GivenStaticGenericClass_RecreatesContainer()
+	public async Task CreatePartialTypeDeclarationOptions_GivenStaticGenericClass_RecreatesContainer(
+		CancellationToken cancellationToken
+	)
 	{
 		// Arrange
 		const string source = """
@@ -334,7 +408,7 @@ public class TypeHelpersTests
 			{
 			}
 			""";
-		var symbol = await GetTypeSymbolAsync(source, "Container");
+		var symbol = await GetTypeSymbolAsync(source, "Container", cancellationToken);
 
 		// Act
 		var declaration = TypeHelpers.CreatePartialTypeDeclarationOptions(symbol);
@@ -360,7 +434,9 @@ public class TypeHelpersTests
 	}
 
 	[Test]
-	public async Task CreatePartialTypeDeclarationOptions_GivenReadonlyRecordStruct_RecreatesContainer()
+	public async Task CreatePartialTypeDeclarationOptions_GivenReadonlyRecordStruct_RecreatesContainer(
+		CancellationToken cancellationToken
+	)
 	{
 		// Arrange
 		const string source = """
@@ -369,7 +445,7 @@ public class TypeHelpersTests
 			{
 			}
 			""";
-		var symbol = await GetTypeSymbolAsync(source, "Container");
+		var symbol = await GetTypeSymbolAsync(source, "Container", cancellationToken);
 
 		// Act
 		var declaration = TypeHelpers.CreatePartialTypeDeclarationOptions(symbol);
@@ -382,7 +458,9 @@ public class TypeHelpersTests
 	}
 
 	[Test]
-	public async Task CreatePartialTypeDeclarationOptions_GivenBasicMode_OmitsOptionalParts()
+	public async Task CreatePartialTypeDeclarationOptions_GivenBasicMode_OmitsOptionalParts(
+		CancellationToken cancellationToken
+	)
 	{
 		// Arrange
 		const string source = """
@@ -391,7 +469,7 @@ public class TypeHelpersTests
 			{
 			}
 			""";
-		var symbol = await GetTypeSymbolAsync(source, "Container");
+		var symbol = await GetTypeSymbolAsync(source, "Container", cancellationToken);
 
 		// Act
 		var declaration = TypeHelpers.CreatePartialTypeDeclarationOptions(symbol, includeOptionalParts: false);
@@ -409,16 +487,16 @@ public class TypeHelpersTests
 	}
 
 	[Test]
-	public async Task IsAccessibleAsPublicOrInternal_PublicType_ReturnsTrue()
+	public async Task IsAccessibleAsPublicOrInternal_PublicType_ReturnsTrue(CancellationToken cancellationToken)
 	{
 		var source = "public class MyClass { }";
-		var symbol = await GetTypeSymbolAsync(source, "MyClass");
+		var symbol = await GetTypeSymbolAsync(source, "MyClass", cancellationToken);
 
 		await Assert.That(TypeHelpers.IsAccessibleAsPublicOrInternal(symbol)).IsTrue();
 	}
 
 	[Test]
-	public async Task IsAccessibleAsPublicOrInternal_PrivateNestedType_ReturnsFalse()
+	public async Task IsAccessibleAsPublicOrInternal_PrivateNestedType_ReturnsFalse(CancellationToken cancellationToken)
 	{
 		var source = """
 			public class Outer
@@ -426,9 +504,25 @@ public class TypeHelpersTests
 				private class Inner { }
 			}
 			""";
-		var symbol = await GetTypeSymbolAsync(source, "Outer");
+		var symbol = await GetTypeSymbolAsync(source, "Outer", cancellationToken);
 		var innerSymbol = symbol.GetTypeMembers("Inner").First();
 
 		await Assert.That(TypeHelpers.IsAccessibleAsPublicOrInternal(innerSymbol)).IsFalse();
+	}
+
+	[Test]
+	[Arguments("System.Collections.Generic.Dictionary<string, int>")]
+	[Arguments("System.Collections.Generic.IDictionary<int, bool>")]
+	[Arguments("System.Collections.Generic.IReadOnlyDictionary<int, string>")]
+	public async Task Is_GivenTypeIsAMatch_ReturnsTrue(string typeName, CancellationToken cancellationToken)
+	{
+		var dictionaryKV = new TypeIdentity(typeof(Dictionary<,>));
+		var iDictionaryKV = new TypeIdentity(typeof(IDictionary<,>));
+		var iReadOnlyDictionaryKV = new TypeIdentity(typeof(IReadOnlyDictionary<,>));
+
+		var symbol = GetTypeReferenceSymbol(typeName, cancellationToken);
+
+		await Assert.That(symbol).IsNotNull();
+		await Assert.That(TypeHelpers.Is(symbol, dictionaryKV, iDictionaryKV, iReadOnlyDictionaryKV)).IsTrue();
 	}
 }

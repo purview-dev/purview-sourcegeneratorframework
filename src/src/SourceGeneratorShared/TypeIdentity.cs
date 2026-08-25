@@ -1,30 +1,7 @@
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 
-namespace Purview.SourceGeneratorFramework.Models;
-
-/// <summary>
-/// Represents a single link in a nested type's containing-type chain.
-/// </summary>
-/// <remarks>
-/// Deliberately minimal: only the name and the containing type's own generic arity are needed to identify
-/// and render a link in the chain, or to match it against a declaration or symbol. Unlike
-/// <see cref="TypeValueObject"/> it carries no namespace, generic arguments or further nesting, so building
-/// a chain never recurses into argument resolution.
-/// </remarks>
-public readonly record struct ContainingType(string Name, int GenericArity)
-{
-	/// <summary>
-	/// Gets the CLR metadata name, including the generic arity suffix when required.
-	/// </summary>
-	public string MetadataName => GenericArity == 0 ? Name : $"{Name}`{GenericArity}";
-
-	/// <summary>
-	/// Gets the type name suitable for use in generated code, using open placeholders for any generic
-	/// parameters since a containing link does not track the constructed argument shapes.
-	/// </summary>
-	public string RenderTypeName => GenericArity == 0 ? Name : $"{Name}<{new string(',', GenericArity - 1)}>";
-}
+namespace Purview.SourceGeneratorFramework;
 
 /// <summary>
 /// Represents a semantic reference to a named type, independent of any single compilation.
@@ -33,7 +10,7 @@ public readonly record struct ContainingType(string Name, int GenericArity)
 /// <para>
 /// This value object models <b>named type identity</b>. Arrays, pointers, function pointers,
 /// <see langword="dynamic"/>, generic parameters and error types are not identities and are modelled by
-/// <see cref="TypeReferenceOptions"/>, which is also the element type of <see cref="TypeArguments"/>.
+/// <see cref="TypeReference"/>, which is also the element type of <see cref="TypeArguments"/>.
 /// </para>
 /// <para>
 /// Matching against an <see cref="ITypeSymbol"/> is <i>structural</i> — name, namespace, containing-type
@@ -41,23 +18,31 @@ public readonly record struct ContainingType(string Name, int GenericArity)
 /// against another.
 /// </para>
 /// <para>
+/// Generic definitions and constructed generic types are intentionally distinct values. For example,
+/// <c>new TypeIdentity(typeof(Dictionary&lt;,&gt;))</c> represents the open definition, while calling
+/// <see cref="MakeGeneric(TypeIdentity[])"/> supplies concrete arguments. Structural
+/// <see cref="Equals(TypeIdentity)"/> requires the same generic construction; symbol
+/// <see cref="Matches(ITypeSymbol?)"/> is asymmetric and allows an open definition to match any constructed
+/// symbol having the same definition.
+/// </para>
+/// <para>
 /// Construction is on the hot path of every generator pipeline, so it deliberately avoids
 /// <c>ToDisplayString</c>, <c>GetGenericArguments</c> and builder growth. The common cases — a non-nested,
 /// non-generic type — allocate nothing beyond the namespace string.
 /// </para>
 /// </remarks>
-public readonly record struct TypeValueObject
+public readonly record struct TypeIdentity
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="TypeValueObject"/> struct from a <see cref="Type"/>.
+	/// Initializes a new instance of the <see cref="TypeIdentity"/> struct from a <see cref="Type"/>.
 	/// </summary>
 	/// <exception cref="ArgumentNullException">Thrown when the provided type is null.</exception>
 	/// <exception cref="ArgumentException">
-	/// Thrown when the type is not a named type. Use <see cref="TryCreate(Type, out TypeValueObject)"/> when the
-	/// input may not be representable, or <see cref="TypeReferenceOptions.TryCreate(Type, out TypeReferenceOptions)"/>
+	/// Thrown when the type is not a named type. Use <see cref="TryCreate(Type, out TypeIdentity)"/> when the
+	/// input may not be representable, or <see cref="TypeReference.TryCreate(Type, out TypeReference)"/>
 	/// to capture array, pointer and nullable composition.
 	/// </exception>
-	public TypeValueObject(Type type)
+	public TypeIdentity(Type type)
 	{
 		if (type == null)
 			throw new ArgumentNullException(nameof(type));
@@ -65,7 +50,7 @@ public readonly record struct TypeValueObject
 		if (!IsRepresentable(type))
 		{
 			throw new ArgumentException(
-				$"The type '{type}' is not a named type and cannot be represented by {nameof(TypeValueObject)}. Use {nameof(TypeReferenceOptions)} for composed references.",
+				$"The type '{type}' is not a named type and cannot be represented by {nameof(TypeIdentity)}. Use {nameof(TypeReference)} for composed references.",
 				nameof(type)
 			);
 		}
@@ -98,19 +83,19 @@ public readonly record struct TypeValueObject
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="TypeValueObject"/> struct from a type name and namespace.
+	/// Initializes a new instance of the <see cref="TypeIdentity"/> struct from a type name and namespace.
 	/// <para>
 	/// <b>Note:</b> This constructor does not validate the provided type name or namespace. It is the caller's
 	/// responsibility to ensure the values represent a real type. For keyword types prefer
-	/// <see cref="TypeValueObject(SpecialType)"/>, <see cref="TypeValueObject(ITypeSymbol)"/> or
-	/// <see cref="TypeValueObject(Type)"/>.
+	/// <see cref="TypeIdentity(SpecialType)"/>, <see cref="TypeIdentity(ITypeSymbol)"/> or
+	/// <see cref="TypeIdentity(Type)"/>.
 	/// </para>
 	/// <para>
 	/// This produces a top-level, non-generic type. Use <see cref="Nested(string, int)"/> for nested types and
-	/// <see cref="MakeGeneric(TypeReferenceOptions[])"/> for constructed generics.
+	/// <see cref="MakeGeneric(TypeReference[])"/> for constructed generics.
 	/// </para>
 	/// </summary>
-	public TypeValueObject(string typeName, string? @namespace)
+	public TypeIdentity(string typeName, string? @namespace)
 	{
 		if (string.IsNullOrWhiteSpace(typeName))
 			throw new ArgumentException("Type name cannot be null, empty or whitespace.", nameof(typeName));
@@ -123,15 +108,15 @@ public readonly record struct TypeValueObject
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="TypeValueObject"/> struct from a Roslyn type symbol.
+	/// Initializes a new instance of the <see cref="TypeIdentity"/> struct from a Roslyn type symbol.
 	/// </summary>
 	/// <exception cref="ArgumentNullException">Thrown when the provided symbol is null.</exception>
 	/// <exception cref="ArgumentException">
 	/// Thrown when the symbol is not a resolvable named type. Use
-	/// <see cref="TryCreate(ITypeSymbol, out TypeValueObject)"/> inside generator pipelines, where unresolved and
+	/// <see cref="TryCreate(ITypeSymbol, out TypeIdentity)"/> inside generator pipelines, where unresolved and
 	/// composed symbols are routine.
 	/// </exception>
-	public TypeValueObject(ITypeSymbol typeSymbol)
+	public TypeIdentity(ITypeSymbol typeSymbol)
 	{
 		if (typeSymbol == null)
 			throw new ArgumentNullException(nameof(typeSymbol));
@@ -139,7 +124,7 @@ public readonly record struct TypeValueObject
 		if (typeSymbol is not INamedTypeSymbol namedType || !IsRepresentable(namedType))
 		{
 			throw new ArgumentException(
-				$"The symbol '{typeSymbol.ToDisplayString()}' is not a resolvable named type and cannot be represented by {nameof(TypeValueObject)}. Use {nameof(TryCreate)} for a non-throwing conversion.",
+				$"The symbol '{typeSymbol.ToDisplayString()}' is not a resolvable named type and cannot be represented by {nameof(TypeIdentity)}. Use {nameof(TryCreate)} for a non-throwing conversion.",
 				nameof(typeSymbol)
 			);
 		}
@@ -165,10 +150,10 @@ public readonly record struct TypeValueObject
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="TypeValueObject"/> struct from a recognized C# keyword
+	/// Initializes a new instance of the <see cref="TypeIdentity"/> struct from a recognized C# keyword
 	/// special type.
 	/// </summary>
-	public TypeValueObject(SpecialType specialType)
+	public TypeIdentity(SpecialType specialType)
 	{
 		var knownType = KnownLangTypes.Get(specialType);
 		if (knownType == TypeMapping.Empty)
@@ -233,11 +218,11 @@ public readonly record struct TypeValueObject
 	/// </summary>
 	/// <remarks>
 	/// Empty for a non-generic type and for an open generic definition; use <see cref="GenericArity"/> to
-	/// distinguish those cases. Arguments are <see cref="TypeReferenceOptions"/> so that composed arguments —
+	/// distinguish those cases. Arguments are <see cref="TypeReference"/> so that composed arguments —
 	/// <c>List&lt;int[]&gt;</c>, <c>List&lt;T&gt;</c>, <c>List&lt;string?&gt;</c> — are represented exactly
 	/// rather than widened to the open definition.
 	/// </remarks>
-	public ImmutableArray<TypeReferenceOptions> TypeArguments { get; init; }
+	public ImmutableArray<TypeReference> TypeArguments { get; init; }
 
 	/// <summary>
 	/// Gets a value indicating whether this value represents an open generic type definition.
@@ -249,6 +234,17 @@ public readonly record struct TypeValueObject
 
 	/// <summary>Gets a value indicating whether the type is in the global namespace.</summary>
 	public bool IsGlobalNamespace => Namespace is null;
+
+	/// <summary>
+	/// Gets a value indicating whether this type's simple name uses the conventional C# attribute suffix.
+	/// </summary>
+	/// <remarks>
+	/// This describes the type name only. Whether the type is emitted as an attribute application is determined
+	/// by <see cref="AttributeDeclarationOptions"/>.
+	/// </remarks>
+	public bool IsAttribute =>
+		Name.Length > TypeHelpers.AttributeSuffix.Length
+		&& Name.EndsWith(TypeHelpers.AttributeSuffix, StringComparison.Ordinal);
 
 	/// <summary>
 	/// Gets the CLR metadata name, including the generic arity suffix when required.
@@ -274,46 +270,55 @@ public readonly record struct TypeValueObject
 	/// <summary>
 	/// Gets the fully-qualified global type name for use in generated code.
 	/// </summary>
-	public string RenderFullName
+	public string RenderFullName => RenderFullNameCore(omitAttributeSuffix: false);
+
+	/// <summary>
+	/// Gets the fully-qualified name for use in an attribute application, omitting the optional
+	/// <c>Attribute</c> suffix from the outer type name.
+	/// </summary>
+	public string RenderAttributeName => RenderFullNameCore(omitAttributeSuffix: true);
+
+	string RenderFullNameCore(bool omitAttributeSuffix)
 	{
-		get
-		{
-			if (SpecialType != SpecialType.None)
-				return Keyword!;
+		if (SpecialType != SpecialType.None)
+			return Keyword!;
 
-			var name = RenderTypeName;
-			if (IsNested)
-				name = $"{string.Join(".", ContainingTypes.Select(static type => type.RenderTypeName))}.{name}";
+		var name = RenderTypeNameCore(omitAttributeSuffix);
+		if (IsNested)
+			name = $"{string.Join(".", ContainingTypes.Select(static type => type.RenderTypeName))}.{name}";
 
-			return IsGlobalNamespace ? name : $"global::{Namespace}.{name}";
-		}
+		return IsGlobalNamespace ? name : $"global::{Namespace}.{name}";
 	}
 
 	/// <summary>
 	/// Gets the type name suitable for use in generated code, without namespace or containing types.
 	/// </summary>
-	public string RenderTypeName
-	{
-		get
-		{
-			if (SpecialType != SpecialType.None)
-				return Keyword!;
-
-			if (GenericArity == 0)
-				return Name;
-
-			// Render the open generic definition with commas for each type parameter, or the constructed form with
-			return TypeArguments.IsDefaultOrEmpty
-				? $"{Name}<{new string(',', GenericArity - 1)}>"
-				: $"{Name}<{string.Join(", ", TypeArguments.Select(static argument => argument.RenderFullName))}>";
-		}
-	}
+	public string RenderTypeName => RenderTypeNameCore(omitAttributeSuffix: false);
 
 	/// <summary>
-	/// Gets the fully-qualified name rendered as a C# attribute application, including brackets and the
-	/// optional omission of the <c>Attribute</c> suffix.
+	/// Gets the unqualified type name for use in an attribute application, omitting the optional
+	/// <c>Attribute</c> suffix while retaining generic arguments.
 	/// </summary>
-	public string RenderAttributeName => $"[{TypeHelpers.GetTypeName(RenderFullName)}]";
+	public string RenderAttributeTypeName => RenderTypeNameCore(omitAttributeSuffix: true);
+
+	string RenderTypeNameCore(bool omitAttributeSuffix)
+	{
+		if (SpecialType != SpecialType.None)
+			return Keyword!;
+
+		var name =
+			omitAttributeSuffix && IsAttribute
+				? Name.Substring(0, Name.Length - TypeHelpers.AttributeSuffix.Length)
+				: Name;
+
+		if (GenericArity == 0)
+			return name;
+
+		// Render the open generic definition with commas for each type parameter, or the constructed form with
+		return TypeArguments.IsDefaultOrEmpty
+			? $"{name}<{new string(',', GenericArity - 1)}>"
+			: $"{name}<{string.Join(", ", TypeArguments.Select(static argument => argument.RenderFullName))}>";
+	}
 
 	/// <summary>
 	/// Returns the rendered full name.
@@ -400,12 +405,12 @@ public readonly record struct TypeValueObject
 	public bool Equals(Type? other) => other is not null && TryCreate(other, out var value) && Equals(value);
 
 	/// <summary>Determines whether the specified structured reference is an unmodified reference to this type.</summary>
-	public bool Equals(TypeReferenceOptions? other) => other is not null && other.Equals(this);
+	public bool Equals(TypeReference? other) => other is not null && other.Equals(this);
 
 	/// <summary>
 	/// Determines whether the specified value represents the same type.
 	/// </summary>
-	public bool Equals(TypeValueObject other) =>
+	public bool Equals(TypeIdentity other) =>
 		string.Equals(Name, other.Name, StringComparison.Ordinal)
 		&& GenericArity == other.GenericArity
 		&& SpecialType == other.SpecialType
@@ -444,32 +449,32 @@ public readonly record struct TypeValueObject
 	}
 
 	/// <summary>
-	/// Implicitly converts a <see cref="TypeValueObject"/> to its rendered full name.
+	/// Implicitly converts a <see cref="TypeIdentity"/> to its rendered full name.
 	/// </summary>
-	public static implicit operator string(TypeValueObject typeValueObject) => typeValueObject.RenderFullName;
+	public static implicit operator string(TypeIdentity typeValueObject) => typeValueObject.RenderFullName;
 
 	// ---------------------------------------------------------------------------------------------
 	// Composition
 	// ---------------------------------------------------------------------------------------------
 
 	/// <summary>Creates the canonical source-generation type reference for this type.</summary>
-	public TypeReferenceOptions AsTypeReference() => new(this);
+	public TypeReference AsTypeReference() => new(this);
 
 	/// <summary>Creates a nullable structured type reference.</summary>
-	public TypeReferenceOptions MakeNullable() => AsTypeReference().Nullable();
+	public TypeReference MakeNullable() => AsTypeReference().Nullable();
 
 	/// <summary>Creates an array structured type reference with the specified rank.</summary>
-	public TypeReferenceOptions MakeArray(int rank = 1) => AsTypeReference().MakeArray(rank);
+	public TypeReference MakeArray(int rank = 1) => AsTypeReference().MakeArray(rank);
 
 	/// <summary>Creates a pointer structured type reference.</summary>
-	public TypeReferenceOptions MakePointer() => AsTypeReference().MakePointer();
+	public TypeReference MakePointer() => AsTypeReference().MakePointer();
 
 	/// <summary>
 	/// Creates a value describing a type nested inside this one.
 	/// </summary>
 	/// <param name="typeName">The nested type's simple name.</param>
 	/// <param name="genericArity">The nested type's own generic arity.</param>
-	public TypeValueObject Nested(string typeName, int genericArity = 0)
+	public TypeIdentity Nested(string typeName, int genericArity = 0)
 	{
 		if (typeName == null)
 			throw new ArgumentNullException(nameof(typeName));
@@ -485,7 +490,7 @@ public readonly record struct TypeValueObject
 
 		chain.Add(new ContainingType(Name, GenericArity));
 
-		return new TypeValueObject
+		return new TypeIdentity
 		{
 			Name = typeName,
 			Namespace = Namespace,
@@ -498,14 +503,20 @@ public readonly record struct TypeValueObject
 	/// <summary>
 	/// Creates a generic variant of this type from type argument names.
 	/// </summary>
-	public TypeValueObject MakeGeneric(params string[] typeArguments)
+	/// <remarks>
+	/// Each string is a literal named type argument, not a wildcard. For example,
+	/// <c>MakeGeneric("TKey", "TValue")</c> describes arguments literally named <c>TKey</c> and
+	/// <c>TValue</c>; it does not mean “any two arguments.” Leave an identity created from
+	/// <c>typeof(Dictionary&lt;,&gt;)</c> unconstructed to match any construction of that definition.
+	/// </remarks>
+	public TypeIdentity MakeGeneric(params string[] typeArguments)
 	{
 		if (typeArguments == null)
 			throw new ArgumentNullException(nameof(typeArguments));
 
-		var references = new TypeReferenceOptions[typeArguments.Length];
+		var references = new TypeReference[typeArguments.Length];
 		for (var index = 0; index < typeArguments.Length; index++)
-			references[index] = new TypeReferenceOptions(new TypeValueObject(typeArguments[index], null));
+			references[index] = new TypeReference(new TypeIdentity(typeArguments[index], null));
 
 		return MakeGeneric(references);
 	}
@@ -513,12 +524,17 @@ public readonly record struct TypeValueObject
 	/// <summary>
 	/// Creates a constructed generic type using the specified named type arguments.
 	/// </summary>
-	public TypeValueObject MakeGeneric(params TypeValueObject[] typeArguments)
+	/// <remarks>
+	/// Supplying arguments creates a typed construction used by structural equality and matching. To represent
+	/// an open generic definition, do not call this method; construct the identity from an open runtime type or
+	/// Roslyn original definition instead.
+	/// </remarks>
+	public TypeIdentity MakeGeneric(params TypeIdentity[] typeArguments)
 	{
 		if (typeArguments == null)
 			throw new ArgumentNullException(nameof(typeArguments));
 
-		var references = new TypeReferenceOptions[typeArguments.Length];
+		var references = new TypeReference[typeArguments.Length];
 		for (var index = 0; index < typeArguments.Length; index++)
 			references[index] = typeArguments[index].AsTypeReference();
 
@@ -528,7 +544,11 @@ public readonly record struct TypeValueObject
 	/// <summary>
 	/// Creates a constructed generic type using the specified composed type arguments.
 	/// </summary>
-	public TypeValueObject MakeGeneric(params TypeReferenceOptions[] typeArguments)
+	/// <remarks>
+	/// Use this overload when an argument is itself composed, such as an array, nullable type, pointer, generic
+	/// parameter or nested generic construction. Arguments are compared as real type references, not placeholders.
+	/// </remarks>
+	public TypeIdentity MakeGeneric(params TypeReference[] typeArguments)
 	{
 		if (typeArguments == null)
 			throw new ArgumentNullException(nameof(typeArguments));
@@ -559,25 +579,33 @@ public readonly record struct TypeValueObject
 	// Factories
 	// ---------------------------------------------------------------------------------------------
 
-	/// <summary>Gets an empty <see cref="TypeValueObject"/>.</summary>
-	public static readonly TypeValueObject Empty;
-
-	/// <summary>Creates a <see cref="TypeValueObject"/> from a generic type parameter.</summary>
-	public static TypeValueObject Create<T>() => new(typeof(T));
+	/// <summary>Gets an empty <see cref="TypeIdentity"/>.</summary>
+	public static readonly TypeIdentity Empty;
 
 	/// <summary>
-	/// Attempts to create a <see cref="TypeValueObject"/> from a type symbol, returning <see langword="false"/>
+	/// Creates a <see cref="TypeIdentity"/> from a runtime type.
+	/// </summary>
+	/// <remarks>
+	/// Runtime <see cref="Type"/> values do not retain nullable-reference annotations. To represent
+	/// <c>string?</c>, create the <c>string</c> value then call <see cref="MakeNullable"/>, or use
+	/// <see cref="TypeReference.TryCreate(ITypeSymbol?, out TypeReference)"/> when working
+	/// with Roslyn symbols.
+	/// </remarks>
+	public static TypeIdentity Create<T>() => new(typeof(T));
+
+	/// <summary>
+	/// Attempts to create a <see cref="TypeIdentity"/> from a type symbol, returning <see langword="false"/>
 	/// for symbols that cannot be represented.
 	/// </summary>
 	/// <remarks>
 	/// Prefer this inside generator and analyzer pipelines, where array, pointer, type-parameter and unresolved
 	/// error symbols are routine and must not throw.
 	/// </remarks>
-	public static bool TryCreate(ITypeSymbol? typeSymbol, out TypeValueObject value)
+	public static bool TryCreate(ITypeSymbol? typeSymbol, out TypeIdentity value)
 	{
 		if (typeSymbol is INamedTypeSymbol namedType && IsRepresentable(namedType))
 		{
-			value = new TypeValueObject(namedType);
+			value = new TypeIdentity(namedType);
 
 			return true;
 		}
@@ -588,14 +616,14 @@ public readonly record struct TypeValueObject
 	}
 
 	/// <summary>
-	/// Attempts to create a <see cref="TypeValueObject"/> from a runtime type, returning
+	/// Attempts to create a <see cref="TypeIdentity"/> from a runtime type, returning
 	/// <see langword="false"/> for types that cannot be represented.
 	/// </summary>
-	public static bool TryCreate(Type? type, out TypeValueObject value)
+	public static bool TryCreate(Type? type, out TypeIdentity value)
 	{
 		if (type is not null && IsRepresentable(type))
 		{
-			value = new TypeValueObject(type);
+			value = new TypeIdentity(type);
 
 			return true;
 		}
@@ -612,7 +640,7 @@ public readonly record struct TypeValueObject
 	/// <summary>
 	/// Determines whether a symbol is a resolvable named type this value object can describe.
 	/// </summary>
-	internal static bool IsRepresentable(ITypeSymbol? typeSymbol) =>
+	static bool IsRepresentable(ITypeSymbol? typeSymbol) =>
 		typeSymbol is INamedTypeSymbol
 		&& typeSymbol.TypeKind
 			is not (
@@ -635,7 +663,7 @@ public readonly record struct TypeValueObject
 	/// Replaces <c>ContainingNamespace.ToDisplayString()</c>, which routes through Roslyn's full symbol-display
 	/// machinery — a per-symbol cost that dominates construction in a generator processing thousands of types.
 	/// </remarks>
-	internal static string? BuildNamespace(INamespaceSymbol? @namespace)
+	static string? BuildNamespace(INamespaceSymbol? @namespace)
 	{
 		if (@namespace is null || @namespace.IsGlobalNamespace)
 			return null;
@@ -679,7 +707,7 @@ public readonly record struct TypeValueObject
 	/// <summary>
 	/// Compares a dotted namespace string against a namespace symbol chain without allocating.
 	/// </summary>
-	internal static bool NamespaceMatches(string? expected, INamespaceSymbol? actual)
+	static bool NamespaceMatches(string? expected, INamespaceSymbol? actual)
 	{
 		if (actual is null || actual.IsGlobalNamespace)
 			return expected is null;
@@ -759,10 +787,7 @@ public readonly record struct TypeValueObject
 		return true;
 	}
 
-	static bool TypeArgumentsEqual(
-		ImmutableArray<TypeReferenceOptions> left,
-		ImmutableArray<TypeReferenceOptions> right
-	)
+	static bool TypeArgumentsEqual(ImmutableArray<TypeReference> left, ImmutableArray<TypeReference> right)
 	{
 		var leftCount = left.IsDefaultOrEmpty ? 0 : left.Length;
 		var rightCount = right.IsDefaultOrEmpty ? 0 : right.Length;
@@ -838,7 +863,7 @@ public readonly record struct TypeValueObject
 		return builder.MoveToImmutable();
 	}
 
-	static ImmutableArray<TypeReferenceOptions> BuildArguments(INamedTypeSymbol typeSymbol)
+	static ImmutableArray<TypeReference> BuildArguments(INamedTypeSymbol typeSymbol)
 	{
 		var arguments = typeSymbol.TypeArguments;
 		if (arguments.Length == 0)
@@ -851,11 +876,11 @@ public readonly record struct TypeValueObject
 		)
 			return [];
 
-		var builder = ImmutableArray.CreateBuilder<TypeReferenceOptions>(arguments.Length);
+		var builder = ImmutableArray.CreateBuilder<TypeReference>(arguments.Length);
 		foreach (var argument in arguments)
 		{
 			// Only genuinely unrepresentable arguments (function pointers, error types) widen to the definition.
-			if (!TypeReferenceOptions.TryCreate(argument, out var value))
+			if (!TypeReference.TryCreate(argument, out var value))
 				return [];
 
 			builder.Add(value);
@@ -864,15 +889,15 @@ public readonly record struct TypeValueObject
 		return builder.MoveToImmutable();
 	}
 
-	static ImmutableArray<TypeReferenceOptions> BuildArguments(Type[] allArguments, int offset, int count)
+	static ImmutableArray<TypeReference> BuildArguments(Type[] allArguments, int offset, int count)
 	{
 		if (count == 0 || allArguments.Length < offset + count)
 			return [];
 
-		var builder = ImmutableArray.CreateBuilder<TypeReferenceOptions>(count);
+		var builder = ImmutableArray.CreateBuilder<TypeReference>(count);
 		for (var index = offset; index < offset + count; index++)
 		{
-			if (!TypeReferenceOptions.TryCreate(allArguments[index], out var value))
+			if (!TypeReference.TryCreate(allArguments[index], out var value))
 				return [];
 
 			builder.Add(value);
@@ -889,7 +914,7 @@ public readonly record struct TypeValueObject
 	/// <c>Outer&lt;T&gt;.Inner</c> is <c>Inner</c> and <c>Outer&lt;T&gt;.Inner&lt;U&gt;</c> is <c>Inner`1</c> —
 	/// which is exactly the value needed, and it costs no allocation.
 	/// </remarks>
-	internal static int ParseArity(string metadataName)
+	static int ParseArity(string metadataName)
 	{
 		var separator = metadataName.LastIndexOf('`');
 		if (separator < 0 || separator == metadataName.Length - 1)

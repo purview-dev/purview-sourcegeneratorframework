@@ -8,7 +8,7 @@ public readonly record struct ParameterDeclarationOptions
 	/// <summary>Creates a parameter declaration.</summary>
 	public ParameterDeclarationOptions(
 		string name,
-		TypeReferenceOptions reference,
+		TypeReference reference,
 		ParameterModifier modifier = ParameterModifier.None
 	)
 	{
@@ -21,7 +21,7 @@ public readonly record struct ParameterDeclarationOptions
 	public string Name { get; }
 
 	/// <summary>Gets the parameter type.</summary>
-	public TypeReferenceOptions Reference { get; }
+	public TypeReference Reference { get; }
 
 	/// <summary>Gets the parameter passing modifier.</summary>
 	public ParameterModifier Modifier { get; init; }

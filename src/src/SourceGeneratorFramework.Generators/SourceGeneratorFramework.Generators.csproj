@@ -11,16 +11,32 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
 		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
-		<PackageReference Include="System.Collections.Immutable" VersionOverride="9.0.0" />
 	</ItemGroup>
 
-	<Target Name="GetSourceGeneratorAnalyzerFiles" DependsOnTargets="Build" Returns="@(SourceGeneratorAnalyzerFile)">
+	<Target
+		Name="DeclareSourceGeneratorSharedRuntimeDependency"
+		BeforeTargets="CopySourceGeneratorRuntimeDependencies;GetSourceGeneratorAnalyzerFiles"
+	>
 		<ItemGroup>
-			<SourceGeneratorAnalyzerFile Include="$(TargetPath)" />
-			<SourceGeneratorAnalyzerFile
+			<SourceGeneratorRuntimeDependency
 				Include="@(ReferenceCopyLocalPaths)"
 				Condition="'%(ReferenceCopyLocalPaths.Filename)%(ReferenceCopyLocalPaths.Extension)' == 'Purview.SourceGeneratorFramework.Shared.dll'"
-			/>
+			>
+				<DestinationSubPath>%(ReferenceCopyLocalPaths.Filename)%(ReferenceCopyLocalPaths.Extension)</DestinationSubPath>
+			</SourceGeneratorRuntimeDependency>
 		</ItemGroup>
+	</Target>
+
+	<PropertyGroup>
+		<SourceGeneratorSharedAssembly>$(MSBuildThisFileDirectory)..\SourceGeneratorShared\bin\$(Configuration)\netstandard2.0\Purview.SourceGeneratorFramework.Shared.dll</SourceGeneratorSharedAssembly>
+	</PropertyGroup>
+
+	<Target Name="CopySourceGeneratorSharedToAnalyzerOutput" AfterTargets="CopyFilesToOutputDirectory">
+		<Copy
+			SourceFiles="$(SourceGeneratorSharedAssembly)"
+			DestinationFolder="$(TargetDir)"
+			SkipUnchangedFiles="true"
+			Condition="Exists('$(SourceGeneratorSharedAssembly)')"
+		/>
 	</Target>
 </Project>

@@ -36,11 +36,47 @@ public static class TypeHelpers
 		if (typeName == null)
 			throw new ArgumentNullException(nameof(typeName));
 
-		var idx = typeName.IndexOf('`');
-		if (idx >= 0)
-			typeName = typeName.Substring(0, idx);
+		var typeNameEnd = GetGenericTypeNameEnd(typeName);
+		return typeNameEnd > AttributeSuffix.Length
+			&& string.Compare(
+				typeName,
+				typeNameEnd - AttributeSuffix.Length,
+				AttributeSuffix,
+				0,
+				AttributeSuffix.Length,
+				StringComparison.Ordinal
+			) == 0;
+	}
 
-		return typeName.Length > AttributeSuffix.Length && typeName.EndsWith(AttributeSuffix, StringComparison.Ordinal);
+	/// <summary>
+	/// Determines whether the specified type symbol is compatible with any of the expected base types or interfaces.
+	/// </summary>
+	/// <param name="identity">The type symbol to check.</param>
+	/// <param name="expectedBases">The expected base types or interfaces to check against.</param>
+	/// <returns><c>true</c> if the type symbol is compatible with any of the expected base types or interfaces; otherwise, <c>false</c>.</returns>
+	/// <exception cref="ArgumentNullException">Thrown if the identity or expectedBases parameters are null.</exception>
+	/// <remarks>
+	/// An expected open generic definition matches any construction with the same name, namespace and arity. An
+	/// expected constructed generic validates its arguments; an actual argument may also satisfy an expected
+	/// argument by implementing or inheriting from that expected contract.
+	/// </remarks>
+	public static bool Is(INamedTypeSymbol identity, params TypeIdentity[] expectedBases)
+	{
+		if (identity == null)
+			throw new ArgumentNullException(nameof(identity));
+		if (expectedBases == null)
+			throw new ArgumentNullException(nameof(expectedBases));
+
+		foreach (var expectedBase in expectedBases)
+		{
+			if (IsCompatibleExpectedBase(identity, expectedBase))
+				return true;
+
+			if (InheritsFrom(identity, expectedBase) || Implements(identity, expectedBase))
+				return true;
+		}
+
+		return false;
 	}
 
 	/// <summary>
@@ -51,63 +87,102 @@ public static class TypeHelpers
 		if (typeName == null)
 			throw new ArgumentNullException(nameof(typeName));
 
-		var idx = typeName.IndexOf('`');
-		if (idx >= 0)
-			typeName = typeName.Substring(0, idx);
+		var typeNameEnd = GetGenericTypeNameEnd(typeName);
+		if (!IsAttribute(typeName))
+			return typeName;
 
-		if (IsAttribute(typeName))
-			typeName = typeName.Substring(0, typeName.Length - AttributeSuffix.Length);
-
-		return typeName;
+		// Remove the 'Attribute' suffix while preserving any generic arity or type arguments
+		return typeName.Substring(0, typeNameEnd - AttributeSuffix.Length) + typeName.Substring(typeNameEnd);
 	}
 
 	/// <summary>
-	/// Determines whether the target symbol has an explicit base type declaration.
+	/// Gets the exclusive end index of a type's non-generic name.
 	/// </summary>
-	public static bool HasExplicitBaseType(TargetSymbolDescriptor descriptor)
+	/// <remarks>
+	/// Supports both CLR metadata names such as <c>MarkerAttribute`1</c> and C# rendered names
+	/// such as <c>global::Example.MarkerAttribute&lt;string&gt;</c>.
+	/// </remarks>
+	static int GetGenericTypeNameEnd(string typeName)
 	{
-		if (descriptor == null)
-			throw new ArgumentNullException(nameof(descriptor));
-		if (descriptor.Declaration == null)
-			return false;
+		var metadataGenericStart = typeName.IndexOf('`');
+		var renderedGenericStart = typeName.IndexOf('<');
+		if (metadataGenericStart < 0)
+			return renderedGenericStart < 0 ? typeName.Length : renderedGenericStart;
+		if (renderedGenericStart < 0)
+			return metadataGenericStart;
+
+		// If both generic indicators are present, return the earliest one to get the non-generic name end.
+		return Math.Min(metadataGenericStart, renderedGenericStart);
+	}
+
+	/// <summary>
+	/// Determines whether the target syntax has an explicit base type declaration.
+	/// </summary>
+	public static bool HasExplicitBaseType(BaseTypeDeclarationSyntax syntaxNode)
+	{
+		if (syntaxNode == null)
+			throw new ArgumentNullException(nameof(syntaxNode));
 
 		// Check if the declaration has a base list with at least one type specified
-		return descriptor.Declaration.BaseList is { Types.Count: > 0 };
+		return syntaxNode.BaseList is { Types.Count: > 0 };
 	}
 
 	/// <summary>
-	/// Determines whether the target symbol is derived from the expected base type.
+	/// Determines whether the <see cref="ITypeSymbol"/> has a base type. Not that
+	/// if the base type is <see cref="object"/>, it is considered to not have an explicit base type.
 	/// </summary>
-	public static bool IsDerivedFromExpectedBase(TargetSymbolDescriptor descriptor, TypeValueObject expectedBase)
+	public static bool HasExplicitBaseType(ITypeSymbol symbol)
 	{
-		if (descriptor == null)
-			throw new ArgumentNullException(nameof(descriptor));
-		if (descriptor.Symbol.BaseType is not null)
-		{
-			if (IsCompatibleExpectedBase(descriptor.Symbol.BaseType, expectedBase))
-				return true;
-		}
+		if (symbol == null)
+			throw new ArgumentNullException(nameof(symbol));
 
-		var declaredBaseTypes = descriptor.Declaration?.BaseList?.Types;
+		// Check if the declaration has a base list with at least one type specified
+		return symbol.BaseType is null or { SpecialType: not SpecialType.System_Object };
+	}
+
+	/// <summary>
+	/// Determines whether the target syntax is derived from the expected base type.
+	/// </summary>
+	public static bool IsDerivedFromExpectedBase(BaseTypeDeclarationSyntax syntax, TypeIdentity expectedBase)
+	{
+		if (syntax == null)
+			throw new ArgumentNullException(nameof(syntax));
+
+		var declaredBaseTypes = syntax.BaseList?.Types;
 		if (declaredBaseTypes is null)
 			return false;
 
 		foreach (var baseType in declaredBaseTypes)
 		{
-			if (
-				string.Equals(
-					GetUnqualifiedTypeName(baseType.Type),
-					expectedBase.MetadataFullName,
-					StringComparison.Ordinal
-				)
-			)
+			if (string.Equals(GetUnqualifiedTypeName(baseType.Type), expectedBase.Name, StringComparison.Ordinal))
 				return true;
 		}
 
 		return false;
 	}
 
-	static bool IsCompatibleExpectedBase(INamedTypeSymbol actualBase, TypeValueObject expectedBase)
+	/// <summary>
+	/// Determines whether the target symbol is derived from the expected base type.
+	/// </summary>
+	/// <remarks>
+	/// Open expected generic definitions match constructed base types. Constructed expected identities validate
+	/// generic arguments semantically, including interface implementation and inheritance compatibility.
+	/// </remarks>
+	public static bool IsDerivedFromExpectedBase(ITypeSymbol symbol, TypeIdentity expectedBase)
+	{
+		if (symbol == null)
+			throw new ArgumentNullException(nameof(symbol));
+
+		if (symbol.BaseType is not null)
+		{
+			if (IsCompatibleExpectedBase(symbol.BaseType, expectedBase))
+				return true;
+		}
+
+		return false;
+	}
+
+	static bool IsCompatibleExpectedBase(INamedTypeSymbol actualBase, TypeIdentity expectedBase)
 	{
 		if (expectedBase.Equals(actualBase))
 			return true;
@@ -119,11 +194,11 @@ public static class TypeHelpers
 		if (actualDefinition.Name != expectedBase.Name || actualNamespace != expectedBase.Namespace)
 			return false;
 
-		// A name-only TypeValueObject has no generic shape information. Treat it as the generic
-		// definition identified by that name, allowing callers such as TypeLibrary.ResourceKitBase
-		// to validate any constructed ResourceKitBase<T>.
-		if (expectedBase.GenericArity == 0 && expectedBase.TypeArguments.IsDefaultOrEmpty)
-			return true;
+		// An identity without constructed type arguments represents its type definition. Match
+		// any construction with the same name and arity. A name-only identity has arity zero and
+		// intentionally retains the historical name-only wildcard behavior.
+		if (expectedBase.TypeArguments.IsDefaultOrEmpty)
+			return expectedBase.GenericArity == 0 || actualDefinition.Arity == expectedBase.GenericArity;
 
 		if (
 			actualDefinition.Arity != expectedBase.GenericArity
@@ -141,7 +216,6 @@ public static class TypeHelpers
 			var actualArgument = actualBase.TypeArguments[index];
 			if (
 				!expectedArgument.Equals(actualArgument)
-				&& !expectedArgument.Equals(actualArgument)
 				&& !Implements(actualArgument, expectedArgument)
 				&& !InheritsFrom(actualArgument, expectedArgument)
 			)
@@ -184,9 +258,9 @@ public static class TypeHelpers
 	}
 
 	/// <summary>
-	/// Creates a <see cref="TypeValueObject"/> for the embedded compiler attribute used by source generators.
+	/// Creates a <see cref="TypeIdentity"/> for the embedded compiler attribute used by source generators.
 	/// </summary>
-	public static readonly TypeValueObject EmbeddedAttribute = new(nameof(EmbeddedAttribute), "Microsoft.CodeAnalysis");
+	public static readonly TypeIdentity EmbeddedAttribute = new(nameof(EmbeddedAttribute), "Microsoft.CodeAnalysis");
 
 	/// <summary>
 	/// Determines whether the type declaration is marked <see langword="partial"/>.
@@ -256,7 +330,7 @@ public static class TypeHelpers
 	/// <summary>
 	/// Determines whether the symbol has an attribute with the specified metadata name.
 	/// </summary>
-	public static ImmutableArray<AttributeData> GetAttributes(ISymbol symbol, TypeValueObject attributeType) =>
+	public static ImmutableArray<AttributeData> GetAttributes(ISymbol symbol, TypeIdentity attributeType) =>
 		GetAttributes(symbol, attributeType.MetadataFullName);
 
 	/// <summary>
@@ -289,7 +363,7 @@ public static class TypeHelpers
 	/// <summary>
 	/// Determines whether the symbol has an attribute with the specified metadata name.
 	/// </summary>
-	public static AttributeData? GetAttribute(ISymbol symbol, TypeValueObject attributeType) =>
+	public static AttributeData? GetAttribute(ISymbol symbol, TypeIdentity attributeType) =>
 		GetAttribute(symbol, attributeType.MetadataFullName);
 
 	/// <summary>
@@ -318,7 +392,7 @@ public static class TypeHelpers
 	/// <summary>
 	/// Determines whether the symbol has the specified attribute.
 	/// </summary>
-	public static bool HasAttribute(ISymbol symbol, TypeValueObject attributeType) =>
+	public static bool HasAttribute(ISymbol symbol, TypeIdentity attributeType) =>
 		HasAttribute(symbol, attributeType.MetadataFullName);
 
 	/// <summary>
@@ -367,7 +441,7 @@ public static class TypeHelpers
 	/// <summary>
 	/// Determines whether the type inherits from the specified base type.
 	/// </summary>
-	public static bool InheritsFrom(ITypeSymbol typeSymbol, TypeValueObject baseType) =>
+	public static bool InheritsFrom(ITypeSymbol typeSymbol, TypeIdentity baseType) =>
 		InheritsFrom(typeSymbol, baseType.MetadataFullName);
 
 	/// <summary>
@@ -381,7 +455,7 @@ public static class TypeHelpers
 	/// <summary>
 	/// Determines whether the type implements the specified interface.
 	/// </summary>
-	public static bool Implements(ITypeSymbol typeSymbol, TypeValueObject interfaceType) =>
+	public static bool Implements(ITypeSymbol typeSymbol, TypeIdentity interfaceType) =>
 		Implements(typeSymbol, interfaceType.MetadataFullName);
 
 	/// <summary>

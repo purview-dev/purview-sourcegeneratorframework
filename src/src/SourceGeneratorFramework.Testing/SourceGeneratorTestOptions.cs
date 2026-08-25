@@ -1,8 +1,15 @@
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace Purview.SourceGeneratorFramework.Testing;
+
+/*
+ * IMPORTANT!
+ *
+ * If you add a new property to this record, please also update the copy constructor!
+ */
 
 /// <summary>
 /// Options that configure a source generator test run.
@@ -33,40 +40,44 @@ public record SourceGeneratorTestOptions
 	// Bootstraps Default using the property initializers without recursively reading Default.
 	SourceGeneratorTestOptions(bool _) { }
 
-	/// <summary>Initializes an options snapshot by copying another instance.</summary>
-	/// <param name="source">The options to copy.</param>
-	/// <remarks>
-	/// This is also the record copy constructor. Mutable collections are copied so options snapshots
-	/// can be customized independently.
-	/// </remarks>
-	protected SourceGeneratorTestOptions(SourceGeneratorTestOptions source)
-	{
-		if (source is null)
-			throw new ArgumentNullException(nameof(source));
+	///// <summary>Initializes an options snapshot by copying another instance.</summary>
+	///// <param name="source">The options to copy.</param>
+	///// <remarks>
+	///// This is also the record copy constructor. Mutable collections are copied so options snapshots
+	///// can be customized independently.
+	///// </remarks>
+	//protected SourceGeneratorTestOptions(SourceGeneratorTestOptions source)
+	//{
+	//	if (source is null)
+	//		throw new ArgumentNullException(nameof(source));
 
-		IncludeDefaultNamespaces = source.IncludeDefaultNamespaces;
-		DefaultNamespaces = source.DefaultNamespaces;
-		AdditionalNamespaces = source.AdditionalNamespaces;
-		AdditionalAssemblyTypes = source.AdditionalAssemblyTypes;
-		AdditionalReferences = source.AdditionalReferences;
-		PreprocessReferences = source.PreprocessReferences;
-		ThrowOnGenerationException = source.ThrowOnGenerationException;
-		CompileToAssembly = source.CompileToAssembly;
-		ValidateCodeWriterScopes = source.ValidateCodeWriterScopes;
-		EnableLogging = source.EnableLogging;
-		ThrowOnLogError = source.ThrowOnLogError;
-		DisableSourceGeneratorPropertyName = source.DisableSourceGeneratorPropertyName;
-		DisableSourceGeneratorValue = source.DisableSourceGeneratorValue;
+	//	IncludeDefaultNamespaces = source.IncludeDefaultNamespaces;
+	//	DefaultNamespaces = source.DefaultNamespaces;
+	//	AdditionalNamespaces = source.AdditionalNamespaces;
+	//	AdditionalAssemblyTypes = source.AdditionalAssemblyTypes;
+	//	AdditionalReferences = source.AdditionalReferences;
+	//	PreprocessReferences = source.PreprocessReferences;
+	//	ThrowOnGenerationException = source.ThrowOnGenerationException;
+	//	CompileToAssembly = source.CompileToAssembly;
+	//	ValidateCodeWriterScopes = source.ValidateCodeWriterScopes;
+	//	EnableLogging = source.EnableLogging;
+	//	ThrowOnLogError = source.ThrowOnLogError;
+	//	DisableSourceGeneratorPropertyName = source.DisableSourceGeneratorPropertyName;
+	//	DisableSourceGeneratorValue = source.DisableSourceGeneratorValue;
 
-		AnalyzerConfigOptions = [with(source.AnalyzerConfigOptions)];
+	//	AnalyzerConfigOptions = [with(source.AnalyzerConfigOptions)];
 
-		TestOutput = source.TestOutput;
-		CompilationAssemblyName = source.CompilationAssemblyName;
-		OutputKind = source.OutputKind;
-		LanguageVersion = source.LanguageVersion;
-		ExcludeGeneratedSourceHintNames = source.ExcludeGeneratedSourceHintNames;
-		AdditionalText = source.AdditionalText;
-	}
+	//	TestOutput = source.TestOutput;
+	//	CompilationAssemblyName = source.CompilationAssemblyName;
+	//	OutputKind = source.OutputKind;
+	//	LanguageVersion = source.LanguageVersion;
+	//	ExcludeGeneratedSourceHintNames = source.ExcludeGeneratedSourceHintNames;
+	//	AdditionalText = source.AdditionalText;
+	//	AdditionalSources = source.AdditionalSources;
+	//	AnalyzerTypes = source.AnalyzerTypes;
+	//	AnalyzerOptions = source.AnalyzerOptions;
+	//	CompilationWithAnalyzersOptions = source.CompilationWithAnalyzersOptions;
+	//}
 
 	/// <summary>
 	/// Gets a value indicating whether the default namespaces should be prepended to the source.
@@ -139,9 +150,10 @@ public record SourceGeneratorTestOptions
 	public bool? DisableSourceGeneratorValue { get; init; }
 
 	/// <summary>
-	/// Gets additional analyzer-config options to pass to the generator driver.
+	/// Gets additional analyzer-config options to pass to the generator driver, such as <c>build_property.*</c> or <c>build_metadata.*</c> values.
 	/// </summary>
-	public Dictionary<string, string> AnalyzerConfigOptions { get; init; } = [];
+	public ImmutableDictionary<string, string> AnalyzerConfigOptions { get; init; } =
+		ImmutableDictionary<string, string>.Empty;
 
 	/// <summary>
 	/// Gets the test output receiver used for generator logging.
@@ -171,7 +183,33 @@ public record SourceGeneratorTestOptions
 	public ImmutableArray<string> ExcludeGeneratedSourceHintNames { get; init; } = [];
 
 	/// <summary>
-	/// Gets additional text files to include in the test compilation.
+	/// Gets additional files to include in the test compilation, such as configuration files or other content that can be read by the generator.
 	/// </summary>
 	public ImmutableArray<AdditionalText> AdditionalText { get; init; } = [];
+
+	/// <summary>
+	/// Gets additional source text to include in the test compilation, such as generated code or other content that can be read by the generator.
+	/// </summary>
+	/// <remarks>This will be added to the compilation as additional source files, along with the source provided.</remarks>
+	public ImmutableArray<string> AdditionalSources { get; init; } = [];
+
+	/// <summary>
+	/// Gets additional analyzer types to include in the test compilation, such as diagnostic
+	/// analyzers or other Roslyn analyzers that can be run alongside the generator.
+	/// </summary>
+	/// <remarks>When this is populated, the compilation will also include the specified analyzers
+	/// and populate <see cref="DriverRunResult.AnalyzerResult"/>.</remarks>
+	public ImmutableArray<Type> AnalyzerTypes { get; init; } = [];
+
+	/// <summary>
+	/// Gets the options to use when running the compilation with analyzers.
+	/// </summary>
+	/// <remarks>This is mutually exclusive with <see cref="CompilationWithAnalyzersOptions"/>.</remarks>
+	public AnalyzerOptions? AnalyzerOptions { get; init; }
+
+	/// <summary>
+	/// Gets the options to use when running the compilation with analyzers.
+	/// </summary>
+	/// <remarks>This is mutually exclusive with <see cref="AnalyzerOptions"/>.</remarks>
+	public CompilationWithAnalyzersOptions? CompilationWithAnalyzersOptions { get; init; }
 }

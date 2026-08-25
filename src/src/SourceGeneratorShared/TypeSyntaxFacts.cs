@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Purview.SourceGeneratorFramework.Models;
+namespace Purview.SourceGeneratorFramework;
 
 /// <summary>
 /// Low-level syntax helpers shared by the matching extensions, exposed as pure static functions so they can be
@@ -25,7 +25,7 @@ public static class TypeSyntaxFacts
 	/// </param>
 	/// <returns><see langword="false"/> for tuples, function pointers and other unrepresentable forms.</returns>
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1021:Avoid out parameters")]
-	public static bool TryGetCore(TypeSyntax? typeSyntax, out TypeSyntax core, out List<TypeModifier>? modifiers)
+	public static bool TryGetCore(TypeSyntax? typeSyntax, out TypeSyntax core, out IList<TypeModifier>? modifiers)
 	{
 		core = null!;
 		modifiers = null;

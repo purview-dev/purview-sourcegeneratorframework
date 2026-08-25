@@ -1,7 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Purview.SourceGeneratorFramework.Logging;
 
-namespace Purview.SourceGeneratorFramework.Models;
+namespace Purview.SourceGeneratorFramework;
 
 /// <summary>
 /// Provides execution services for source generation, including the compilation, immutable
@@ -49,8 +49,7 @@ public class GenerationContext(Compilation compilation, GenerationSettings setti
 		Compilation.GetTypeByMetadataName(fullyQualifiedName);
 
 	/// <summary>Resolves a type from a structured type value.</summary>
-	public INamedTypeSymbol? GetTypeByMetadataName(TypeValueObject type) =>
-		GetTypeByMetadataName(type.MetadataFullName);
+	public INamedTypeSymbol? GetTypeByMetadataName(TypeIdentity type) => GetTypeByMetadataName(type.MetadataFullName);
 
 	/// <inheritdoc />
 	public void Log(SourceGenLogLevel level, int indentation, string message, params object[] args) =>

@@ -6,19 +6,14 @@ namespace Purview.SourceGeneratorFramework;
 public readonly record struct AttributeDeclarationOptions
 {
 	/// <summary>Creates an attribute declaration from a structured type reference.</summary>
-	public AttributeDeclarationOptions(TypeReferenceOptions reference) => Reference = reference;
+	public AttributeDeclarationOptions(TypeReference reference) => Reference = reference;
 
 	/// <summary>Creates an attribute declaration from a structured type value.</summary>
-	/// <remarks>
-	/// <see cref="TypeValueObject.RenderAttributeName"/> includes surrounding square brackets. This
-	/// constructor retains the rendered attribute name while removing those
-	/// delimiters because the code writer supplies them.
-	/// </remarks>
-	public AttributeDeclarationOptions(TypeValueObject type)
+	public AttributeDeclarationOptions(TypeIdentity type)
 		: this(type.AsTypeReference()) { }
 
 	/// <summary>Gets the structured attribute type.</summary>
-	public TypeReferenceOptions Reference { get; }
+	public TypeReference Reference { get; }
 
 	/// <summary>Gets an optional target such as <c>return</c>, <c>field</c>, or <c>property</c>.</summary>
 	public string? Target { get; init; }

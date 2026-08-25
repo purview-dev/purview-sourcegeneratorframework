@@ -2,7 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Purview.SourceGeneratorFramework.Logging;
 
-namespace Purview.SourceGeneratorFramework.Models;
+namespace Purview.SourceGeneratorFramework;
 
 public class GenerationContextTests
 {
@@ -52,7 +52,7 @@ public class GenerationContextTests
 	{
 		var compilation = CreateCompilation();
 		var context = new TestContext(compilation);
-		var type = new TypeValueObject("Object", "System");
+		var type = new TypeIdentity("Object", "System");
 
 		var symbol = context.GetTypeByMetadataName(type);
 

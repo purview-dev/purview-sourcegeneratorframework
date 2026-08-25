@@ -1,4 +1,4 @@
-namespace Purview.SourceGeneratorFramework.Models;
+namespace Purview.SourceGeneratorFramework;
 
 /// <summary>Describes immutable settings shared by a source-generation operation.</summary>
 public sealed record GenerationSettings

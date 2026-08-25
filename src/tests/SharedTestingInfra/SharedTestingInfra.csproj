@@ -1,11 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<ItemGroup>
 		<ProjectReference Include="..\..\src\SourceGeneratorFramework.Testing\SourceGeneratorFramework.Testing.csproj" />
+		<ProjectReference Include="..\..\src\SourceGeneratorShared\SourceGeneratorShared.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
-		<PackageReference Include="System.Collections.Immutable" VersionOverride="9.0.0" />
 		<PackageReference Include="TUnit.Assertions" />
 	</ItemGroup>
 </Project>

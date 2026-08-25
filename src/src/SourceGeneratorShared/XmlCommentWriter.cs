@@ -94,7 +94,7 @@ public static class XmlCommentWriter
 		/// <param name="exceptionType">The type of the exception.</param>
 		/// <param name="content">The content lines.</param>
 		/// <returns>The current writer.</returns>
-		public CodeWriter XmlException(TypeValueObject exceptionType, params string[] content) =>
+		public CodeWriter XmlException(TypeIdentity exceptionType, params string[] content) =>
 			XmlCore(writer, BuildXmlTag("exception", ("cref", exceptionType)), "exception", content);
 
 		/// <summary>
@@ -103,7 +103,7 @@ public static class XmlCommentWriter
 		/// <param name="typeName">The name of the type.</param>
 		/// <param name="content">The content lines.</param>
 		/// <returns>The current writer.</returns>
-		public CodeWriter XmlCref(TypeValueObject typeName, params string[] content) =>
+		public CodeWriter XmlCref(TypeIdentity typeName, params string[] content) =>
 			XmlCore(writer, BuildXmlTag("cref", ("cref", typeName)), "cref", content);
 
 		/// <summary>

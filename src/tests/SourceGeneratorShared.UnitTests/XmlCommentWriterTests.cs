@@ -79,7 +79,7 @@ public class XmlCommentWriterTests
 	{
 		var writer = CodeWriterFactory.ForTests();
 
-		writer.XmlCref(new TypeValueObject(typeof(string)), "first", "second");
+		writer.XmlCref(new TypeIdentity(typeof(string)), "first", "second");
 
 		await Assert
 			.That(writer.ToString())
@@ -114,7 +114,7 @@ public class XmlCommentWriterTests
 	{
 		var writer = CodeWriterFactory.ForTests();
 
-		writer.XmlException(new TypeValueObject(typeof(ArgumentException)), "reason");
+		writer.XmlException(new TypeIdentity(typeof(ArgumentException)), "reason");
 
 		await Assert
 			.That(writer.ToString())

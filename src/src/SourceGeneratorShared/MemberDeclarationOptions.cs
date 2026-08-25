@@ -11,7 +11,7 @@ public readonly record struct MethodDeclarationOptions
 	/// <param name="accessibility">The optional accessibility.</param>
 	public MethodDeclarationOptions(
 		string name,
-		TypeReferenceOptions returnType,
+		TypeReference returnType,
 		TypeDeclarationAccessibility? accessibility = null
 	)
 	{
@@ -33,7 +33,7 @@ public readonly record struct MethodDeclarationOptions
 	public string Name { get; }
 
 	/// <summary>Gets the return type.</summary>
-	public TypeReferenceOptions ReturnType { get; }
+	public TypeReference ReturnType { get; }
 
 	/// <summary>Gets the optional accessibility.</summary>
 	public TypeDeclarationAccessibility? Accessibility { get; init; }
@@ -91,7 +91,7 @@ public readonly record struct PropertyDeclarationOptions
 	/// <summary>Creates a property declaration.</summary>
 	public PropertyDeclarationOptions(
 		string name,
-		TypeReferenceOptions type,
+		TypeReference type,
 		TypeDeclarationAccessibility? accessibility = null
 	)
 	{
@@ -104,7 +104,7 @@ public readonly record struct PropertyDeclarationOptions
 	public string Name { get; }
 
 	/// <summary>Gets the property type.</summary>
-	public TypeReferenceOptions Type { get; }
+	public TypeReference Type { get; }
 
 	/// <summary>Gets the optional accessibility.</summary>
 	public TypeDeclarationAccessibility? Accessibility { get; init; }
@@ -163,11 +163,7 @@ public readonly record struct PropertyDeclarationOptions
 public readonly record struct FieldDeclarationOptions
 {
 	/// <summary>Creates a field declaration.</summary>
-	public FieldDeclarationOptions(
-		string name,
-		TypeReferenceOptions type,
-		TypeDeclarationAccessibility? accessibility = null
-	)
+	public FieldDeclarationOptions(string name, TypeReference type, TypeDeclarationAccessibility? accessibility = null)
 	{
 		Name = name;
 		Type = type;
@@ -178,7 +174,7 @@ public readonly record struct FieldDeclarationOptions
 	public string Name { get; }
 
 	/// <summary>Gets the field type.</summary>
-	public TypeReferenceOptions Type { get; }
+	public TypeReference Type { get; }
 
 	/// <summary>Gets the optional accessibility.</summary>
 	public TypeDeclarationAccessibility? Accessibility { get; init; }

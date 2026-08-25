@@ -1,4 +1,4 @@
-namespace Purview.SourceGeneratorFramework.Models;
+namespace Purview.SourceGeneratorFramework;
 
 public class GeneratorResultTests
 {

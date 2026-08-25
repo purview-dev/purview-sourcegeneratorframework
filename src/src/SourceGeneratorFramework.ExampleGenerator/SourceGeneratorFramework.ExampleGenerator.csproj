@@ -6,6 +6,15 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<!--
+		  The following project references are required only for the purpose of testing the source generator in this project.
+
+		  In reality, reference the NuGet package:
+
+		  <PackageReference Include="Purview.SourceGeneratorFramework" PrivateAssets="all" Version="*" />
+
+		-->
+		<ProjectReference Include="..\SourceGeneratorShared\SourceGeneratorShared.csproj" />
 		<ProjectReference Include="..\SourceGeneratorFramework\SourceGeneratorFramework.csproj" />
 		<ProjectReference
 			Include="..\SourceGeneratorFramework.Generators\SourceGeneratorFramework.Generators.csproj"
@@ -18,15 +27,5 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
 		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Using Include="System.Collections.Immutable" />
-		<Using Include="Microsoft.CodeAnalysis" />
-		<Using Include="Purview.SourceGeneratorFramework" />
-		<Using Include="Purview.SourceGeneratorFramework.Generators" />
-		<Using Include="Purview.SourceGeneratorFramework.Helpers" />
-		<Using Include="Purview.SourceGeneratorFramework.Logging" />
-		<Using Include="Purview.SourceGeneratorFramework.Models" />
 	</ItemGroup>
 </Project>

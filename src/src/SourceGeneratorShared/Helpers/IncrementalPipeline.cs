@@ -283,7 +283,7 @@ public static class IncrementalPipeline
 	/// </summary>
 	public static IncrementalValuesProvider<TOutput> ForAttributeWithMetadataName<TOutput>(
 		IncrementalGeneratorInitializationContext context,
-		TypeValueObject attributeType,
+		TypeIdentity attributeType,
 		Func<GeneratorAttributeSyntaxContext, CancellationToken, TOutput> transform,
 		Func<SyntaxNode, CancellationToken, bool>? predicate = null,
 		string? trackingName = null

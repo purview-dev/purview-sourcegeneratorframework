@@ -2,7 +2,7 @@ namespace Purview.SourceGeneratorFramework;
 
 public class CodeWriterTests
 {
-	static TypeReferenceOptions Type(string name) => new(new TypeValueObject(name, null));
+	static TypeReference Type(string name) => new(new TypeIdentity(name, null));
 
 	static string GeneratedAttributes(bool includeCoverageExclusion = true) =>
 		(includeCoverageExclusion ? "[global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]\n" : "")
@@ -30,7 +30,7 @@ public class CodeWriterTests
 	[Arguments("   ")]
 	public async Task TypeValueObject_GivenMissingName_Throws(string? name)
 	{
-		await Assert.That(() => new TypeValueObject(name!, null)).Throws<ArgumentException>();
+		await Assert.That(() => new TypeIdentity(name!, null)).Throws<ArgumentException>();
 	}
 
 	[Test]
@@ -40,9 +40,9 @@ public class CodeWriterTests
 		var writer = CodeWriterFactory.ForTests();
 
 		// Act
-		writer.WriteField(new FieldDeclarationOptions("field", TypeReferenceOptions.Empty));
-		writer.WriteProperty(new PropertyDeclarationOptions("Property", TypeReferenceOptions.Empty));
-		writer.WriteMethodScope(new MethodDeclarationOptions("Method", TypeReferenceOptions.Empty)).Dispose();
+		writer.WriteField(new FieldDeclarationOptions("field", TypeReference.Empty));
+		writer.WriteProperty(new PropertyDeclarationOptions("Property", TypeReference.Empty));
+		writer.WriteMethodScope(new MethodDeclarationOptions("Method", TypeReference.Empty)).Dispose();
 
 		// Assert
 		await Assert.That(writer.ToString()).IsEmpty();
@@ -284,7 +284,7 @@ public class CodeWriterTests
 	public async Task WriteBlockNamespace_TypeValueObject_WritesNamespaceBlock()
 	{
 		var writer = CodeWriterFactory.ForTests();
-		var typeValue = new TypeValueObject("C", "Test");
+		var typeValue = new TypeIdentity("C", "Test");
 
 		using (writer.WriteBlockNamespaceScope(typeValue))
 		{
@@ -302,7 +302,7 @@ public class CodeWriterTests
 	public async Task WriteBlockNamespace_TypeValueObjectWithGlobalNamespace_ReturnsNoOpScope()
 	{
 		var writer = CodeWriterFactory.ForTests();
-		var typeValue = new TypeValueObject("C", null);
+		var typeValue = new TypeIdentity("C", null);
 
 		using (writer.WriteBlockNamespaceScope(typeValue))
 		{
@@ -319,7 +319,7 @@ public class CodeWriterTests
 	public async Task WriteFileScopedNamespace_TypeValueObject_WritesNamespace()
 	{
 		var writer = CodeWriterFactory.ForTests();
-		var typeValue = new TypeValueObject("C", "Test");
+		var typeValue = new TypeIdentity("C", "Test");
 
 		writer.WriteFileScopedNamespace(typeValue);
 
@@ -332,7 +332,7 @@ public class CodeWriterTests
 	public async Task WriteFileScopedNamespace_TypeValueObjectWithGlobalNamespace_WritesNothing()
 	{
 		var writer = CodeWriterFactory.ForTests();
-		var typeValue = new TypeValueObject("C", null);
+		var typeValue = new TypeIdentity("C", null);
 
 		writer.WriteFileScopedNamespace(typeValue);
 
@@ -374,8 +374,8 @@ public class CodeWriterTests
 		var declaration = new TypeDeclarationOptions("Repository")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
-			BaseType = Type("RepositoryBase").Type.MakeGeneric(Type("T")),
-			Interfaces = [Type("IRepository").Type.MakeGeneric(Type("T")), Type("IDisposable")],
+			BaseType = Type("RepositoryBase").Identity.MakeGeneric(Type("T")),
+			Interfaces = [Type("IRepository").Identity.MakeGeneric(Type("T")), Type("IDisposable")],
 			GenericTypes = [new GenericTypeParameterOptions("T") { Constraints = ["class", "new()"] }],
 		};
 
@@ -404,7 +404,7 @@ public class CodeWriterTests
 		{
 			Accessibility = TypeDeclarationAccessibility.Internal,
 			IsReadOnly = true,
-			Interfaces = [Type("IEquatable").Type.MakeGeneric(Type("Identifier"))],
+			Interfaces = [Type("IEquatable").Identity.MakeGeneric(Type("Identifier"))],
 		};
 
 		using (writer.WriteRecordStructScope(declaration))
@@ -555,7 +555,7 @@ public class CodeWriterTests
 	public async Task WriteClass_WithEmptyBaseType_DoesNotWriteBaseListColon()
 	{
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new TypeDeclarationOptions("ResourceKit") { BaseType = TypeReferenceOptions.Empty };
+		var declaration = new TypeDeclarationOptions("ResourceKit") { BaseType = TypeReference.Empty };
 
 		writer.WriteClass(declaration, static _ => { });
 
@@ -570,12 +570,12 @@ public class CodeWriterTests
 		var writer = CodeWriterFactory.ForTests();
 		var declaration = new TypeDeclarationOptions("ResourceKit")
 		{
-			BaseType = TypeReferenceOptions.Empty,
+			BaseType = TypeReference.Empty,
 			Interfaces =
 			[
-				TypeReferenceOptions.Empty,
-				new TypeReferenceOptions(new TypeValueObject("IResourceKit", null)),
-				TypeReferenceOptions.Empty,
+				TypeReference.Empty,
+				new TypeReference(new TypeIdentity("IResourceKit", null)),
+				TypeReference.Empty,
 			],
 		};
 
@@ -752,7 +752,7 @@ public class CodeWriterTests
 				Accessibility = TypeDeclarationAccessibility.Internal,
 				IsPartial = false,
 				BaseType = Type("CustomAttributeBase"),
-				Attributes = [new(new TypeValueObject("Obsolete", null))],
+				Attributes = [new(new TypeIdentity("Obsolete", null))],
 			},
 			AttributeTargets.Class | AttributeTargets.Property,
 			_ => { },
@@ -812,7 +812,7 @@ public class CodeWriterTests
 			new EnumFieldDeclarationOptions("None", 0)
 			{
 				XmlSummary = ["No status has been selected."],
-				Attributes = [new(new TypeValueObject("Obsolete", null))],
+				Attributes = [new(new TypeIdentity("Obsolete", null))],
 			},
 			new EnumFieldDeclarationOptions("Ready", (object)"1 << 0"),
 			new EnumFieldDeclarationOptions("Unknown")
@@ -952,7 +952,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new MethodDeclarationOptions("CreateAsync", Type("Task").Type.MakeGeneric(Type("T")))
+		var declaration = new MethodDeclarationOptions("CreateAsync", Type("Task").Identity.MakeGeneric(Type("T")))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			IsStatic = true,
@@ -966,8 +966,8 @@ public class CodeWriterTests
 
 		// Assert
 		await Assert
-			.That(writer.ToString())
-			.IsEqualTo(
+			.That(writer)
+			.Generates(
 				GeneratedAttributes()
 					+ "public static async Task<T> CreateAsync<T>(T value, CancellationToken cancellationToken)\n"
 					+ "where T : class\n"
@@ -982,7 +982,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		MethodDeclarationOptions declaration = new("CreateAsync", Type("Task").Type.MakeGeneric(Type("T")))
+		MethodDeclarationOptions declaration = new("CreateAsync", Type("Task").Identity.MakeGeneric(Type("T")))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			IsAsync = true,
@@ -1009,7 +1009,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var generatedCode = new AttributeDeclarationOptions(new TypeValueObject("GeneratedCode", null))
+		var generatedCode = new AttributeDeclarationOptions(new TypeIdentity("GeneratedCode", null))
 		{
 			Arguments =
 			[
@@ -1026,14 +1026,14 @@ public class CodeWriterTests
 		var method = new MethodDeclarationOptions("TryGet", Type("bool"))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
-			Attributes = [new(new TypeValueObject("Obsolete", null))],
-			ReturnAttributes = [new(new TypeValueObject("NotNull", null))],
+			Attributes = [new(new TypeIdentity("Obsolete", null))],
+			ReturnAttributes = [new(new TypeIdentity("NotNull", null))],
 			Parameters =
 			[
 				new("value", Type("string").Nullable())
 				{
 					Modifier = ParameterModifier.Out,
-					Attributes = [new(new TypeValueObject("NotNullWhen", null)) { Arguments = [new(true)] }],
+					Attributes = [new(new TypeIdentity("NotNullWhen", null)) { Arguments = [new(true)] }],
 				},
 			],
 		};
@@ -1064,17 +1064,13 @@ public class CodeWriterTests
 	public async Task AttributeDeclaration_RendersRetainedTypeReferenceSyntax()
 	{
 		var writer = CodeWriterFactory.ForTests();
-		var attributeType = new TypeValueObject("MarkerAttribute", "Example")
-			.MakeGeneric(TypeValueObject.Create<string>())
-			.AsTypeReference()
-			.Nullable();
+		var attributeType = new TypeIdentity("MarkerAttribute", "Example")
+			.MakeGeneric(TypeIdentity.Create<string>().MakeNullable())
+			.AsTypeReference();
 
-		writer.WriteClass(
-			new TypeDeclarationOptions("C") { Attributes = [new AttributeDeclarationOptions(attributeType)] },
-			_ => { }
-		);
+		writer.WriteClass(new("C") { Attributes = [new(attributeType)] }, _ => { });
 
-		await Assert.That(writer.ToString()).Contains("[global::Example.Marker<string>?]");
+		await Assert.That(writer).ContainsGenerated("[global::Example.Marker<string?>]");
 	}
 
 	[Test]
@@ -1144,7 +1140,7 @@ public class CodeWriterTests
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
 		var attribute = new AttributeDeclarationOptions(
-			new TypeValueObject("HostKitAttribute", "Purview.Aspire.ResourceKit")
+			new TypeIdentity("HostKitAttribute", "Purview.Aspire.ResourceKit")
 		)
 		{
 			Arguments = [new AttributeArgumentOptions(true) { Name = "GenerateOptions", IsPropertyAssignment = true }],
@@ -1169,7 +1165,7 @@ public class CodeWriterTests
 	public async Task AttributeTypeValueObject_GivenDeclarationContexts_RendersUnderlyingType()
 	{
 		// Arrange
-		var attributeType = new TypeValueObject("RegistryAttribute", "Example");
+		var attributeType = new TypeIdentity("RegistryAttribute", "Example");
 		var writer = CodeWriterFactory.ForTests();
 
 		// Act
@@ -1199,17 +1195,17 @@ public class CodeWriterTests
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
 		var valueType = Type("global::System.Collections.Generic.Dictionary")
-			.Type.MakeGeneric(Type("string"), Type("Widget").Nullable())
+			.Identity.MakeGeneric(Type("string"), Type("Widget").Nullable())
 			.MakeArray()
 			.Nullable();
-		var method = new MethodDeclarationOptions("Load", valueType)
+		MethodDeclarationOptions method = new("Load", valueType)
 		{
 			Parameters =
 			[
 				new(
 					"items",
 					Type("global::System.Collections.Generic.List")
-						.Type.MakeGeneric(Type("Widget").Nullable())
+						.Identity.MakeGeneric(Type("Widget").Nullable())
 						.AsTypeReference()
 						.Nullable()
 				),
@@ -1799,7 +1795,7 @@ public class CodeWriterTests
 		writer.WriteAutoGeneratedHeader();
 		writer.WriteClass(
 			new TypeDeclarationOptions("GeneratedType"),
-			body => body.WriteProperty(new PropertyDeclarationOptions("Value", TypeValueObject.Create<string>()))
+			body => body.WriteProperty(new PropertyDeclarationOptions("Value", TypeIdentity.Create<string>()))
 		);
 
 		var result = writer.ToString();
@@ -1847,7 +1843,7 @@ public class CodeWriterTests
 		var writer = new CodeWriter("HostKitGenerator", "2.3.4", throwOnUnclosedScopes: false);
 
 		writer.WriteField(
-			new FieldDeclarationOptions("SectionName", TypeValueObject.Create<string>())
+			new FieldDeclarationOptions("SectionName", TypeIdentity.Create<string>())
 			{
 				Accessibility = TypeDeclarationAccessibility.Public,
 				IsConst = true,

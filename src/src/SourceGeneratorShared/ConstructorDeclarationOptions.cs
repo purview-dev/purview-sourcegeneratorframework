@@ -18,30 +18,27 @@ public readonly record struct ConstructorDeclarationOptions
 		if (string.IsNullOrWhiteSpace(name))
 			throw new ArgumentException("Type name cannot be null or whitespace.", nameof(name));
 
-		Reference = new TypeReferenceOptions(new TypeValueObject(name, null));
+		Reference = new TypeReference(new TypeIdentity(name, null));
 		Accessibility = accessibility;
 	}
 
 	/// <summary>Initializes a constructor declaration from its containing type.</summary>
 	/// <param name="type">The containing type. Only its unqualified declaration name is used.</param>
 	/// <param name="accessibility">The optional accessibility modifier, or <see langword="null"/> to omit accessibility.</param>
-	public ConstructorDeclarationOptions(TypeValueObject type, TypeDeclarationAccessibility? accessibility = null)
+	public ConstructorDeclarationOptions(TypeIdentity type, TypeDeclarationAccessibility? accessibility = null)
 		: this(type.AsTypeReference(), accessibility) { }
 
 	/// <summary>Initializes a constructor declaration from its containing type reference.</summary>
 	/// <param name="reference">The containing type reference.</param>
 	/// <param name="accessibility">The optional accessibility modifier, or <see langword="null"/> to omit accessibility.</param>
-	public ConstructorDeclarationOptions(
-		TypeReferenceOptions reference,
-		TypeDeclarationAccessibility? accessibility = null
-	)
+	public ConstructorDeclarationOptions(TypeReference reference, TypeDeclarationAccessibility? accessibility = null)
 	{
 		Reference = reference;
 		Accessibility = accessibility;
 	}
 
 	/// <summary>Gets the structured containing type reference.</summary>
-	public TypeReferenceOptions Reference { get; }
+	public TypeReference Reference { get; }
 
 	/// <summary>
 	/// Gets the optional accessibility modifier, or <see langword="null"/> to omit accessibility.
