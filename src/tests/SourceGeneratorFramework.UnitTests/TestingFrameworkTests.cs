@@ -232,7 +232,7 @@ namespace Test
 
 		// Assert
 		await Assert.That(options.ValidateCodeWriterScopes).IsTrue();
-		await Assert.That(result.GetSource()).Contains("Value = \"true\"");
+		await Assert.That(result.GetSource()).Contains("Value = \"True\"");
 	}
 
 	[Test]

@@ -11,7 +11,7 @@ public sealed class UseIncrementalGeneratorAnalyzer : DiagnosticAnalyzer
 {
 	public const string DiagnosticId = "PSGFR12";
 
-	static readonly DiagnosticDescriptor Rule = new(
+	public static readonly DiagnosticDescriptor Rule = new(
 		DiagnosticId,
 		"Use IIncrementalGenerator instead of ISourceGenerator",
 		"Source generators should implement IIncrementalGenerator and use RegisterSourceOutput for incremental, cache-friendly generation",

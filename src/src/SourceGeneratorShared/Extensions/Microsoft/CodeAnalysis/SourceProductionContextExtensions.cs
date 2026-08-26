@@ -2,9 +2,6 @@ using System.ComponentModel;
 
 namespace Microsoft.CodeAnalysis;
 
-/// <summary>
-/// Extension methods for <see cref="SourceProductionContext"/>.
-/// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public static class SourceProductionContextExtensions
 {

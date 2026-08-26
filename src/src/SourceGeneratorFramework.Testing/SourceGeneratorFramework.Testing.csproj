@@ -16,6 +16,10 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+		<PackageReference
+			Include="Microsoft.CodeAnalysis.CSharp.Workspaces"
+			VersionOverride="$(RoslynCompilerVersion)"
+		/>
 	</ItemGroup>
 
 	<Target Name="IncludeSourceGeneratorShared">

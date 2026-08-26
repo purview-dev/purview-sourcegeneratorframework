@@ -18,13 +18,22 @@
 		<CompilerVisibleProperty Include="PurviewSourceGeneratorFrameworkLoggingSessionId">
 			<Description>Identifies the registered sink for an isolated source-generator logging session.</Description>
 		</CompilerVisibleProperty>
+	</ItemGroup>
 
+	<ItemGroup>
 		<Using Include="Purview.SourceGeneratorFramework" />
 		<Using Include="Purview.SourceGeneratorFramework.Helpers" />
 		<Using Include="Purview.SourceGeneratorFramework.Logging" />
 		<Using
 			Condition="$(DisablePurviewAttributeDataSourceGenerator) != 'true'"
 			Include="Purview.SourceGeneratorFramework.Generators"
+		/>
+	</ItemGroup>
+
+	<ItemGroup>
+		<Using
+			Include="Purview.SourceGeneratorFramework.GenerationContext&lt;Purview.SourceGeneratorFramework.EmptyCapabilities&gt;"
+			Alias="GeneratorContext"
 		/>
 	</ItemGroup>
 </Project>

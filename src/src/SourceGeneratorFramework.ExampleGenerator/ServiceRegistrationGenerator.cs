@@ -6,19 +6,14 @@ namespace Purview.SourceGeneratorFramework.Examples;
 [Generator]
 public partial class ServiceRegistrationGenerator : IIncrementalGenerator
 {
-	const string GeneratorName = "ServiceRegistrationGenerator";
-	const string GeneratorVersion = "1.0.0";
-
 	/// <summary>
 	/// Initializes the generator pipeline.
 	/// </summary>
 	public void Initialize(IncrementalGeneratorInitializationContext context)
 	{
-		context.RegisterEmbeddedAttribute(GeneratorName, GeneratorVersion);
-
-		context.RegisterPostInitializationOutput(spc =>
-			ServiceRegistrationEmitter.EmitAttributeAndEnum(spc, GeneratorName, GeneratorVersion)
-		);
+		context
+			.RegisterEmbeddedAttribute<ServiceRegistrationGenerator>()
+			.RegisterPostInitializationOutput(ServiceRegistrationEmitter.EmitAttributeAndEnum);
 
 		var emitServiceInfo = IncrementalPipeline.PropertyValueProvider(
 			context,
@@ -26,10 +21,8 @@ public partial class ServiceRegistrationGenerator : IIncrementalGenerator
 			value => bool.TryParse(value, out var result) && result
 		);
 
-		var generationContext = IncrementalPipeline.DefaultGenerationContextValueProvider(
+		var generationContext = IncrementalPipeline.DefaultGenerationContextValueProvider<ServiceRegistrationGenerator>(
 			context,
-			GeneratorName,
-			GeneratorVersion,
 			PropertyLibrary.DisableServiceRegistrationGenerator
 		);
 

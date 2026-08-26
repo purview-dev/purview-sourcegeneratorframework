@@ -9,7 +9,7 @@
 		<NoWarn>$(NoWarn);CS1591;</NoWarn>
 		<AssemblyName>$(RootNamespace)</AssemblyName>
 		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
-		<TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeSourceGeneratorShared</TargetsForTfmSpecificContentInPackage>
+		<TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeSourceGeneratorShared;IncludeAnalyzerAssembly</TargetsForTfmSpecificContentInPackage>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -19,6 +19,14 @@
 			ReferenceOutputAssembly="false"
 			OutputItemType="Analyzer"
 			Targets="GetSourceGeneratorAnalyzerFiles"
+		/>
+		<ProjectReference
+			Include="..\SourceGeneratorFramework.Analyzers\SourceGeneratorFramework.Analyzers.csproj"
+			PrivateAssets="all"
+			ReferenceOutputAssembly="false"
+			OutputItemType="Analyzer"
+			Targets="GetSourceGeneratorAnalyzerFiles"
+			Pack="false"
 		/>
 		<ProjectReference
 			Include="..\SourceGeneratorShared\SourceGeneratorShared.csproj"
@@ -52,10 +60,29 @@
 			>
 				<PackagePath>lib/$(TargetFramework)/</PackagePath>
 			</TfmSpecificPackageFile>
+		</ItemGroup>
+	</Target>
 
+	<!--
+		By setting the Analyzer reference to Pack="false", we prevent it from being included in the NuGet package.
+		This solved the warning about duplicate .Shared.dll files being included in the package, but it also means that the analyzer
+		assembly is not included in the package at all.
+
+		So this target is added to explicitly include the analyzer assembly in the package, so that it can be used by other projects that reference this package.
+	-->
+	<Target Name="IncludeAnalyzerAssembly">
+		<MSBuild
+			Projects="..\SourceGeneratorFramework.Analyzers\SourceGeneratorFramework.Analyzers.csproj"
+			Targets="GetTargetPath"
+			Properties="Configuration=$(Configuration);TargetFramework=netstandard2.0"
+		>
+			<Output TaskParameter="TargetOutputs" ItemName="_SourceGeneratorFrameworkAnalyzerAssembly" />
+		</MSBuild>
+
+		<ItemGroup>
 			<TfmSpecificPackageFile
-				Include="@(_SourceGeneratorSharedPackageFile)"
-				Condition="'%(Filename)%(Extension)' != 'Purview.SourceGeneratorFramework.Shared.dll' AND Exists('%(_SourceGeneratorSharedPackageFile.Identity)')"
+				Include="@(_SourceGeneratorFrameworkAnalyzerAssembly)"
+				Condition="Exists('%(_SourceGeneratorFrameworkAnalyzerAssembly.Identity)')"
 			>
 				<PackagePath>analyzers/dotnet/cs/</PackagePath>
 			</TfmSpecificPackageFile>

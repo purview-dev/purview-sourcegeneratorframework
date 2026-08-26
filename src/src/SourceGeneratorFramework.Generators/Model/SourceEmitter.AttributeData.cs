@@ -6,10 +6,7 @@ partial class SourceEmitter
 {
 	static SourceText GenerateAttribute()
 	{
-		var writer = CreateWriter(
-			nameof(AttributeDataModelGenerator),
-			GeneratorTypeLibrary.Attirbutes.GenerateAttribute
-		);
+		var writer = CreateWriter(GeneratorTypeLibrary.Attirbutes.GenerateAttribute);
 
 		return writer
 			.XmlSummary("Generates parsing members for an attribute-data model.")
@@ -91,10 +88,7 @@ partial class SourceEmitter
 
 	static SourceText PropertyAttribute()
 	{
-		var writer = CreateWriter(
-			nameof(AttributeDataModelGenerator),
-			GeneratorTypeLibrary.Attirbutes.PropertyAttribute
-		);
+		var writer = CreateWriter(GeneratorTypeLibrary.Attirbutes.PropertyAttribute);
 
 		return writer
 			.XmlSummary("Marks a record parameter as a named attribute argument.")
@@ -163,10 +157,7 @@ partial class SourceEmitter
 
 	static SourceText ArgumentAttribute()
 	{
-		var writer = CreateWriter(
-			nameof(AttributeDataModelGenerator),
-			GeneratorTypeLibrary.Attirbutes.ArgumentAttribute
-		);
+		var writer = CreateWriter(GeneratorTypeLibrary.Attirbutes.ArgumentAttribute);
 
 		return writer
 			.XmlSummary("Marks a record parameter as a constructor argument.")
@@ -281,10 +272,7 @@ partial class SourceEmitter
 
 	static SourceText NestedModelAttribute()
 	{
-		var writer = CreateWriter(
-			nameof(AttributeDataModelGenerator),
-			GeneratorTypeLibrary.Attirbutes.NestedModelAttribute
-		);
+		var writer = CreateWriter(GeneratorTypeLibrary.Attirbutes.NestedModelAttribute);
 		return writer
 			.XmlSummary("Marks a record parameter as a nested generated attribute-data model.")
 			.WriteAttributeClass(
@@ -296,10 +284,7 @@ partial class SourceEmitter
 
 	static SourceText ExcludeAttribute()
 	{
-		var writer = CreateWriter(
-			nameof(AttributeDataModelGenerator),
-			GeneratorTypeLibrary.Attirbutes.ExcludeAttribute
-		);
+		var writer = CreateWriter(GeneratorTypeLibrary.Attirbutes.ExcludeAttribute);
 		return writer
 			.XmlSummary("Excludes a record parameter from the generated attribute-data model.")
 			.WriteAttributeClass(
@@ -311,10 +296,7 @@ partial class SourceEmitter
 
 	static SourceText GenericTypeArgumentAttribute()
 	{
-		var writer = CreateWriter(
-			nameof(AttributeDataModelGenerator),
-			GeneratorTypeLibrary.Attirbutes.GenericTypeArgumentAttribute
-		);
+		var writer = CreateWriter(GeneratorTypeLibrary.Attirbutes.GenericTypeArgumentAttribute);
 
 		return writer
 			.XmlSummary("Marks a record parameter as a generic type argument of the attribute class.")

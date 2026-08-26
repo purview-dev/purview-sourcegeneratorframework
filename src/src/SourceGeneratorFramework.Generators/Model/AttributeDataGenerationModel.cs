@@ -2,7 +2,7 @@ using System.Collections.Immutable;
 
 namespace Purview.SourceGeneratorFramework.Generators.Model;
 
-sealed record AttributeDataGenerationModel(bool IsDisabled, GenerationContext GenerationContext)
+sealed record AttributeDataGenerationModel(bool IsDisabled, GenerationContext<EmptyCapabilities> GenerationContext)
 {
 	public ImmutableArray<GeneratorResult<AttributeDataModelTarget>
 #pragma warning disable format

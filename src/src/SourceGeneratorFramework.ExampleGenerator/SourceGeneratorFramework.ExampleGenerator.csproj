@@ -22,6 +22,12 @@
 			PrivateAssets="all"
 			ReferenceOutputAssembly="false"
 		/>
+		<ProjectReference
+			Include="..\SourceGeneratorFramework.Analyzers\SourceGeneratorFramework.Analyzers.csproj"
+			OutputItemType="Analyzer"
+			PrivateAssets="all"
+			ReferenceOutputAssembly="false"
+		/>
 	</ItemGroup>
 
 	<ItemGroup>

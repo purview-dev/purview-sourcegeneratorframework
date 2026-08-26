@@ -11,6 +11,17 @@ namespace Purview.SourceGeneratorFramework.Testing;
 /// <summary>
 /// The result of a source generator test run.
 /// </summary>
+/// <param name="AllSyntaxTrees">All syntax trees generated during the run.</param>
+/// <param name="PrimarySyntaxTrees">
+/// The primary syntax trees generated during the run, excluding anything detailed by <see cref="SourceGeneratorTestOptions.ExcludeGeneratedSourceHintNames"/>.
+/// <para>
+/// This is useful for excluding generated source such as attribute markers.
+/// </para>
+/// </param>
+/// <param name="LogEntries">The log entries generated during the run.</param>
+/// <param name="AnalyzerResult">The result of the analyzer compilation run, if any.</param>
+/// <param name="CompilationResult">The result of the compilation run.</param>
+/// <param name="DriverResult">The result of the generator driver run.</param>
 public sealed record class DriverRunResult(
 	GeneratorDriverRunResult DriverResult,
 	CompilationRunResult CompilationResult,

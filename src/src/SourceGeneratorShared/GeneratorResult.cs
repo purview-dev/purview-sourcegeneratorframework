@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+
 namespace Purview.SourceGeneratorFramework;
 
 /// <summary>
@@ -37,6 +39,15 @@ public readonly record struct GeneratorResult<T>
 	/// </summary>
 	public bool IsEmpty => !IsSuccess && !HasDiagnostics;
 
+	public static GeneratorResult<T> Ok(T value, ImmutableArray<DiagnosticInfo> diagnostics)
+	{
+		return new()
+		{
+			Value = value,
+			Diagnostics = diagnostics.IsDefaultOrEmpty ? EquatableArray<DiagnosticInfo>.Empty : new(diagnostics),
+		};
+	}
+
 	/// <summary>
 	/// Creates a successful generator result with the specified value and optional diagnostics.
 	/// </summary>
@@ -45,7 +56,7 @@ public readonly record struct GeneratorResult<T>
 	/// <returns>A successful generator result.</returns>
 	public static GeneratorResult<T> Ok(T value, params DiagnosticInfo[] diagnostics)
 	{
-		return new GeneratorResult<T>
+		return new()
 		{
 			Value = value,
 			Diagnostics =

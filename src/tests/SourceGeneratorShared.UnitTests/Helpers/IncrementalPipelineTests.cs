@@ -137,7 +137,7 @@ public class IncrementalPipelineTests2
 
 		var tree = result.GetGeneratedTree("Context.g.cs");
 		await Assert.That(tree).IsNotNull();
-		await Assert.That(tree!.ToString()).Contains("TestAssembly");
+		await Assert.That(tree!.ToString()).Contains("// GenerationContextTestGenerator");
 	}
 
 	readonly record struct TargetInfo(string Name);
@@ -175,12 +175,10 @@ public class IncrementalPipelineTests2
 
 			var generationContext = IncrementalPipeline.DefaultGenerationContextValueProvider(
 				context,
-				"DiagnosticTestGenerator",
-				"1.0.0"
+				new GenerationSettings("DiagnosticTestGenerator", "1.0.0")
 			);
 
-			IncrementalPipeline.RegisterSourceOutput(
-				context,
+			context.RegisterSourceOutput(
 				targets,
 				generationContext,
 				static (spc, target, ctx) =>
@@ -197,16 +195,14 @@ public class IncrementalPipelineTests2
 	{
 		public void Initialize(IncrementalGeneratorInitializationContext context)
 		{
-			var generationContext = IncrementalPipeline.GenerationContextValueProvider(
+			var generationContext = IncrementalPipeline.DefaultGenerationContextValueProvider(
 				context,
-				"GenerationContextTestGenerator",
-				"1.0.0",
-				static (compilation, settings, logger, _) => new GenerationContext(compilation, settings, logger)
+				new GenerationSettings("GenerationContextTestGenerator", "1.0.0")
 			);
 
 			context.RegisterSourceOutput(
 				generationContext,
-				static (spc, value) => spc.AddSource("Context.g.cs", $"// {value.AssemblyName}")
+				static (spc, value) => spc.AddSource("Context.g.cs", $"// GenerationContextTestGenerator")
 			);
 		}
 	}

@@ -55,6 +55,49 @@ public sealed record DiagnosticInfo(
 	/// Creates a <see cref="DiagnosticInfo"/> from a descriptor and optional location.
 	/// </summary>
 	/// <param name="descriptor">The diagnostic descriptor.</param>
+	/// <param name="locations">The locations of the diagnostic.</param>
+	/// <param name="messageArgs">The message arguments.</param>
+	/// <returns>A <see cref="DiagnosticInfo"/> instance.</returns>
+	public static DiagnosticInfo Create(
+		DiagnosticDescriptor descriptor,
+		IEnumerable<Location> locations,
+		params object[] messageArgs
+	)
+	{
+		var location = locations?.FirstOrDefault();
+		var additionalLocations = locations?.Skip(1).ToImmutableArray();
+
+		return Create(descriptor, location, additionalLocations, messageArgs);
+	}
+
+	/// <summary>
+	/// Creates a <see cref="DiagnosticInfo"/> from a descriptor and optional location.
+	/// </summary>
+	/// <param name="descriptor">The diagnostic descriptor.</param>
+	/// <param name="syntaxReferences">Used to retrieve the locations of the diagnostic.</param>
+	/// <param name="cancellationToken">The cancellation token.</param>
+	/// <param name="messageArgs">The message arguments.</param>
+	/// <returns>A <see cref="DiagnosticInfo"/> instance.</returns>
+	public static DiagnosticInfo Create(
+		DiagnosticDescriptor descriptor,
+		IEnumerable<SyntaxReference> syntaxReferences,
+		CancellationToken cancellationToken,
+		params object[] messageArgs
+	)
+	{
+		var location = syntaxReferences?.FirstOrDefault()?.GetSyntax(cancellationToken).GetLocation();
+		var additionalLocations = syntaxReferences
+			?.Skip(1)
+			.Select(s => s.GetSyntax(cancellationToken).GetLocation())
+			.ToImmutableArray();
+
+		return Create(descriptor, location, additionalLocations, messageArgs);
+	}
+
+	/// <summary>
+	/// Creates a <see cref="DiagnosticInfo"/> from a descriptor and optional location.
+	/// </summary>
+	/// <param name="descriptor">The diagnostic descriptor.</param>
 	/// <param name="location">The location of the diagnostic.</param>
 	/// <param name="additionalLocations">Additional locations of the diagnostic.</param>
 	/// <param name="messageArgs">The message arguments.</param>

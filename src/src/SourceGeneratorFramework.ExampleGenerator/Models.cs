@@ -71,7 +71,7 @@ readonly record struct ServiceTarget(string TypeName, string ClassName, string N
 /// Aggregated generation inputs for the service registration generator.
 /// </summary>
 readonly record struct ServiceRegistrationGenerationModel(
-	GenerationContext Context,
+	GenerationContext<EmptyCapabilities> Context,
 	EquatableArray<ServiceTarget> Targets,
 	bool EmitServiceInfo = false
 );

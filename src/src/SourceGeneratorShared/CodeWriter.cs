@@ -35,8 +35,7 @@ public sealed partial class CodeWriter
 	/// <summary>
 	/// Initializes a new writer with required generator identity.
 	/// </summary>
-	/// <param name="generatorName">The source generator name used by headers and attributes.</param>
-	/// <param name="generatorVersion">The source generator version used by headers and attributes.</param>
+	/// <param name="settings">The generation settings containing the generator name and version used during code writing.</param>
 	/// <param name="initialCapacity">
 	/// The initial number of characters that the internal buffer can contain without growing.
 	/// </param>
@@ -49,26 +48,25 @@ public sealed partial class CodeWriter
 	/// <paramref name="initialCapacity"/> is less than zero.
 	/// </exception>
 	/// <exception cref="ArgumentException">
-	/// <paramref name="generatorName"/> or <paramref name="generatorVersion"/> is empty or whitespace.
+	/// <paramref name="settings"/> is null or contains invalid values.
 	/// </exception>
 	public CodeWriter(
-		string generatorName,
-		string generatorVersion,
+		GenerationSettings settings,
 		int initialCapacity = DefaultCapacity,
 		bool throwOnUnclosedScopes = true
 	)
 	{
+		if (settings is null)
+			throw new ArgumentNullException(nameof(settings));
 		if (initialCapacity < 0)
 			throw new ArgumentOutOfRangeException(nameof(initialCapacity));
 
-		_builder = new StringBuilder(initialCapacity);
-		GeneratorName =
-			NormalizeOptionalIdentity(generatorName, nameof(generatorName))
-			?? throw new ArgumentException("Generator name cannot be null or whitespace.", nameof(generatorName));
-		GeneratorVersion =
-			NormalizeOptionalIdentity(generatorVersion, nameof(generatorVersion))
-			?? throw new ArgumentException("Generator version cannot be null or whitespace.", nameof(generatorVersion));
+		_builder = new(initialCapacity);
+
+		GeneratorName = settings.GeneratorName;
+		GeneratorVersion = settings.GeneratorVersion;
 		ThrowOnUnclosedScopes = throwOnUnclosedScopes;
+
 		if (throwOnUnclosedScopes)
 			_openScopes = [];
 	}
@@ -1769,7 +1767,7 @@ public sealed partial class CodeWriter
 		if (exceptionType.IsNullOrEmpty())
 			throw new ArgumentException("Exception type cannot be null or empty.", nameof(exceptionType));
 
-		Write("throw ");
+		Write("throw new ");
 		WriteExpression(
 			$"{exceptionType}{(message is null ? string.Empty : $"(\"{message}\")")}",
 			expressionWriter: null
@@ -1986,7 +1984,7 @@ public sealed partial class CodeWriter
 		var callback = expressionWriter;
 		if (callback is not null)
 		{
-			var expressionWriterBuffer = new CodeWriter(GeneratorName, GeneratorVersion)
+			CodeWriter expressionWriterBuffer = new(new GenerationSettings(GeneratorName, GeneratorVersion))
 			{
 				DefaultIncludeGeneratedAttributes = DefaultIncludeGeneratedAttributes,
 			};
@@ -2745,17 +2743,6 @@ public sealed partial class CodeWriter
 	{
 		if (string.IsNullOrWhiteSpace(value))
 			throw new ArgumentException($"{description} cannot be null or whitespace.", parameterName);
-	}
-
-	static string? NormalizeOptionalIdentity(string? value, string parameterName)
-	{
-		if (value is null)
-			return null;
-		if (string.IsNullOrWhiteSpace(value))
-			throw new ArgumentException("Generator identity values cannot be empty or whitespace.", parameterName);
-
-		// Normalize the value to a consistent form for comparison and storage.
-		return value;
 	}
 
 	static void ValidateParameters(

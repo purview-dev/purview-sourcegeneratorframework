@@ -11,24 +11,21 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 
 	public void Initialize(IncrementalGeneratorInitializationContext context)
 	{
-		context.RegisterEmbeddedAttribute(typeof(AttributeDataModelGenerator).FullName!, AssemblyInfo.Version);
-
-		context.RegisterPostInitializationOutput(context =>
-		{
-			foreach (var (hintName, source) in SourceEmitter.AttributeDataEmit())
-				context.AddSource(hintName, source);
-		});
+		context
+			.RegisterEmbeddedAttribute<AttributeDataModelGenerator>()
+			.RegisterPostInitializationOutput(context =>
+			{
+				foreach (var (hintName, source) in SourceEmitter.AttributeDataEmit())
+					context.AddSource(hintName, source);
+			});
 
 		var targets = AttributeDataModelLibrary.GetTargets(context, logger: null);
-		var generationContext = IncrementalPipeline.DefaultGenerationContextValueProvider(
+		var generationContext = IncrementalPipeline.DefaultGenerationContextValueProvider<AttributeDataModelGenerator>(
 			context,
-			nameof(AttributeDataModelGenerator),
-			AssemblyInfo.Version,
 			PropertyLibrary.DisableAttributeDataSourceGenerator
 		);
 
-		IncrementalPipeline.RegisterSourceOutput(
-			context,
+		context.RegisterSourceOutput(
 			targets,
 			generationContext,
 			static (spc, target, generationContext) =>
@@ -47,7 +44,7 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 	static void GenerateAttributeDataModel(
 		SourceProductionContext spc,
 		AttributeDataModelTarget target,
-		GenerationContext generationContext
+		GenerationContext<EmptyCapabilities> generationContext
 	)
 	{
 		generationContext.Debug("Generating AttributeDataModel for {0}", target.StructName);

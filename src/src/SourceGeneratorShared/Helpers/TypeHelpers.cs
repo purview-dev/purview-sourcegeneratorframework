@@ -16,6 +16,18 @@ public static class TypeHelpers
 	public const string AttributeSuffix = nameof(Attribute);
 
 	/// <summary>
+	/// Determines whether the specified compilation contains a type with the given identity.
+	/// </summary>
+	/// <param name="compilation">The compilation to check.</param>
+	/// <param name="typeIdentity">The type identity to look for.</param>
+	/// <returns><c>true</c> if the compilation contains the type; otherwise, <c>false</c>.</returns>
+	/// <exception cref="ArgumentNullException">Thrown if the compilation or typeIdentity is null.</exception>
+	public static bool HasType(Compilation compilation, TypeIdentity typeIdentity) =>
+		compilation == null ? throw new ArgumentNullException(nameof(compilation))
+		: typeIdentity == null ? throw new ArgumentNullException(nameof(typeIdentity))
+		: compilation.GetTypeByMetadataName(typeIdentity.MetadataFullName) is not null;
+
+	/// <summary>
 	/// Determines whether the specified type is a C# keyword type.
 	/// </summary>
 	public static bool IsKeywordType(ITypeSymbol type) =>

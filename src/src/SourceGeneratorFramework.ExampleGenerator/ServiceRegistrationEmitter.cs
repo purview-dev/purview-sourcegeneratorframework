@@ -12,15 +12,10 @@ static class ServiceRegistrationEmitter
 	/// Emits the <c>GenerateServiceAttribute</c> attribute and <c>ServiceLifetime</c> enum
 	/// via <see cref="CodeWriter"/>.
 	/// </summary>
-	public static void EmitAttributeAndEnum(
-		IncrementalGeneratorPostInitializationContext spc,
-		string generatorName,
-		string? generatorVersion
-	)
+	public static void EmitAttributeAndEnum(IncrementalGeneratorPostInitializationContext spc)
 	{
-		var writer = new CodeWriter(
-			generatorName: generatorName,
-			generatorVersion: generatorVersion ?? "1.0.0.0",
+		CodeWriter writer = new(
+			GenerationSettings.Create<ServiceRegistrationGenerator>(),
 			throwOnUnclosedScopes: false
 		);
 

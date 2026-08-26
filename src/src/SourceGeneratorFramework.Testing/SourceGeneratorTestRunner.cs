@@ -4,7 +4,6 @@ using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
-using Purview.SourceGeneratorFramework.Helpers;
 using Purview.SourceGeneratorFramework.Logging;
 using Purview.SourceGeneratorFramework.Testing.Models;
 
@@ -161,29 +160,28 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 
 		Dictionary<string, string> analyzerOptions = new(options.AnalyzerConfigOptions)
 		{
-			[IncrementalPipeline.BuildProperty + GenerationContext.ValidateCodeWriterScopesBuildProperty] =
-				options.ValidateCodeWriterScopes ? "true" : "false",
-			[IncrementalPipeline.BuildProperty + GenerationContext.EnableLoggingBuildProperty] = options.EnableLogging
-				? "true"
-				: "false",
+			[SourceGeneratorBuildProperties.ValidateCodeWriterScopes] = options.ValidateCodeWriterScopes.ToString(),
+			[SourceGeneratorBuildProperties.EnableLogging] = options.EnableLogging.ToString(),
 		};
 
 		foreach (var (key, value) in options.AnalyzerConfigOptions)
 		{
-			if (!key.StartsWith(IncrementalPipeline.BuildProperty, StringComparison.Ordinal))
-				analyzerOptions.TryAdd(IncrementalPipeline.BuildProperty + key, value);
+			if (!key.StartsWith(SourceGeneratorBuildProperties.BuildProperty, StringComparison.Ordinal))
+				analyzerOptions.TryAdd(SourceGeneratorBuildProperties.BuildProperty + key, value);
 		}
 
 		if (loggingSessionId is not null)
 		{
-			analyzerOptions[IncrementalPipeline.BuildProperty + GenerationContext.LoggingSessionIdBuildProperty] =
-				loggingSessionId;
+			analyzerOptions[SourceGeneratorBuildProperties.LoggingSessionId] = loggingSessionId;
 		}
 
 		if (options.DisableSourceGeneratorPropertyName is not null && options.DisableSourceGeneratorValue is not null)
 		{
-			analyzerOptions[IncrementalPipeline.BuildProperty + options.DisableSourceGeneratorPropertyName] =
-				options.DisableSourceGeneratorValue.Value.ToString();
+			var disablePropertyName = options.DisableSourceGeneratorPropertyName;
+			if (!disablePropertyName.StartsWith(SourceGeneratorBuildProperties.BuildProperty, StringComparison.Ordinal))
+				disablePropertyName = SourceGeneratorBuildProperties.BuildProperty + disablePropertyName;
+
+			analyzerOptions[disablePropertyName] = options.DisableSourceGeneratorValue.Value.ToString();
 		}
 
 		if (analyzerOptions.Count > 0)
