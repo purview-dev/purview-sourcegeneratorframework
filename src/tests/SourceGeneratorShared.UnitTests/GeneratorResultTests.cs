@@ -7,9 +7,9 @@ public class GeneratorResultTests
 	{
 		var result = GeneratorResult<string>.Ok("value");
 
-		await Assert.That(result.IsSuccess).IsTrue();
+		await Assert.That(result.HasValue).IsTrue();
 		await Assert.That(result.IsEmpty).IsFalse();
-		await Assert.That(result.IsFatal).IsFalse();
+		await Assert.That(result.ShouldProcess).IsTrue();
 		await Assert.That(result.HasDiagnostics).IsFalse();
 		await Assert.That(result.Value).IsEqualTo("value");
 	}
@@ -29,13 +29,13 @@ public class GeneratorResultTests
 		);
 		var result = GeneratorResult<string>.Ok("value", diagnostic);
 
-		await Assert.That(result.IsSuccess).IsTrue();
+		await Assert.That(result.HasValue).IsTrue();
 		await Assert.That(result.HasDiagnostics).IsTrue();
 		await Assert.That(result.Value).IsEqualTo("value");
 	}
 
 	[Test]
-	public async Task Fail_WithDiagnostics_IsFatal()
+	public async Task Fail_WithDiagnostics_ShouldProcessIsFalse()
 	{
 		var diagnostic = DiagnosticInfo.Create(
 			new Microsoft.CodeAnalysis.DiagnosticDescriptor(
@@ -43,14 +43,14 @@ public class GeneratorResultTests
 				"Test",
 				"Message",
 				"Test",
-				Microsoft.CodeAnalysis.DiagnosticSeverity.Warning,
+				Microsoft.CodeAnalysis.DiagnosticSeverity.Error,
 				true
 			)
 		);
 		var result = GeneratorResult<string>.Fail(diagnostic);
 
-		await Assert.That(result.IsSuccess).IsFalse();
-		await Assert.That(result.IsFatal).IsTrue();
+		await Assert.That(result.HasValue).IsFalse();
+		await Assert.That(result.ShouldProcess).IsFalse();
 		await Assert.That(result.IsEmpty).IsFalse();
 		await Assert.That(result.HasDiagnostics).IsTrue();
 		await Assert.That(result.Value).IsNull();
@@ -67,9 +67,9 @@ public class GeneratorResultTests
 	{
 		var result = GeneratorResult<string>.Empty;
 
-		await Assert.That(result.IsSuccess).IsFalse();
+		await Assert.That(result.HasValue).IsFalse();
 		await Assert.That(result.IsEmpty).IsTrue();
-		await Assert.That(result.IsFatal).IsFalse();
+		await Assert.That(result.ShouldProcess).IsFalse();
 		await Assert.That(result.HasDiagnostics).IsFalse();
 		await Assert.That(result.Value).IsNull();
 	}
@@ -79,13 +79,13 @@ public class GeneratorResultTests
 	{
 		var result = GeneratorResult<int>.Empty;
 
-		await Assert.That(result.IsSuccess).IsFalse();
+		await Assert.That(result.HasValue).IsFalse();
 		await Assert.That(result.IsEmpty).IsTrue();
-		await Assert.That(result.IsFatal).IsFalse();
+		await Assert.That(result.ShouldProcess).IsFalse();
 	}
 
 	[Test]
-	public async Task Fail_WithValueType_IsFatal()
+	public async Task Fail_WithValueType_ShouldProcessIsFalse()
 	{
 		var diagnostic = DiagnosticInfo.Create(
 			new Microsoft.CodeAnalysis.DiagnosticDescriptor(
@@ -93,15 +93,15 @@ public class GeneratorResultTests
 				"Test",
 				"Message",
 				"Test",
-				Microsoft.CodeAnalysis.DiagnosticSeverity.Warning,
+				Microsoft.CodeAnalysis.DiagnosticSeverity.Error,
 				true
 			)
 		);
 
 		var result = GeneratorResult<int>.Fail(diagnostic);
 
-		await Assert.That(result.IsSuccess).IsFalse();
+		await Assert.That(result.HasValue).IsFalse();
 		await Assert.That(result.IsEmpty).IsFalse();
-		await Assert.That(result.IsFatal).IsTrue();
+		await Assert.That(result.ShouldProcess).IsFalse();
 	}
 }

@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
@@ -152,6 +153,7 @@ public record SourceGeneratorTestOptions
 	/// <summary>
 	/// Gets additional analyzer-config options to pass to the generator driver, such as <c>build_property.*</c> or <c>build_metadata.*</c> values.
 	/// </summary>
+	[SuppressMessage("Style", "IDE0301:Use collection expression for empty")]
 	public ImmutableDictionary<string, string> AnalyzerConfigOptions { get; init; } =
 		ImmutableDictionary<string, string>.Empty;
 

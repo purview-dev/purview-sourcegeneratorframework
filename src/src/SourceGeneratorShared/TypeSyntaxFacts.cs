@@ -32,6 +32,7 @@ public static class TypeSyntaxFacts
 
 		while (true)
 		{
+#pragma warning disable format
 			switch (typeSyntax)
 			{
 				case null:
@@ -78,6 +79,7 @@ public static class TypeSyntaxFacts
 
 					return true;
 			}
+#pragma warning restore format
 		}
 	}
 
@@ -134,6 +136,7 @@ public static class TypeSyntaxFacts
 		if (segments is null)
 			throw new ArgumentNullException(nameof(segments));
 
+#pragma warning disable format
 		switch (qualifier)
 		{
 			case null:
@@ -165,6 +168,7 @@ public static class TypeSyntaxFacts
 
 				return false;
 		}
+#pragma warning restore format
 	}
 
 	/// <summary>

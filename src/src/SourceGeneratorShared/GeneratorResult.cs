@@ -12,7 +12,8 @@ public readonly record struct GeneratorResult<T>
 	/// <summary>
 	/// Gets the value of the generator result. If the result is a failure, this will be null or default(T).
 	/// </summary>
-	public T? Value { get; private init; }
+	/// <remarks>This value can be null or default(T) if the result is a failure.</remarks>
+	public T Value { get; private init; }
 
 	/// <summary>
 	/// Gets the diagnostics associated with the generator result. If the result is successful, this may be empty or contain warnings.
@@ -22,29 +23,47 @@ public readonly record struct GeneratorResult<T>
 	/// <summary>
 	/// Indicates whether the generator result is successful (has a value) and does not contain any fatal diagnostics.
 	/// </summary>
-	public bool IsSuccess => Value is not null && !EqualityComparer<T>.Default.Equals(Value, default!);
+	public bool HasValue { get; private init; }
 
 	/// <summary>
 	/// Indicates whether the generator result contains any diagnostics, regardless of success or failure.
 	/// </summary>
-	public bool HasDiagnostics => !Diagnostics.IsEmpty;
+	public bool HasDiagnostics { get; private init; }
 
 	/// <summary>
-	/// Indicates whether the generator result is a failure and contains at least one fatal diagnostic.
+	/// Indicates whether the generator result should be processed, meaning it has a value and does not contain any error severity diagnostics.
 	/// </summary>
-	public bool IsFatal => !IsSuccess && HasDiagnostics;
+	public bool ShouldProcess { get; private init; }
+
+	/// <summary>
+	/// Indicates whether the generator result contains any diagnostics with severity of Error.
+	/// </summary>
+	/// <remarks>We use the DefaultSeverity of the diagnostic descriptor, rather than the effective one
+	/// because regardless of if the consumer has changed its level, the source generator is effectively saying
+	/// it's serious and cannot continue.</remarks>
+	public bool HasErrorDiagnostics { get; private init; }
 
 	/// <summary>
 	///	Indicates whether the generator result is empty, meaning it has no value and no diagnostics.
 	/// </summary>
-	public bool IsEmpty => !IsSuccess && !HasDiagnostics;
+	public bool IsEmpty => this == Empty;
 
 	public static GeneratorResult<T> Ok(T value, ImmutableArray<DiagnosticInfo> diagnostics)
 	{
+		var hasValue = value is not null && !EqualityComparer<T>.Default.Equals(value, default!);
+		var hasDiagnostics = !diagnostics.IsDefaultOrEmpty;
+		var hasErrorDiagnostics = diagnostics.Any(d =>
+			d.Descriptor.DefaultSeverity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error
+		);
+
 		return new()
 		{
-			Value = value,
-			Diagnostics = diagnostics.IsDefaultOrEmpty ? EquatableArray<DiagnosticInfo>.Empty : new(diagnostics),
+			Value = value!,
+			Diagnostics = diagnostics,
+			HasValue = hasValue,
+			HasDiagnostics = hasDiagnostics,
+			ShouldProcess = hasValue && !hasErrorDiagnostics,
+			HasErrorDiagnostics = hasErrorDiagnostics,
 		};
 	}
 
@@ -54,17 +73,13 @@ public readonly record struct GeneratorResult<T>
 	/// <param name="value">The value of the generator result.</param>
 	/// <param name="diagnostics">Optional diagnostics associated with the result.</param>
 	/// <returns>A successful generator result.</returns>
-	public static GeneratorResult<T> Ok(T value, params DiagnosticInfo[] diagnostics)
-	{
-		return new()
-		{
-			Value = value,
-			Diagnostics =
-				diagnostics is null || diagnostics.Length == 0
-					? EquatableArray<DiagnosticInfo>.Empty
-					: EquatableArray<DiagnosticInfo>.Create(diagnostics),
-		};
-	}
+	public static GeneratorResult<T> Ok(T value, params DiagnosticInfo[] diagnostics) =>
+		Ok(
+			value,
+			diagnostics is null || diagnostics.Length == 0
+				? EquatableArray<DiagnosticInfo>.Empty
+				: EquatableArray<DiagnosticInfo>.Create(diagnostics)
+		);
 
 	/// <summary>
 	/// Creates a failed generator result with the specified diagnostics. At least one diagnostic must be provided.
@@ -82,8 +97,19 @@ public readonly record struct GeneratorResult<T>
 			);
 		}
 
-		// All valid...
-		return new() { Diagnostics = EquatableArray<DiagnosticInfo>.Create(diagnostics) };
+		var hasErrorDiagnostics = diagnostics.Any(d =>
+			d.Descriptor.DefaultSeverity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error
+		);
+
+		return new()
+		{
+			Value = default!,
+			Diagnostics = EquatableArray<DiagnosticInfo>.Create(diagnostics),
+			HasValue = false,
+			HasDiagnostics = true,
+			ShouldProcess = !hasErrorDiagnostics,
+			HasErrorDiagnostics = hasErrorDiagnostics,
+		};
 	}
 
 	/// <summary>

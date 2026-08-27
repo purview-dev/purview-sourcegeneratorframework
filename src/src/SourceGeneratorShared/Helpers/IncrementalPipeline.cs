@@ -68,6 +68,7 @@ public static class IncrementalPipeline
 		if (factory is null)
 			throw new ArgumentNullException(nameof(factory));
 
+		// Combine the compilation and generation configuration into a single value provider, then transform it into a generation context.
 		return context
 			.CompilationProvider.Combine(
 				GenerationConfigurationValueProvider(context, settings.DisabledSourceGenMSBuildProperty)

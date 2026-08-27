@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Purview.SourceGeneratorFramework.Generators.Helpers;
 
 namespace Purview.SourceGeneratorFramework.Generators;
 
@@ -295,7 +296,7 @@ public readonly partial record struct RequiredAttributeData;
 
 		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
-		await Assert.That(result.DriverResult.Diagnostics).Contains(d => d.Id == "ADM0004");
+		await Assert.That(result).HasDiagnostic(DiagnosticLibrary.NestedModelNotGenerated);
 	}
 
 	[Test]

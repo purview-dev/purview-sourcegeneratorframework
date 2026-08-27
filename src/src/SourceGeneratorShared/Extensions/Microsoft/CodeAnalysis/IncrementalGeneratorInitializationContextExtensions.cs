@@ -91,10 +91,10 @@ public static class IncrementalGeneratorInitializationContextExtensions
 					if (item.Output.HasDiagnostics)
 						spc.ReportDiagnostics(item.Output.Diagnostics);
 
-					if (!item.Output.IsSuccess || item.Output.IsFatal)
+					if (!item.Output.HasValue || item.Output.ShouldProcess)
 						return;
 
-					generate(spc, item.Output.Value!, item.Context);
+					generate(spc, item.Output.Value, item.Context);
 				}
 			);
 

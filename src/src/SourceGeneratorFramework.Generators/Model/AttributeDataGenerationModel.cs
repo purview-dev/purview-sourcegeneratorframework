@@ -1,13 +1,6 @@
-using System.Collections.Immutable;
-
 namespace Purview.SourceGeneratorFramework.Generators.Model;
 
-sealed record AttributeDataGenerationModel(bool IsDisabled, GenerationContext<EmptyCapabilities> GenerationContext)
-{
-	public ImmutableArray<GeneratorResult<AttributeDataModelTarget>
-#pragma warning disable format
-	> AttributeDataTargets { get; set; } = [];
-#pragma warning restore format
-
-	public ImmutableArray<DiagnosticInfo> Diagnostics { get; set; } = [];
-}
+sealed record AttributeDataOutputContext(
+	GenerationContext<EmptyCapabilities> Context,
+	EquatableArray<GeneratorResult<AttributeDataModelTarget>> Targets
+);

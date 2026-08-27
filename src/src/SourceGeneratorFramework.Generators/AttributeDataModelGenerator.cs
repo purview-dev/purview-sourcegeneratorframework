@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
+using Purview.SourceGeneratorFramework.Generators.Helpers;
 using Purview.SourceGeneratorFramework.Logging;
 
 namespace Purview.SourceGeneratorFramework.Generators;
@@ -19,24 +20,37 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 					context.AddSource(hintName, source);
 			});
 
-		var targets = AttributeDataModelLibrary.GetTargets(context, logger: null);
-		var generationContext = IncrementalPipeline.DefaultGenerationContextValueProvider<AttributeDataModelGenerator>(
+		var targetPipeline = AttributeDataModelLibrary.GetAttributeTargetPipeline(context);
+		var contextPipeline = IncrementalPipeline.DefaultGenerationContextValueProvider<AttributeDataModelGenerator>(
 			context,
 			PropertyLibrary.DisableAttributeDataSourceGenerator
 		);
 
+		var outputPipeline = contextPipeline.CollectWith(
+			targetPipeline,
+			(generationContext, targets, ct) => new AttributeDataOutputContext(generationContext, targets)
+		);
+
 		context.RegisterSourceOutput(
-			targets,
-			generationContext,
-			static (spc, target, generationContext) =>
+			outputPipeline,
+			static (spc, outputContext) =>
 			{
-				if (generationContext.Settings.IsSourceGeneratorDisabled)
+				if (outputContext.Context.Settings.IsSourceGeneratorDisabled)
 				{
-					generationContext.Info("AttributeDataModelGenerator is disabled.");
+					outputContext.Context.Info("AttributeDataModelGenerator is disabled.");
 					return;
 				}
 
-				GenerateAttributeDataModel(spc, target, generationContext);
+				foreach (var target in outputContext.Targets)
+				{
+					if (target.HasDiagnostics)
+						spc.ReportDiagnostics(target.Diagnostics);
+
+					if (!target.ShouldProcess)
+						continue;
+
+					GenerateAttributeDataModel(spc, target.Value, outputContext.Context);
+				}
 			}
 		);
 	}

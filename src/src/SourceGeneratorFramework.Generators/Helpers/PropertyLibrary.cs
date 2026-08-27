@@ -1,4 +1,4 @@
-namespace Purview.SourceGeneratorFramework.Generators.Model;
+namespace Purview.SourceGeneratorFramework.Generators.Helpers;
 
 static class PropertyLibrary
 {
