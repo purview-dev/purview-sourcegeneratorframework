@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using ModularPipelines.Attributes;
 using ModularPipelines.Configuration;
 using ModularPipelines.Context;
@@ -37,8 +38,34 @@ public class PublishLocalNuGetModule(
 		CancellationToken cancellationToken
 	)
 	{
-		if (!Directory.Exists(localNuGetFeedSettings.Value.LocalFeedPath))
-			Directory.CreateDirectory(localNuGetFeedSettings.Value.LocalFeedPath);
+		var localFeedPath = localNuGetFeedSettings.Value.LocalFeedPath;
+
+		var validationResults = new List<ValidationResult>();
+		var validationContext = new ValidationContext(localNuGetFeedSettings.Value);
+		if (
+			!Validator.TryValidateObject(
+				localNuGetFeedSettings.Value,
+				validationContext,
+				validationResults,
+				validateAllProperties: true
+			)
+		)
+		{
+			foreach (var validationResult in validationResults)
+				context.Logger.LogError("{Message}", validationResult.ErrorMessage);
+
+			context.Logger.LogError(
+				"If you passed a Windows path with backslashes, your shell may have stripped them. "
+					+ "Try using forward slashes, e.g. --PublishLocalNuGet:LocalFeedPath=p:/_sync-projects/.local-nuget/."
+			);
+			return null;
+		}
+
+		var fullLocalFeedPath = Path.GetFullPath(localFeedPath);
+		context.Logger.LogInformation("Publishing local NuGet packages to {LocalFeedPath}.", fullLocalFeedPath);
+
+		if (!Directory.Exists(fullLocalFeedPath))
+			Directory.CreateDirectory(fullLocalFeedPath);
 
 		var packages = Directory.GetFiles(buildSettings.Value.ArtifactsFolder, "*.s*nupkg").ToArray();
 		if (packages.Length == 0)
@@ -51,7 +78,7 @@ public class PublishLocalNuGetModule(
 		foreach (var package in packages)
 		{
 			var fileName = Path.GetFileName(package);
-			var destinationPath = Path.Combine(localNuGetFeedSettings.Value.LocalFeedPath, fileName);
+			var destinationPath = Path.Combine(fullLocalFeedPath, fileName);
 
 			if (Path.GetExtension(fileName) == ".nupkg")
 				nupkgPackages.Add(await ParsePackageDetailsAsync(package, cancellationToken));

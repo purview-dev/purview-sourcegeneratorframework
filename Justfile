@@ -24,7 +24,7 @@ pipeline-pr *args:
 [group('Pipeline')]
 pipeline-build *args:
     echo "Running build pipeline..."
-    dotnet run --project {{ pipeline_project }} --configuration {{ build_configuration }} -- Build:RunTests=false --Release:Mode=None {{ args }} 
+    dotnet run --project {{ pipeline_project }} --configuration {{ build_configuration }} -- --Build:RunTests=false --Release:Mode=None {{ args }} 
 
 # Run the release pipeline (restore, build, lint, tests, pack, publish, GitHub release)
 [group('Pipeline')]
@@ -33,6 +33,8 @@ pipeline-release *args:
     dotnet run --project {{ pipeline_project }} --configuration {{ build_configuration }} -- --Release:Mode=NuGet {{ args }}
 
 # Run the release pipeline (restore, build, lint, tests, pack, local nuget publish)
+# Note: when running via a sh-style shell on Windows, backslashes in the path may be stripped.
+# Use forward slashes for the feed path, e.g. --PublishLocalNuGet:LocalFeedPath=p:/_sync-projects/.local-nuget/
 [group('Pipeline')]
 pipeline-local-release *args:
     echo "Running local release pipeline..."

@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
 		<RoslynCompilerVersion Condition="'$(RoslynCompilerVersion)' == ''">[4.13.0,)</RoslynCompilerVersion>
-		<RoslynAnalyzersVersion Condition="'$(RoslynAnalyzersVersion)' == ''">[5.6.0,)</RoslynAnalyzersVersion>
+		<RoslynAnalyzersVersion Condition="'$(RoslynAnalyzersVersion)' == ''">[5.9.0,)</RoslynAnalyzersVersion>
 		<TUnitVersion>[1.65.51,)</TUnitVersion>
 		<ModularPipelinesVersion>[3.2.8,)</ModularPipelinesVersion>
 	</PropertyGroup>

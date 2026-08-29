@@ -9,30 +9,26 @@ A set of libraries for building and testing incremental C# source generators usi
 | [`Purview.SourceGeneratorFramework`](src/src/SourceGeneratorFramework) | Core helpers, models, and MSBuild integration for writing incremental source generators. | Yes |
 | [`Purview.SourceGeneratorFramework.Testing`](src/src/SourceGeneratorFramework.Testing) | Framework-agnostic test runner and assertions for source generator unit tests. | Yes |
 | [`Purview.SourceGeneratorFramework.Testing.TUnit`](src/src/SourceGeneratorFramework.Testing.TUnit) | TUnit-specific test base classes and assertions for source generator tests. | Yes |
-| [`SourceGeneratorFramework.Testing.Generators`](src/src/SourceGeneratorFramework.Testing.Generators) | Internal Roslyn source generator used by the framework package. | No |
-| [`SourceGeneratorFramework.ExampleGenerator`](src/src/SourceGeneratorFramework.ExampleGenerator) | Reference implementation showing how to build a generator with the framework. | No |
+| [`Purview.SourceGeneratorFramework.Generators`](src/src/SourceGeneratorFramework.Generators) | Internal Roslyn source generator used by the framework package. | No |
+| [`Purview.SourceGeneratorFramework.ExampleGenerator`](src/src/SourceGeneratorFramework.ExampleGenerator) | Reference implementation showing how to build a generator with the framework. | No |
 
 ## Requirements
 
-- .NET SDK 8.0 or later
+- .NET SDK 10.0 or later
 - The test projects target `net8.0`, `net9.0`, and `net10.0`
 - Source generators target `netstandard2.0`
 
 ## Building
 
-Restore and build the solution using the `just` recipes or `dotnet` directly:
+Restore and build the solution:
 
 ```bash
-just build
-# or
 dotnet build src/SourceGeneratorFramework.slnx -c Release
 ```
 
 ## Running tests
 
 ```bash
-just tests
-# or
 dotnet test src/SourceGeneratorFramework.slnx -c Release
 ```
 
@@ -46,7 +42,7 @@ normal reference with `ReferenceOutputAssembly="true"`. The complete pattern is 
 
 ### AttributeDataModelGenerator
 
-The framework package includes `AttributeDataModelGenerator` (implemented in `SourceGeneratorFramework.Testing.Generators`), which generates `readonly record struct` parser models for .NET attributes. It removes the repetitive boilerplate of hand-writing `FromAttributeData` methods for every attribute you want to inspect in a source generator.
+The framework package includes `AttributeDataModelGenerator` (implemented in `Purview.SourceGeneratorFramework.Generators`), which generates `readonly record struct` parser models for .NET attributes. It removes the repetitive boilerplate of hand-writing `FromAttributeData` methods for every attribute you want to inspect in a source generator.
 
 Supported features:
 - Manual mapping of named arguments, constructor arguments by index, and constructor arguments by name
@@ -56,13 +52,11 @@ Supported features:
 - Optional `DefaultValue` runtime fallback when a property is not found on the attribute
 - An `Empty` sentinel that uses `default(T)` for every property
 
-See the [`SourceGeneratorFramework.Testing.Generators` README](src/src/SourceGeneratorFramework.Testing.Generators) for examples, including validation attributes with nested types.
+See the [`Purview.SourceGeneratorFramework.Generators` README](src/src/SourceGeneratorFramework.Generators) for examples, including validation attributes with nested types.
 
 ## Packaging
 
 ```bash
-just pack
-# or
 dotnet pack src/SourceGeneratorFramework.slnx -c Release -o ./artifacts
 ```
 
