@@ -119,7 +119,17 @@ public record SourceGeneratorTestOptions
 	/// <summary>
 	/// Gets a value indicating whether the output compilation should be emitted to an assembly.
 	/// </summary>
-	public bool CompileToAssembly { get; init; } = true;
+	/// <remarks>
+	/// The default is <see langword="false"/> because emitting an assembly is expensive and most
+	/// generator tests only need to inspect generated source. Use <see cref="Compile"/> to opt-in
+	/// when the test needs to load or reflect over the compiled output.
+	/// </remarks>
+	public bool CompileToAssembly { get; init; }
+
+	/// <summary>
+	/// Creates a copy of these options with <see cref="CompileToAssembly"/> set to <see langword="true"/>.
+	/// </summary>
+	public SourceGeneratorTestOptions Compile() => this with { CompileToAssembly = true };
 
 	/// <summary>
 	/// Gets whether code writers created by the generation context should throw when generated

@@ -14,6 +14,7 @@
 			Path="src/SourceGeneratorFramework.CodeFixers/SourceGeneratorFramework.CodeFixers.csproj"
 			Id="0911f5c7-139e-4ddc-9918-d4826fe0c20c"
 		/>
+		<Project Path="src/SourceGeneratorFramework.Benchmarks/SourceGeneratorFramework.Benchmarks.csproj" />
 		<Project Path="src/SourceGeneratorFramework.Generators/SourceGeneratorFramework.Generators.csproj" />
 		<Project Path="src/SourceGeneratorFramework.Testing.TUnit/SourceGeneratorFramework.Testing.TUnit.csproj" />
 		<Project Path="src/SourceGeneratorFramework.Testing/SourceGeneratorFramework.Testing.csproj" />

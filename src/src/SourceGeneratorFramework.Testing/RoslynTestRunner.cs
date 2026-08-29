@@ -91,17 +91,8 @@ public abstract class RoslynTestRunner
 		return new(workspace, solution.GetProject(projectId)!, documentIds.ToImmutable());
 	}
 
-	static string PrepareSource(string source, SourceGeneratorTestOptions options)
-	{
-		if (!options.IncludeDefaultNamespaces)
-			return source;
-
-		var namespaces = options.DefaultNamespaces.AddRange(options.AdditionalNamespaces);
-		return string.Join(Environment.NewLine, namespaces.Select(n => $"using {n};"))
-			+ Environment.NewLine
-			+ Environment.NewLine
-			+ source;
-	}
+	static string PrepareSource(string source, SourceGeneratorTestOptions options) =>
+		SourceGeneratorHelpers.PrepareSource(source, options);
 
 	/// <summary>Owns the workspace and project created for a test run.</summary>
 	protected sealed class TestProject(

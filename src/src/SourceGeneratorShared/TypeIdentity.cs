@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 using Microsoft.CodeAnalysis;
 
 namespace Purview.SourceGeneratorFramework;
@@ -129,24 +131,72 @@ public readonly record struct TypeIdentity
 			);
 		}
 
-		var knownType = KnownLangTypes.Get(namedType.SpecialType);
-		if (knownType != TypeMapping.Empty)
+		var assembly = namedType.ContainingAssembly;
+		if (assembly is not null)
 		{
-			Name = knownType.Type.Name;
-			Namespace = knownType.Type.Namespace;
-			Keyword = knownType.Keyword;
-			SpecialType = knownType.SpecialType;
-			ContainingTypes = [];
-			TypeArguments = [];
-
-			return;
+			var cache = AssemblySymbolCache.GetValue(assembly, AssemblyCacheFactory);
+			this = cache.GetOrAdd(typeSymbol, SymbolCacheFactory).Value;
 		}
+		else
+		{
+			this = CreateFromSymbol(typeSymbol).Value;
+		}
+	}
 
-		Name = namedType.Name;
-		Namespace = BuildNamespace(namedType.ContainingNamespace);
-		ContainingTypes = BuildContainingTypes(namedType);
-		GenericArity = namedType.Arity;
-		TypeArguments = BuildArguments(namedType);
+	static readonly ConditionalWeakTable<
+		IAssemblySymbol,
+		ConcurrentDictionary<ITypeSymbol, TypeIdentityCacheEntry>
+	> AssemblySymbolCache = new();
+	static readonly ConditionalWeakTable<
+		IAssemblySymbol,
+		ConcurrentDictionary<ITypeSymbol, TypeIdentityCacheEntry>
+	>.CreateValueCallback AssemblyCacheFactory = static assembly => new ConcurrentDictionary<
+		ITypeSymbol,
+		TypeIdentityCacheEntry
+	>(TypeSymbolEqualityComparer.Instance);
+	static readonly Func<ITypeSymbol, TypeIdentityCacheEntry> SymbolCacheFactory = CreateFromSymbol;
+
+	static TypeIdentityCacheEntry CreateFromSymbol(ITypeSymbol typeSymbol)
+	{
+		var namedType = (INamedTypeSymbol)typeSymbol;
+		var knownType = KnownLangTypes.Get(namedType.SpecialType);
+
+		return knownType == TypeMapping.Empty
+			? new TypeIdentityCacheEntry(
+				new TypeIdentity
+				{
+					Name = namedType.Name,
+					Namespace = BuildNamespace(namedType.ContainingNamespace),
+					ContainingTypes = BuildContainingTypes(namedType),
+					GenericArity = namedType.Arity,
+					TypeArguments = BuildArguments(namedType),
+				}
+			)
+			: new TypeIdentityCacheEntry(
+				new TypeIdentity
+				{
+					Name = knownType.Type.Name,
+					Namespace = knownType.Type.Namespace,
+					Keyword = knownType.Keyword,
+					SpecialType = knownType.SpecialType,
+					ContainingTypes = [],
+					TypeArguments = [],
+				}
+			);
+	}
+
+	sealed class TypeSymbolEqualityComparer : IEqualityComparer<ITypeSymbol>
+	{
+		public static readonly TypeSymbolEqualityComparer Instance = new();
+
+		public bool Equals(ITypeSymbol? x, ITypeSymbol? y) => SymbolEqualityComparer.Default.Equals(x, y);
+
+		public int GetHashCode(ITypeSymbol obj) => SymbolEqualityComparer.Default.GetHashCode(obj);
+	}
+
+	sealed class TypeIdentityCacheEntry(TypeIdentity value)
+	{
+		public TypeIdentity Value = value;
 	}
 
 	/// <summary>

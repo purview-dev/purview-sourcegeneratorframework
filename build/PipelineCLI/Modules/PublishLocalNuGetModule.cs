@@ -54,11 +54,11 @@ public class PublishLocalNuGetModule(
 			foreach (var validationResult in validationResults)
 				context.Logger.LogError("{Message}", validationResult.ErrorMessage);
 
-			context.Logger.LogError(
-				"If you passed a Windows path with backslashes, your shell may have stripped them. "
-					+ "Try using forward slashes, e.g. --PublishLocalNuGet:LocalFeedPath=p:/_sync-projects/.local-nuget/."
+			throw new InvalidOperationException(
+				$"Invalid {nameof(PublishLocalNuGetSettings)} configuration for {nameof(PublishLocalNuGetSettings.LocalFeedPath)}. "
+					+ "Windows paths with backslashes may have been stripped by the shell; "
+					+ "use forward slashes, e.g. --PublishLocalNuGet:LocalFeedPath=p:/_sync-projects/.local-nuget/."
 			);
-			return null;
 		}
 
 		var fullLocalFeedPath = Path.GetFullPath(localFeedPath);
@@ -70,8 +70,9 @@ public class PublishLocalNuGetModule(
 		var packages = Directory.GetFiles(buildSettings.Value.ArtifactsFolder, "*.s*nupkg").ToArray();
 		if (packages.Length == 0)
 		{
-			context.Logger.LogError("No packages found in {ArtifactsFolder}", buildSettings.Value.ArtifactsFolder);
-			return null;
+			throw new InvalidOperationException(
+				$"No packages found in {buildSettings.Value.ArtifactsFolder}. The local feed was not populated."
+			);
 		}
 
 		List<PackageDetails> nupkgPackages = [];

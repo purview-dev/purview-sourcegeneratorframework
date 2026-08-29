@@ -25,5 +25,6 @@
 		<PackageVersion Include="TUnit.Mocks" Version="$(TUnitVersion)" />
 		<PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="[8.0.0,)" />
 		<PackageVersion Include="System.Collections.Immutable" Version="[8.0.0,)" />
+		<PackageVersion Include="BenchmarkDotNet" Version="[0.14.0,)" />
 	</ItemGroup>
 </Project>

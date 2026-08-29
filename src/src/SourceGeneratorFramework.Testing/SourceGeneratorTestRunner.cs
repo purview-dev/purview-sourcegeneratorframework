@@ -135,16 +135,8 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		return new(compilationWithAnalyzers, analyzerDiagnostics);
 	}
 
-	static string PrepareSource(string source, SourceGeneratorTestOptions options)
-	{
-		if (!options.IncludeDefaultNamespaces)
-			return source;
-
-		var namespaces = options.DefaultNamespaces.AddRange(options.AdditionalNamespaces);
-		var usings = string.Join(Environment.NewLine, namespaces.Select(n => $"using {n};"));
-
-		return usings + Environment.NewLine + Environment.NewLine + source;
-	}
+	static string PrepareSource(string source, SourceGeneratorTestOptions options) =>
+		SourceGeneratorHelpers.PrepareSource(source, options);
 
 	static GeneratorDriver CreateDriver(
 		TGenerator generator,
@@ -199,33 +191,54 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		if (loggingSessionId is null)
 			return null;
 
-		Action<string, int> sink = (message, level) =>
+		void Sink(string message, int level)
 		{
 			var type = (SourceGenLogLevel)level;
 			options.TestOutput.WriteLine($"[{type}] {message}");
 
 			logEntries.Add(new(type, message));
-		};
+		}
 
-		List<IDisposable> registrations = [SourceGenLogging.RegisterSinkCore(loggingSessionId, sink)];
+		List<IDisposable> registrations = [SourceGenLogging.RegisterSinkCore(loggingSessionId, Sink)];
 
 		// Self-contained generators may embed the framework logging types. Register the test sink
 		// explicitly with that private copy rather than relying on process-wide shared state.
-		var embeddedLoggingType = typeof(TGenerator).Assembly.GetType(
-			"Purview.SourceGeneratorFramework.Logging.SourceGenLogging",
-			throwOnError: false
-		);
-		if (embeddedLoggingType is not null && embeddedLoggingType != typeof(SourceGenLogging))
-		{
-			var registerSink = embeddedLoggingType.GetMethod(
-				"RegisterSinkCore",
-				BindingFlags.Static | BindingFlags.NonPublic
-			);
-			if (registerSink?.Invoke(null, [loggingSessionId, sink]) is IDisposable registration)
-				registrations.Add(registration);
-		}
+		var embeddedRegistration = GetEmbeddedSinkRegistration(typeof(TGenerator).Assembly);
+		if (embeddedRegistration is not null)
+			registrations.Add(embeddedRegistration(loggingSessionId, Sink));
 
 		return new(registrations);
+	}
+
+	static readonly ConcurrentDictionary<
+		Assembly,
+		Func<string, Action<string, int>, IDisposable>?
+	> EmbeddedSinkRegistrationCache = new();
+
+	static Func<string, Action<string, int>, IDisposable>? GetEmbeddedSinkRegistration(Assembly generatorAssembly)
+	{
+		return EmbeddedSinkRegistrationCache.GetOrAdd(
+			generatorAssembly,
+			static assembly =>
+			{
+				var embeddedLoggingType = assembly.GetType(
+					"Purview.SourceGeneratorFramework.Logging.SourceGenLogging",
+					throwOnError: false
+				);
+				if (embeddedLoggingType is null || embeddedLoggingType == typeof(SourceGenLogging))
+					return null;
+
+				var registerSink = embeddedLoggingType.GetMethod(
+					"RegisterSinkCore",
+					BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic
+				);
+
+				return registerSink is null
+					? null
+					: (Func<string, Action<string, int>, IDisposable>)
+						Delegate.CreateDelegate(typeof(Func<string, Action<string, int>, IDisposable>), registerSink);
+			}
+		);
 	}
 
 	sealed class LoggingRegistrations(List<IDisposable> registrations) : IDisposable

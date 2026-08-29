@@ -23,6 +23,31 @@ public sealed record PublishLocalNuGetSettings : IValidatableObject
 			yield break;
 		}
 
+		// Path.IsPathRooted("p:foo") returns true, but a drive-relative path like "p:foo" is NOT an
+		// absolute path: Path.GetFullPath resolves it against the current directory and can silently
+		// copy packages to an unintended location. This is the classic signature of a Windows path whose
+		// backslashes were stripped by a sh-style shell, e.g. 'p:\_sync-projects\.local-nuget\'.
+		if (LocalFeedPath.Length >= 2 && LocalFeedPath[1] == ':')
+		{
+			var hasSeparatorAfterDrive =
+				LocalFeedPath.Length >= 3
+				&& (
+					LocalFeedPath[2] == Path.DirectorySeparatorChar
+					|| LocalFeedPath[2] == Path.AltDirectorySeparatorChar
+				);
+			if (!hasSeparatorAfterDrive)
+			{
+				yield return new ValidationResult(
+					$"LocalFeedPath '{LocalFeedPath}' is drive-relative, not an absolute path. "
+						+ "This is usually caused by the shell stripping backslashes from a Windows path such as "
+						+ $"'p:\\_sync-projects\\.local-nuget\\'. Use forward slashes instead, e.g. "
+						+ "'p:/_sync-projects/.local-nuget/'.",
+					[nameof(LocalFeedPath)]
+				);
+				yield break;
+			}
+		}
+
 		if (!Path.IsPathRooted(LocalFeedPath))
 		{
 			yield return new ValidationResult(
@@ -33,7 +58,7 @@ public sealed record PublishLocalNuGetSettings : IValidatableObject
 		}
 
 		var root = Path.GetPathRoot(LocalFeedPath);
-		if (root is null)
+		if (string.IsNullOrEmpty(root))
 		{
 			yield return new ValidationResult(
 				$"LocalFeedPath could not be parsed. Received: '{LocalFeedPath}'.",

@@ -713,11 +713,7 @@ public readonly partial record struct RequiredAttributeData;
 			}
 			""";
 
-		var result = await GenerateAsync(
-			source,
-			new() { CompileToAssembly = false },
-			cancellationToken: cancellationToken
-		);
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
 		result.AssertNoGenerationExceptions().AssertNoLogErrors();
 
