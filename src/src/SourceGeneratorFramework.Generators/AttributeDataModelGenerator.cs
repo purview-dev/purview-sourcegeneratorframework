@@ -26,31 +26,27 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 			PropertyLibrary.DisableAttributeDataSourceGenerator
 		);
 
-		var outputPipeline = contextPipeline.CollectWith(
-			targetPipeline,
-			(generationContext, targets, ct) => new AttributeDataOutputContext(generationContext, targets)
-		);
+		var outputPipeline = targetPipeline.CombineWithContext(contextPipeline);
 
 		context.RegisterSourceOutput(
 			outputPipeline,
 			static (spc, outputContext) =>
 			{
-				if (outputContext.Context.Settings.IsSourceGeneratorDisabled)
+				var (target, generationContext) = outputContext;
+
+				if (generationContext.Settings.IsSourceGeneratorDisabled)
 				{
-					outputContext.Context.Info("AttributeDataModelGenerator is disabled.");
+					generationContext.Info("AttributeDataModelGenerator is disabled.");
 					return;
 				}
 
-				foreach (var target in outputContext.Targets)
-				{
-					if (target.HasDiagnostics)
-						spc.ReportDiagnostics(target.Diagnostics);
+				if (target.HasDiagnostics)
+					spc.ReportDiagnostics(target.Diagnostics);
 
-					if (!target.ShouldProcess)
-						continue;
+				if (!target.ShouldProcess)
+					return;
 
-					GenerateAttributeDataModel(spc, target.Value, outputContext.Context);
-				}
+				GenerateAttributeDataModel(spc, target.Value, generationContext);
 			}
 		);
 	}
@@ -611,7 +607,7 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 			return;
 		}
 
-		var sources = property.Sources;
+		var sources = property.Sources.AsImmutableArray();
 		if (sources.IsEmpty)
 		{
 			writer.WriteLine($"var {variableName} = default({typeName});");
@@ -720,7 +716,7 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 
 	static void WriteEnumPropertyExtraction(CodeWriter writer, AttributeDataModelProperty property, string variableName)
 	{
-		var sources = property.Sources;
+		var sources = property.Sources.AsImmutableArray();
 		var defaultValueExpression = property.HasDefaultValue ? property.DefaultValueExpression : "null";
 
 		if (sources.Length == 1)

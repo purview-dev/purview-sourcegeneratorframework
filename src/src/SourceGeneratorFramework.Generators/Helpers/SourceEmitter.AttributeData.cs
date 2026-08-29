@@ -192,7 +192,9 @@ partial class SourceEmitter
 								],
 							},
 							writerBody =>
-								writer.WriteAssignment("Name", "name").WriteAssignment("DefaultValue", "defaultValue")
+								writerBody
+									.WriteAssignment("Name", "name")
+									.WriteAssignment("DefaultValue", "defaultValue")
 						);
 
 					bodyWriter
@@ -213,7 +215,8 @@ partial class SourceEmitter
 									},
 								],
 							},
-							writerBody => writer.WriteLine("Index = index;").WriteLine("DefaultValue = defaultValue;")
+							writerBody =>
+								writerBody.WriteLine("Index = index;").WriteLine("DefaultValue = defaultValue;")
 						);
 
 					bodyWriter

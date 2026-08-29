@@ -29,9 +29,10 @@ Produce clear, deterministic, maintainable source-generator emission code using 
 
 1. Prefer structured declaration APIs over handwritten declaration strings.
 2. Prefer XML helper extensions (`XmlSummary`, `XmlParam`, etc.) over raw `///` output.
-3. Keep `CodeWriter` instances output-scoped; never cache in incremental provider state.
+3. Keep `CodeWriter` instances output-scoped; never cache in incremental provider state or custom contexts.
 4. Preserve semantic behavior while modernizing implementation style.
 5. Keep edits minimal and localized to emitter concerns.
+6. Consult `docs/guide.md` for incremental source-generator best practices and enforce them during reviews/refactors: analysers for validation, generators for generation, remove Roslyn objects from pipeline models, use `EquatableArray<T>` for collections, avoid `Collect()` unless global, prefer per-target output, deterministic output, etc.
 
 ## Refactoring posture
 

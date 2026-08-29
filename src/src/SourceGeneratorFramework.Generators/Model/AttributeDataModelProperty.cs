@@ -1,5 +1,3 @@
-using System.Collections.Immutable;
-
 namespace Purview.SourceGeneratorFramework.Generators.Model;
 
 sealed record PropertySource(AttributePropertySource Source, string? MappedName, int ConstructorIndex);
@@ -7,7 +5,7 @@ sealed record PropertySource(AttributePropertySource Source, string? MappedName,
 sealed record AttributeDataModelProperty(
 	string PropertyName,
 	string FullyQualifiedTypeName,
-	ImmutableArray<PropertySource> Sources,
+	EquatableArray<PropertySource> Sources,
 	string DefaultValueExpression,
 	bool HasDefaultValue,
 	bool IsExplicit,

@@ -504,7 +504,9 @@ static class AttributeDataModelLibrary
 					new AttributeDataModelProperty(
 						PropertyName: propertyName,
 						FullyQualifiedTypeName: modelTypeName,
-						Sources: [new PropertySource(AttributePropertySource.ConstructorName, parameter.Name, i)],
+						Sources: EquatableArray<PropertySource>.Create(
+							new PropertySource(AttributePropertySource.ConstructorName, parameter.Name, i)
+						),
 						DefaultValueExpression: defaultValueExpression,
 						HasDefaultValue: parameter.HasExplicitDefaultValue,
 						IsExplicit: false,
@@ -572,7 +574,9 @@ static class AttributeDataModelLibrary
 				new(
 					PropertyName: propertyName,
 					FullyQualifiedTypeName: modelTypeName,
-					Sources: [new PropertySource(AttributePropertySource.NamedArgument, property.Name, -1)],
+					Sources: EquatableArray<PropertySource>.Create(
+						new PropertySource(AttributePropertySource.NamedArgument, property.Name, -1)
+					),
 					DefaultValueExpression: defaultValueExpression,
 					HasDefaultValue: false,
 					IsExplicit: false,
