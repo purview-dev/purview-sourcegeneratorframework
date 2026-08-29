@@ -232,7 +232,7 @@ namespace Test
 
 		// Assert
 		await Assert.That(options.ValidateCodeWriterScopes).IsTrue();
-		await Assert.That(result.GetSource()).Contains("Value = \"true\"");
+		await Assert.That(result.GetSource()).Contains("Value = \"True\"");
 	}
 
 	[Test]
@@ -241,7 +241,7 @@ namespace Test
 	)
 	{
 		var runner = new SourceGeneratorTestRunner<OptionsGenerator>();
-		var options = new SourceGeneratorTestOptions { AnalyzerConfigOptions = { ["CustomOption"] = "enabled" } };
+		var options = new SourceGeneratorTestOptions().WithAnalyzerConfigOptions(("CustomOption", "enabled"));
 
 		var result = await runner.RunAsync("public sealed class Input { }", options, cancellationToken);
 
@@ -277,14 +277,12 @@ namespace Test
 		var originalDefault = SourceGeneratorTestOptions.Default;
 		try
 		{
-			SourceGeneratorTestOptions.Default = originalDefault with
-			{
-				AnalyzerConfigOptions = new Dictionary<string, string> { ["Shared"] = "default" },
-			};
+			SourceGeneratorTestOptions.Default = originalDefault.WithAnalyzerConfigOptions(("Shared", "default"));
 
 			var first = new CustomSourceGeneratorTestOptions();
 			var second = new CustomSourceGeneratorTestOptions();
-			first.AnalyzerConfigOptions["OnlyFirst"] = "value";
+
+			first = first.WithAnalyzerConfigOptions(("OnlyFirst", "value"));
 
 			await Assert.That(first.AnalyzerConfigOptions["Shared"]).IsEqualTo("default");
 			await Assert.That(second.AnalyzerConfigOptions.ContainsKey("OnlyFirst")).IsFalse();
@@ -294,5 +292,54 @@ namespace Test
 		{
 			SourceGeneratorTestOptions.Default = originalDefault;
 		}
+	}
+
+	// ---------------------------------------------------------------------------------------------
+	// Compile() preserves the concrete options type for downstream derived records
+	// ---------------------------------------------------------------------------------------------
+
+	[Test]
+	public async Task Compile_OnBaseOptions_SetsCompileToAssembly()
+	{
+		var options = new SourceGeneratorTestOptions();
+
+		var result = options.Compile();
+
+		await Assert.That(result.CompileToAssembly).IsTrue();
+		await Assert.That(result.GetType()).IsEqualTo(typeof(SourceGeneratorTestOptions));
+	}
+
+	[Test]
+	public async Task Compile_OnAnalyzerOptions_PreservesConcreteType()
+	{
+		var options = new AnalyzerTestOptions();
+
+		var result = options.Compile();
+
+		await Assert.That(result.CompileToAssembly).IsTrue();
+		await Assert.That(result.GetType()).IsEqualTo(typeof(AnalyzerTestOptions));
+	}
+
+	[Test]
+	public async Task Compile_OnCodeFixOptions_PreservesConcreteType()
+	{
+		var options = new CodeFixTestOptions();
+
+		var result = options.Compile();
+
+		await Assert.That(result.CompileToAssembly).IsTrue();
+		await Assert.That(result.GetType()).IsEqualTo(typeof(CodeFixTestOptions));
+	}
+
+	[Test]
+	public async Task Compile_OnCustomDerivedOptions_PreservesConcreteTypeAndProperties()
+	{
+		var options = new CustomSourceGeneratorTestOptions();
+
+		var result = options.Compile();
+
+		await Assert.That(result.CompileToAssembly).IsTrue();
+		await Assert.That(result.GetType()).IsEqualTo(typeof(CustomSourceGeneratorTestOptions));
+		await Assert.That(result.CustomValue).IsEqualTo("custom");
 	}
 }

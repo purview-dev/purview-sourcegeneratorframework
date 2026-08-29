@@ -11,7 +11,7 @@ public sealed class AvoidRegisterImplementationSourceOutputAnalyzer : Diagnostic
 {
 	public const string DiagnosticId = "PSGFR14";
 
-	static readonly DiagnosticDescriptor Rule = new(
+	public static readonly DiagnosticDescriptor Rule = new(
 		DiagnosticId,
 		"Avoid RegisterImplementationSourceOutput",
 		"Avoid RegisterImplementationSourceOutput unless the generator explicitly produces implementation-only sources; prefer RegisterSourceOutput",

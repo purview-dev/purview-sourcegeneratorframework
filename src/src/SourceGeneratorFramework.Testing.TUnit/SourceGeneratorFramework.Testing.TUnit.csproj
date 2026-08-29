@@ -1,5 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
+		<TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeSourceGeneratorShared</TargetsForTfmSpecificContentInPackage>
 		<TargetFrameworks>$(TestingTargetFrameworks)</TargetFrameworks>
 		<IsPackable>true</IsPackable>
 		<AssemblyName>$(RootNamespace)</AssemblyName>
@@ -7,11 +8,38 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\SourceGeneratorFramework.Testing\SourceGeneratorFramework.Testing.csproj" />
+		<ProjectReference
+			Include="..\SourceGeneratorShared\SourceGeneratorShared.csproj"
+			PrivateAssets="all"
+			Pack="false"
+		/>
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="TUnit.Core" />
 		<PackageReference Include="TUnit.Assertions" />
-		<PackageReference Include="System.Collections.Immutable" VersionOverride="[9.0.0,)" />
 	</ItemGroup>
+
+	<Target Name="IncludeSourceGeneratorShared">
+		<MSBuild
+			Projects="..\SourceGeneratorShared\SourceGeneratorShared.csproj"
+			Targets="GetTargetPath"
+			Properties="Configuration=$(Configuration);TargetFramework=netstandard2.0"
+		>
+			<Output TaskParameter="TargetOutputs" ItemName="_SourceGeneratorSharedAssembly" />
+		</MSBuild>
+
+		<ItemGroup>
+			<_SourceGeneratorSharedPackageFile Include="@(_SourceGeneratorSharedAssembly)" />
+			<_SourceGeneratorSharedPackageFile Include="@(_SourceGeneratorSharedAssembly->'%(RootDir)%(Directory)%(Filename).pdb')" />
+			<_SourceGeneratorSharedPackageFile Include="@(_SourceGeneratorSharedAssembly->'%(RootDir)%(Directory)%(Filename).xml')" />
+
+			<TfmSpecificPackageFile
+				Include="@(_SourceGeneratorSharedPackageFile)"
+				Condition="Exists('%(_SourceGeneratorSharedPackageFile.Identity)')"
+			>
+				<PackagePath>lib/$(TargetFramework)/</PackagePath>
+			</TfmSpecificPackageFile>
+		</ItemGroup>
+	</Target>
 </Project>

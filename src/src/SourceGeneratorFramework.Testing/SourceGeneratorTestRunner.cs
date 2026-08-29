@@ -3,9 +3,8 @@ using System.Collections.Immutable;
 using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Purview.SourceGeneratorFramework.Helpers;
+using Microsoft.CodeAnalysis.Diagnostics;
 using Purview.SourceGeneratorFramework.Logging;
-using Purview.SourceGeneratorFramework.Models;
 using Purview.SourceGeneratorFramework.Testing.Models;
 
 namespace Purview.SourceGeneratorFramework.Testing;
@@ -34,9 +33,19 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		CancellationToken cancellationToken = default
 	)
 	{
-		options ??= new SourceGeneratorTestOptions();
+		options ??= new();
+		if (options.AnalyzerOptions is not null && options.CompilationWithAnalyzersOptions is not null)
+		{
+			throw new ArgumentException(
+				$"{nameof(options.AnalyzerOptions)} and {nameof(options.CompilationWithAnalyzersOptions)} cannot be provided at the same time.",
+				nameof(options)
+			);
+		}
 
 		ConcurrentBag<LogEntry> logEntries = [];
+
+		if (!options.AdditionalSources.IsDefaultOrEmpty)
+			sources = sources.Concat(options.AdditionalSources);
 
 		var syntaxTrees = sources
 			.Select(source =>
@@ -61,6 +70,8 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 			out _,
 			cancellationToken
 		);
+
+		var analyzerCompilationRun = await GetAnalyzerResultsAsync(options, outputCompilation, cancellationToken);
 		var result = driver.GetRunResult();
 
 		Assembly? assembly = null;
@@ -75,22 +86,57 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		return new(
 			result,
 			new(outputCompilation, assembly, compilationDiagnostics),
+			analyzerCompilationRun,
 			result.GeneratedTrees,
 			excludedGeneratedSource,
 			[.. logEntries]
 		);
 	}
 
-	static string PrepareSource(string source, SourceGeneratorTestOptions options)
+	static async Task<AnalyzerCompilationRunResult?> GetAnalyzerResultsAsync(
+		SourceGeneratorTestOptions options,
+		Compilation outputCompilation,
+		CancellationToken cancellationToken
+	)
 	{
-		if (!options.IncludeDefaultNamespaces)
-			return source;
+		if (options.AnalyzerTypes.IsDefaultOrEmpty)
+			return null;
 
-		var namespaces = options.DefaultNamespaces.AddRange(options.AdditionalNamespaces);
-		var usings = string.Join(Environment.NewLine, namespaces.Select(n => $"using {n};"));
+		var analyzers = options
+			.AnalyzerTypes.Select(static type =>
+			{
+#pragma warning disable CA2208 // Instantiate argument exceptions correctly
+				if (type.GetConstructors().All(c => c.GetParameters().Length > 0))
+				{
+					throw new ArgumentException(
+						$"Analyzer type {type.FullName} must have a parameterless constructor.",
+						nameof(options.AnalyzerTypes)
+					);
+				}
 
-		return usings + Environment.NewLine + Environment.NewLine + source;
+				if (!typeof(DiagnosticAnalyzer).IsAssignableFrom(type))
+				{
+					throw new ArgumentException(
+						$"Analyzer type {type.FullName} must be a DiagnosticAnalyzer.",
+						nameof(options.AnalyzerTypes)
+					);
+				}
+#pragma warning restore CA2208 // Instantiate argument exceptions correctly
+
+				return (Activator.CreateInstance(type) as DiagnosticAnalyzer)!;
+			})
+			.ToImmutableArray();
+
+		var compilationWithAnalyzers = options.CompilationWithAnalyzersOptions is not null
+			? outputCompilation.WithAnalyzers(analyzers, options.CompilationWithAnalyzersOptions)
+			: outputCompilation.WithAnalyzers(analyzers, options.AnalyzerOptions);
+
+		var analyzerDiagnostics = await compilationWithAnalyzers.GetAnalyzerDiagnosticsAsync(cancellationToken);
+		return new(compilationWithAnalyzers, analyzerDiagnostics);
 	}
+
+	static string PrepareSource(string source, SourceGeneratorTestOptions options) =>
+		SourceGeneratorHelpers.PrepareSource(source, options);
 
 	static GeneratorDriver CreateDriver(
 		TGenerator generator,
@@ -104,25 +150,31 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 			parseOptions: new(options.LanguageVersion)
 		);
 
-		var analyzerOptions = new Dictionary<string, string>(options.AnalyzerConfigOptions)
+		Dictionary<string, string> analyzerOptions = new(options.AnalyzerConfigOptions)
 		{
-			[IncrementalPipeline.BuildProperty + GenerationContext.ValidateCodeWriterScopesBuildProperty] =
-				options.ValidateCodeWriterScopes ? "true" : "false",
-			[IncrementalPipeline.BuildProperty + GenerationContext.EnableLoggingBuildProperty] = options.EnableLogging
-				? "true"
-				: "false",
+			[SourceGeneratorBuildProperties.ValidateCodeWriterScopes] = options.ValidateCodeWriterScopes.ToString(),
+			[SourceGeneratorBuildProperties.EnableLogging] = options.EnableLogging.ToString(),
 		};
+
 		foreach (var (key, value) in options.AnalyzerConfigOptions)
 		{
-			if (!key.StartsWith(IncrementalPipeline.BuildProperty, StringComparison.Ordinal))
-				analyzerOptions.TryAdd(IncrementalPipeline.BuildProperty + key, value);
+			if (!key.StartsWith(SourceGeneratorBuildProperties.BuildProperty, StringComparison.Ordinal))
+				analyzerOptions.TryAdd(SourceGeneratorBuildProperties.BuildProperty + key, value);
 		}
+
 		if (loggingSessionId is not null)
-			analyzerOptions[IncrementalPipeline.BuildProperty + GenerationContext.LoggingSessionIdBuildProperty] =
-				loggingSessionId;
+		{
+			analyzerOptions[SourceGeneratorBuildProperties.LoggingSessionId] = loggingSessionId;
+		}
+
 		if (options.DisableSourceGeneratorPropertyName is not null && options.DisableSourceGeneratorValue is not null)
-			analyzerOptions[IncrementalPipeline.BuildProperty + options.DisableSourceGeneratorPropertyName] =
-				options.DisableSourceGeneratorValue.Value.ToString();
+		{
+			var disablePropertyName = options.DisableSourceGeneratorPropertyName;
+			if (!disablePropertyName.StartsWith(SourceGeneratorBuildProperties.BuildProperty, StringComparison.Ordinal))
+				disablePropertyName = SourceGeneratorBuildProperties.BuildProperty + disablePropertyName;
+
+			analyzerOptions[disablePropertyName] = options.DisableSourceGeneratorValue.Value.ToString();
+		}
 
 		if (analyzerOptions.Count > 0)
 			driver = driver.WithUpdatedAnalyzerConfigOptions(new TestAnalyzerConfigOptionsProvider(analyzerOptions));
@@ -139,33 +191,54 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		if (loggingSessionId is null)
 			return null;
 
-		Action<string, int> sink = (message, level) =>
+		void Sink(string message, int level)
 		{
 			var type = (SourceGenLogLevel)level;
 			options.TestOutput.WriteLine($"[{type}] {message}");
 
 			logEntries.Add(new(type, message));
-		};
+		}
 
-		List<IDisposable> registrations = [SourceGenLogging.RegisterSinkCore(loggingSessionId, sink)];
+		List<IDisposable> registrations = [SourceGenLogging.RegisterSinkCore(loggingSessionId, Sink)];
 
 		// Self-contained generators may embed the framework logging types. Register the test sink
 		// explicitly with that private copy rather than relying on process-wide shared state.
-		var embeddedLoggingType = typeof(TGenerator).Assembly.GetType(
-			"Purview.SourceGeneratorFramework.Logging.SourceGenLogging",
-			throwOnError: false
-		);
-		if (embeddedLoggingType is not null && embeddedLoggingType != typeof(SourceGenLogging))
-		{
-			var registerSink = embeddedLoggingType.GetMethod(
-				"RegisterSinkCore",
-				BindingFlags.Static | BindingFlags.NonPublic
-			);
-			if (registerSink?.Invoke(null, [loggingSessionId, sink]) is IDisposable registration)
-				registrations.Add(registration);
-		}
+		var embeddedRegistration = GetEmbeddedSinkRegistration(typeof(TGenerator).Assembly);
+		if (embeddedRegistration is not null)
+			registrations.Add(embeddedRegistration(loggingSessionId, Sink));
 
 		return new(registrations);
+	}
+
+	static readonly ConcurrentDictionary<
+		Assembly,
+		Func<string, Action<string, int>, IDisposable>?
+	> EmbeddedSinkRegistrationCache = new();
+
+	static Func<string, Action<string, int>, IDisposable>? GetEmbeddedSinkRegistration(Assembly generatorAssembly)
+	{
+		return EmbeddedSinkRegistrationCache.GetOrAdd(
+			generatorAssembly,
+			static assembly =>
+			{
+				var embeddedLoggingType = assembly.GetType(
+					"Purview.SourceGeneratorFramework.Logging.SourceGenLogging",
+					throwOnError: false
+				);
+				if (embeddedLoggingType is null || embeddedLoggingType == typeof(SourceGenLogging))
+					return null;
+
+				var registerSink = embeddedLoggingType.GetMethod(
+					"RegisterSinkCore",
+					BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic
+				);
+
+				return registerSink is null
+					? null
+					: (Func<string, Action<string, int>, IDisposable>)
+						Delegate.CreateDelegate(typeof(Func<string, Action<string, int>, IDisposable>), registerSink);
+			}
+		);
 	}
 
 	sealed class LoggingRegistrations(List<IDisposable> registrations) : IDisposable

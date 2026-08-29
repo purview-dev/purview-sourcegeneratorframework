@@ -5,123 +5,38 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile
-			Include="..\SourceGeneratorFramework\CodeWriter.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\CodeWriter.cs"
-		/>
-		<Compile
-			Include="..\SourceGeneratorFramework\XmlCommentWriter.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\XmlCommentWriter.cs"
-		/>
-		<Compile
-			Include="..\SourceGeneratorFramework\CodeWriterScopeValidationException.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\CodeWriterScopeValidationException.cs"
-		/>
-		<Compile
-			Include="..\SourceGeneratorFramework\TypeDeclarationOptions.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\TypeDeclarationOptions.cs"
-		/>
-		<Compile
-			Include="..\SourceGeneratorFramework\ConstructorDeclarationOptions.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\ConstructorDeclarationOptions.cs"
-		/>
-		<Compile
-			Include="..\SourceGeneratorFramework\MemberDeclarationOptions.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\MemberDeclarationOptions.cs"
-		/>
-		<Compile
-			Include="..\SourceGeneratorFramework\DeclarationSyntaxOptions.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\DeclarationSyntaxOptions.cs"
-		/>
-		<Compile
-			Include="..\SourceGeneratorFramework\TypeReferenceOptions.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\TypeReferenceOptions.cs"
-		/>
-		<Compile
-			Include="..\SourceGeneratorFramework\PurviewTypeLibrary.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\PurviewTypeLibrary.cs"
-		/>
-
-		<!-- Models -->
-		<Compile
-			Include="..\SourceGeneratorFramework\Models\DiagnosticInfo.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Models\DiagnosticInfo.cs"
-		/>
-		<Compile
-			Include="..\SourceGeneratorFramework\Models\GenerationContext.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Models\GenerationContext.cs"
-		/>
-		<Compile
-			Include="..\SourceGeneratorFramework\Models\GeneratorResult.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Models\GeneratorResult.cs"
-		/>
-		<Compile
-			Include="..\SourceGeneratorFramework\Models\TypeValueObject.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Models\TypeValueObject.cs"
-		/>
-		<Compile
-			Include="..\SourceGeneratorFramework\Models\TargetSymbolDescriptor.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Models\TargetSymbolDescriptor.cs"
-		/>
-		<Compile
-			Include="..\SourceGeneratorFramework\Models\EquatableArray.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Models\EquatableArray.cs"
-		/>
-		<!-- Helpers -->
-		<Compile
-			Include="..\SourceGeneratorFramework\Helpers\KnownLangTypes.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Helpers\KnownLangTypes.cs"
-		/>
-		<Compile
-			Include="..\SourceGeneratorFramework\Helpers\TypeHelpers.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Helpers\TypeHelpers.cs"
-		/>
-		<Compile
-			Include="..\SourceGeneratorFramework\Helpers\EmbeddedResourceHelper.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Helpers\EmbeddedResourceHelper.cs"
-		/>
-		<Compile
-			Include="..\SourceGeneratorFramework\Helpers\IncrementalPipeline.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Helpers\IncrementalPipeline.cs"
-		/>
-		<Compile
-			Include="..\SourceGeneratorFramework\Helpers\IncrementalGeneratorInitializationContextExtensions.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Helpers\IncrementalGeneratorInitializationContextExtensions.cs"
-		/>
-		<!-- Logging -->
-		<Compile
-			Include="..\SourceGeneratorFramework\Logging\ISourceGenLogger.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Logging\ISourceGenLogger.cs"
-		/>
-		<Compile
-			Include="..\SourceGeneratorFramework\Logging\ISourceGenLoggerExtensions.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Logging\ISourceGenLoggerExtensions.cs"
-		/>
-		<Compile
-			Include="..\SourceGeneratorFramework\Logging\SourceGenLogLevel.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Logging\SourceGenLogLevel.cs"
-		/>
-		<Compile
-			Include="..\SourceGeneratorFramework\Logging\SourceGenLogger.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Logging\SourceGenLogger.cs"
-		/>
-		<Compile
-			Include="..\SourceGeneratorFramework\Logging\SourceGenLogging.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Logging\SourceGenLogging.cs"
-		/>
-		<!-- Extensions/ Polyfills -->
-		<Compile
-			Include="..\SourceGeneratorFramework\Extensions\System\Runtime\CompilerServices\IsExternalInit.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Extensions\System\Runtime\CompilerServices\IsExternalInit.cs"
-		/>
-		<Compile
-			Include="..\SourceGeneratorFramework\Extensions\Microsoft\CodeAnalysis\SourceProductionContextExtension.cs"
-			Link="Extensions\Purview\SourceGeneratorFramework\Extensions\Microsoft\CodeAnalysis\SourceProductionContextExtension.cs"
-		/>
+		<ProjectReference Include="..\SourceGeneratorShared\SourceGeneratorShared.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
 		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
 	</ItemGroup>
+
+	<Target
+		Name="DeclareSourceGeneratorSharedRuntimeDependency"
+		BeforeTargets="CopySourceGeneratorRuntimeDependencies;GetSourceGeneratorAnalyzerFiles"
+	>
+		<ItemGroup>
+			<SourceGeneratorRuntimeDependency
+				Include="@(ReferenceCopyLocalPaths)"
+				Condition="'%(ReferenceCopyLocalPaths.Filename)%(ReferenceCopyLocalPaths.Extension)' == 'Purview.SourceGeneratorFramework.Shared.dll'"
+			>
+				<DestinationSubPath>%(ReferenceCopyLocalPaths.Filename)%(ReferenceCopyLocalPaths.Extension)</DestinationSubPath>
+			</SourceGeneratorRuntimeDependency>
+		</ItemGroup>
+	</Target>
+
+	<PropertyGroup>
+		<SourceGeneratorSharedAssembly>$(MSBuildThisFileDirectory)..\SourceGeneratorShared\bin\$(Configuration)\netstandard2.0\Purview.SourceGeneratorFramework.Shared.dll</SourceGeneratorSharedAssembly>
+	</PropertyGroup>
+
+	<Target Name="CopySourceGeneratorSharedToAnalyzerOutput" AfterTargets="CopyFilesToOutputDirectory">
+		<Copy
+			SourceFiles="$(SourceGeneratorSharedAssembly)"
+			DestinationFolder="$(TargetDir)"
+			SkipUnchangedFiles="true"
+			Condition="Exists('$(SourceGeneratorSharedAssembly)')"
+		/>
+	</Target>
 </Project>

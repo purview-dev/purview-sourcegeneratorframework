@@ -11,7 +11,7 @@ public sealed class PreferForAttributeWithMetadataNameAnalyzer : DiagnosticAnaly
 {
 	public const string DiagnosticId = "PSGFR11";
 
-	static readonly DiagnosticDescriptor Rule = new(
+	public static readonly DiagnosticDescriptor Rule = new(
 		DiagnosticId,
 		"Prefer ForAttributeWithMetadataName over CreateSyntaxProvider",
 		"Prefer SyntaxProvider.ForAttributeWithMetadataName for attribute-based detection; it is faster and more incremental-friendly than CreateSyntaxProvider",

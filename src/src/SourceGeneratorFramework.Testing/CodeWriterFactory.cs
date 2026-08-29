@@ -15,12 +15,10 @@ public static class CodeWriterFactory
 	public static CodeWriter ForTests(
 		int initialCapacity = 4096,
 		bool throwOnUnclosedScopes = true,
-		string generatorName = DefaultGeneratorName,
-		string generatorVersion = DefaultGeneratorVersion
+		GenerationSettings? settings = null
 	) =>
 		new(
-			generatorName: generatorName,
-			generatorVersion: generatorVersion,
+			settings ?? new(DefaultGeneratorName, DefaultGeneratorVersion),
 			initialCapacity: initialCapacity,
 			throwOnUnclosedScopes: throwOnUnclosedScopes
 		);

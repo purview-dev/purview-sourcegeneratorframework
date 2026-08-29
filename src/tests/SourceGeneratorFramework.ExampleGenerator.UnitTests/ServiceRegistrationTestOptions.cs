@@ -12,7 +12,6 @@ public record ServiceRegistrationTestOptions : SourceGeneratorTestOptions
 			typeof(ServiceLifetime)
 		);
 		AdditionalNamespaces = AdditionalNamespaces.Add("Purview.SourceGeneratorFramework.Examples");
-		DisableSourceGeneratorPropertyName =
-			ServiceRegistrationGeneratorPropertyLibrary.DisableServiceRegistrationGenerator;
+		DisableSourceGeneratorPropertyName = PropertyLibrary.DisableServiceRegistrationGenerator;
 	}
 }

@@ -1,6 +1,6 @@
 using Microsoft.CodeAnalysis;
 
-namespace Purview.SourceGeneratorFramework.Extensions;
+namespace Purview.SourceGeneratorFramework;
 
 /// <summary>
 /// Provides extension methods for extracting values from <see cref="AttributeData"/>.
@@ -39,7 +39,7 @@ public static partial class AttributeDataExtensions
 			{
 				if (string.Equals(namedArg.Key, name, StringComparison.Ordinal))
 				{
-					value = As<T>(namedArg.Value);
+					value = namedArg.Value.As<T>();
 					return true;
 				}
 			}
@@ -115,7 +115,7 @@ public static partial class AttributeDataExtensions
 				return false;
 			}
 
-			value = As<T>(attribute.ConstructorArguments[index]);
+			value = attribute.ConstructorArguments[index].As<T>();
 			return true;
 		}
 
@@ -185,6 +185,60 @@ public static partial class AttributeDataExtensions
 
 			return false;
 		}
+
+		/// <summary>
+		/// Gets the display name of an enum named argument, returning the default if the argument is not present or not an enum.
+		/// </summary>
+		public string? GetEnumNamedArgument(string name, string? defaultValue = null)
+		{
+			if (
+				attribute.TryGetNamedArgument<TypedConstant>(name, out var value)
+				&& !value.IsNull
+				&& value.Kind == TypedConstantKind.Enum
+			)
+			{
+				return value.ToEnumString();
+			}
+
+			// Return the default value if the named argument is not present or not an enum.
+			return defaultValue;
+		}
+
+		/// <summary>
+		/// Gets the display name of an enum constructor argument by parameter name, returning the default if the argument is not present or not an enum.
+		/// </summary>
+		public string? GetEnumConstructorArgument(string name, string? defaultValue = null)
+		{
+			if (
+				attribute.TryGetConstructorArgument<TypedConstant>(name, out var value)
+				&& !value.IsNull
+				&& value.Kind == TypedConstantKind.Enum
+			)
+			{
+				return value.ToEnumString();
+			}
+
+			// Return the default value if the constructor argument is not present or not an enum.
+			return defaultValue;
+		}
+
+		/// <summary>
+		/// Gets the display name of an enum constructor argument by index, returning the default if the argument is not present or not an enum.
+		/// </summary>
+		public string? GetEnumConstructorArgument(int index, string? defaultValue = null)
+		{
+			if (
+				attribute.TryGetConstructorArgument<TypedConstant>(index, out var value)
+				&& !value.IsNull
+				&& value.Kind == TypedConstantKind.Enum
+			)
+			{
+				return value.ToEnumString();
+			}
+
+			// Return the default value if the constructor argument is not present or not an enum.
+			return defaultValue;
+		}
 	}
 
 	static T? ConvertTypeSymbol<T>(ITypeSymbol? typeSymbol)
@@ -197,6 +251,13 @@ public static partial class AttributeDataExtensions
 		)
 		{
 			return typeSymbol is T typedValue ? typedValue : default;
+		}
+
+		if (targetType == typeof(TypeIdentity))
+		{
+			return typeSymbol is not null && TypeIdentity.TryCreate(typeSymbol, out var identity)
+				? (T?)(object?)identity
+				: default;
 		}
 
 		// If the target type is not a symbol type, we cannot convert it, so we return default.

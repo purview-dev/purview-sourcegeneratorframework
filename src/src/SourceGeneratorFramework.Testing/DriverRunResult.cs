@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Reflection;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Diagnostics;
 using Purview.SourceGeneratorFramework.Logging;
 using Purview.SourceGeneratorFramework.Testing.Models;
 
@@ -10,9 +11,21 @@ namespace Purview.SourceGeneratorFramework.Testing;
 /// <summary>
 /// The result of a source generator test run.
 /// </summary>
+/// <param name="AllSyntaxTrees">All syntax trees generated during the run.</param>
+/// <param name="PrimarySyntaxTrees">
+/// The primary syntax trees generated during the run, excluding anything detailed by <see cref="SourceGeneratorTestOptions.ExcludeGeneratedSourceHintNames"/>.
+/// <para>
+/// This is useful for excluding generated source such as attribute markers.
+/// </para>
+/// </param>
+/// <param name="LogEntries">The log entries generated during the run.</param>
+/// <param name="AnalyzerResult">The result of the analyzer compilation run, if any.</param>
+/// <param name="CompilationResult">The result of the compilation run.</param>
+/// <param name="DriverResult">The result of the generator driver run.</param>
 public sealed record class DriverRunResult(
 	GeneratorDriverRunResult DriverResult,
 	CompilationRunResult CompilationResult,
+	AnalyzerCompilationRunResult? AnalyzerResult,
 	ImmutableArray<SyntaxTree> AllSyntaxTrees,
 	ImmutableArray<SyntaxTree> PrimarySyntaxTrees,
 	ImmutableArray<LogEntry> LogEntries
@@ -124,6 +137,22 @@ public sealed record class DriverRunResult(
 	/// <returns>The matching syntax tree, or <see langword="null"/> if none is found.</returns>
 	public SyntaxTree? GetGeneratedTree(string filePathSuffix) =>
 		AllSyntaxTrees.FirstOrDefault(tree => tree.FilePath.EndsWith(filePathSuffix, StringComparison.Ordinal));
+
+	/// <summary>
+	/// Gets the symbol for a type by its metadata name.
+	/// </summary>
+	/// <param name="identity">The identity of the type.</param>
+	/// <returns>The symbol for the type, or <see langword="null"/> if the type is not found.</returns>
+	public ISymbol? GetTypeByMetadataName(TypeIdentity identity) =>
+		CompilationResult.Compilation.GetTypeByMetadataName(identity.MetadataFullName);
+
+	/// <summary>
+	/// Gets the symbol for a type by its metadata name.
+	/// </summary>
+	/// <param name="fullyQualifiedMetadataName">The fully qualified metadata name of the type.</param>
+	/// <returns>The symbol for the type, or <see langword="null"/> if the type is not found.</returns>
+	public ISymbol? GetTypeByMetadataName(string fullyQualifiedMetadataName) =>
+		CompilationResult.Compilation.GetTypeByMetadataName(fullyQualifiedMetadataName);
 }
 
 /// <summary>
@@ -135,6 +164,16 @@ public sealed record class DriverRunResult(
 public sealed record class CompilationRunResult(
 	Compilation Compilation,
 	Assembly? Assembly,
+	ImmutableArray<Diagnostic> Diagnostics
+);
+
+/// <summary>
+/// The result of a compilation run with analyzers applied, including the compilation and any diagnostics produced during compilation.
+/// </summary>
+/// <param name="Compilation">The compilation that was run, with analyzers applied.</param>
+/// <param name="Diagnostics">The diagnostics produced just by the analyzers defined by <see cref="SourceGeneratorTestOptions.AnalyzerTypes"/>.</param>
+public sealed record class AnalyzerCompilationRunResult(
+	CompilationWithAnalyzers Compilation,
 	ImmutableArray<Diagnostic> Diagnostics
 );
 

@@ -6,16 +6,24 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile
-			Include="..\SourceGeneratorFramework\Extensions\System\Runtime\CompilerServices\IsExternalInit.cs"
-			Link="Extensions\System\Runtime\CompilerServices\IsExternalInit.cs"
-		/>
-	</ItemGroup>
+		<!--
+		  The following project references are required only for the purpose of testing the source generator in this project.
 
-	<ItemGroup>
+		  In reality, reference the NuGet package:
+
+		  <PackageReference Include="Purview.SourceGeneratorFramework" PrivateAssets="all" Version="*" />
+
+		-->
+		<ProjectReference Include="..\SourceGeneratorShared\SourceGeneratorShared.csproj" />
 		<ProjectReference Include="..\SourceGeneratorFramework\SourceGeneratorFramework.csproj" />
 		<ProjectReference
 			Include="..\SourceGeneratorFramework.Generators\SourceGeneratorFramework.Generators.csproj"
+			OutputItemType="Analyzer"
+			PrivateAssets="all"
+			ReferenceOutputAssembly="false"
+		/>
+		<ProjectReference
+			Include="..\SourceGeneratorFramework.Analyzers\SourceGeneratorFramework.Analyzers.csproj"
 			OutputItemType="Analyzer"
 			PrivateAssets="all"
 			ReferenceOutputAssembly="false"
@@ -25,15 +33,5 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
 		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Using Include="System.Collections.Immutable" />
-		<Using Include="Microsoft.CodeAnalysis" />
-		<Using Include="Purview.SourceGeneratorFramework" />
-		<Using Include="Purview.SourceGeneratorFramework.Generators" />
-		<Using Include="Purview.SourceGeneratorFramework.Helpers" />
-		<Using Include="Purview.SourceGeneratorFramework.Logging" />
-		<Using Include="Purview.SourceGeneratorFramework.Models" />
 	</ItemGroup>
 </Project>

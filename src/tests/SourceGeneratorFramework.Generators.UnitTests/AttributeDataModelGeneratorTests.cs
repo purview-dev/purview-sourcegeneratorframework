@@ -2,18 +2,19 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Purview.SourceGeneratorFramework.Testing;
-using Purview.SourceGeneratorFramework.Testing.TUnit;
+using Purview.SourceGeneratorFramework.Generators.Helpers;
 
 namespace Purview.SourceGeneratorFramework.Generators;
 
-public class AttributeDataModelGeneratorTests : TUnitSourceGeneratorTestBase<AttributeDataModelGenerator>
+public class AttributeDataModelGeneratorTests
+	: TUnitSourceGeneratorTestBase<AttributeDataModelGenerator, AttributeDataModelTestOptions>
 {
 	[Test]
 	public async Task Generate_RequiredAttributeData_DefaultNamedAndNestedModel(CancellationToken cancellationToken)
 	{
 		var source = """
 			using Microsoft.CodeAnalysis;
+			using Purview.SourceGeneratorFramework;
 			using Purview.SourceGeneratorFramework.Generators;
 			using System.ComponentModel.DataAnnotations;
 
@@ -23,7 +24,7 @@ public class AttributeDataModelGeneratorTests : TUnitSourceGeneratorTestBase<Att
 				public readonly partial record struct ValidationAttributeData(
 					string? ErrorMessage,
 					string? ErrorMessageResourceName,
-					ITypeSymbol? ErrorMessageResourceType
+					TypeIdentity? ErrorMessageResourceType
 				);
 
 				[Generate(typeof(RequiredAttribute))]
@@ -215,15 +216,14 @@ public class AttributeDataModelGeneratorTests : TUnitSourceGeneratorTestBase<Att
 	public async Task Generate_AutoDiscover_DiscoversNamedArguments(CancellationToken cancellationToken)
 	{
 		var source = """
-			using Purview.SourceGeneratorFramework.Generators;
-			using System.ComponentModel.DataAnnotations;
+using Purview.SourceGeneratorFramework.Generators;
+using System.ComponentModel.DataAnnotations;
 
-			namespace Test
-			{
-				[Generate(typeof(RequiredAttribute), AutoDiscover = true)]
-				public readonly partial record struct RequiredAttributeData;
-			}
-			""";
+namespace Test;
+
+[Generate(typeof(RequiredAttribute), AutoDiscover = true)]
+public readonly partial record struct RequiredAttributeData;
+""";
 
 		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
@@ -297,7 +297,7 @@ public class AttributeDataModelGeneratorTests : TUnitSourceGeneratorTestBase<Att
 
 		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
-		await Assert.That(result.DriverResult.Diagnostics).Contains(d => d.Id == "ADM0004");
+		await Assert.That(result).HasDiagnostic(DiagnosticLibrary.NestedModelNotGenerated);
 	}
 
 	[Test]
@@ -490,6 +490,7 @@ public class AttributeDataModelGeneratorTests : TUnitSourceGeneratorTestBase<Att
 	{
 		var source = """
 			using Microsoft.CodeAnalysis;
+			using Purview.SourceGeneratorFramework;
 			using Purview.SourceGeneratorFramework.Generators;
 
 			namespace Aspire.Hosting.ApplicationModel
@@ -522,7 +523,7 @@ public class AttributeDataModelGeneratorTests : TUnitSourceGeneratorTestBase<Att
 				public readonly partial record struct ResourceDefinitionAttributeData(
 					[Argument("name")] string? Name,
 					[Argument("propertyName")] string? PropertyName,
-					[GenericTypeArgument] INamedTypeSymbol? AspireResourceType
+					[GenericTypeArgument] TypeIdentity AspireResourceType
 				);
 
 				[ResourceDefinition("myResource", "MyResource")]
@@ -547,11 +548,13 @@ public class AttributeDataModelGeneratorTests : TUnitSourceGeneratorTestBase<Att
 		await Assert.That(generated).Contains("readonly partial record struct ResourceDefinitionAttributeData");
 		await Assert.That(generated).Contains("string? Name");
 		await Assert.That(generated).Contains("string? PropertyName");
-		await Assert.That(generated).Contains("INamedTypeSymbol? AspireResourceType");
+		await Assert
+			.That(generated)
+			.Contains("global::Purview.SourceGeneratorFramework.TypeIdentity AspireResourceType");
 		await Assert
 			.That(generated)
 			.Contains(
-				"attributeData.TryGetGenericTypeArgument<global::Microsoft.CodeAnalysis.INamedTypeSymbol>(0, out var aspireResourceType)"
+				"attributeData.TryGetGenericTypeArgument<global::Purview.SourceGeneratorFramework.TypeIdentity>(0, out var aspireResourceType)"
 			);
 		await Assert
 			.That(generated)
@@ -561,6 +564,7 @@ public class AttributeDataModelGeneratorTests : TUnitSourceGeneratorTestBase<Att
 
 		var runtimeSource = """
 			using Microsoft.CodeAnalysis;
+			using Purview.SourceGeneratorFramework;
 
 			namespace Aspire.Hosting.ApplicationModel
 			{
@@ -591,7 +595,7 @@ public class AttributeDataModelGeneratorTests : TUnitSourceGeneratorTestBase<Att
 				public readonly partial record struct ResourceDefinitionAttributeData(
 					string? Name,
 					string? PropertyName,
-					INamedTypeSymbol? AspireResourceType
+					TypeIdentity AspireResourceType
 				);
 
 				[ResourceDefinition("myResource", "MyResource")]
@@ -675,13 +679,15 @@ public class AttributeDataModelGeneratorTests : TUnitSourceGeneratorTestBase<Att
 
 		await Assert.That(nameProperty!.GetValue(resourceData)).IsEqualTo("myResource");
 		await Assert.That(propertyNameProperty!.GetValue(resourceData)).IsEqualTo("MyResource");
-		await Assert.That(aspireResourceTypeProperty!.GetValue(resourceData)).IsNull();
+		await Assert
+			.That((TypeIdentity)aspireResourceTypeProperty!.GetValue(resourceData)!)
+			.IsEqualTo(TypeIdentity.Empty);
 
 		await Assert.That(nameProperty.GetValue(genericResourceData)).IsEqualTo("myGenericResource");
 		await Assert.That(propertyNameProperty.GetValue(genericResourceData)).IsEqualTo("MyGenericResource");
-		var aspireResourceType = aspireResourceTypeProperty.GetValue(genericResourceData) as INamedTypeSymbol;
+		var aspireResourceType = (TypeIdentity?)aspireResourceTypeProperty.GetValue(genericResourceData);
 		await Assert.That(aspireResourceType).IsNotNull();
-		await Assert.That(SymbolEqualityComparer.Default.Equals(aspireResourceType, myResourceType)).IsTrue();
+		await Assert.That(aspireResourceType!.Value.Matches(myResourceType)).IsTrue();
 	}
 
 	[Test]
@@ -689,13 +695,14 @@ public class AttributeDataModelGeneratorTests : TUnitSourceGeneratorTestBase<Att
 	{
 		var source = """
 			using Microsoft.CodeAnalysis;
+			using Purview.SourceGeneratorFramework;
 			using Purview.SourceGeneratorFramework.Generators;
 
 			namespace Test
 			{
 			[Generate(typeof(TestingAttribute))]
 			public readonly partial record struct TestingAttributeData(
-				[Argument("typeThing")] [Property] INamedTypeSymbol? TypeThing
+				[Argument("typeThing")] [Property] TypeIdentity? TypeThing
 			);
 
 				public class TestingAttribute : System.Attribute
@@ -706,11 +713,7 @@ public class AttributeDataModelGeneratorTests : TUnitSourceGeneratorTestBase<Att
 			}
 			""";
 
-		var result = await GenerateAsync(
-			source,
-			new SourceGeneratorTestOptions { CompileToAssembly = false },
-			cancellationToken: cancellationToken
-		);
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
 		result.AssertNoGenerationExceptions().AssertNoLogErrors();
 
@@ -722,16 +725,16 @@ public class AttributeDataModelGeneratorTests : TUnitSourceGeneratorTestBase<Att
 
 		await Assert.That(generated).IsNotNull();
 		await Assert.That(generated).Contains("readonly partial record struct TestingAttributeData");
-		await Assert.That(generated).Contains("INamedTypeSymbol? TypeThing");
+		await Assert.That(generated).Contains("global::Purview.SourceGeneratorFramework.TypeIdentity? TypeThing");
 		await Assert
 			.That(generated)
 			.Contains(
-				"attributeData.TryGetConstructorArgument<global::Microsoft.CodeAnalysis.INamedTypeSymbol>(\"typeThing\", out typeThing)"
+				"attributeData.TryGetConstructorArgument<global::Purview.SourceGeneratorFramework.TypeIdentity>(\"typeThing\", out typeThing)"
 			);
 		await Assert
 			.That(generated)
 			.Contains(
-				"attributeData.TryGetNamedArgument<global::Microsoft.CodeAnalysis.INamedTypeSymbol>(\"TypeThing\", out typeThing)"
+				"attributeData.TryGetNamedArgument<global::Purview.SourceGeneratorFramework.TypeIdentity>(\"TypeThing\", out typeThing)"
 			);
 	}
 

@@ -3,8 +3,4 @@
 		<ProjectReference Include="..\..\src\SourceGeneratorFramework.Testing.TUnit\SourceGeneratorFramework.Testing.TUnit.csproj" />
 		<ProjectReference Include="..\..\src\SourceGeneratorFramework.Testing\SourceGeneratorFramework.Testing.csproj" />
 	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Include="System.Collections.Immutable" VersionOverride="9.0.0" />
-	</ItemGroup>
 </Project>

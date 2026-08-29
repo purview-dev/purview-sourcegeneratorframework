@@ -6,36 +6,29 @@ namespace Purview.SourceGeneratorFramework.Examples;
 [Generator]
 public partial class ServiceRegistrationGenerator : IIncrementalGenerator
 {
-	const string GeneratorName = "ServiceRegistrationGenerator";
-	const string GeneratorVersion = "1.0.0";
-
 	/// <summary>
 	/// Initializes the generator pipeline.
 	/// </summary>
 	public void Initialize(IncrementalGeneratorInitializationContext context)
 	{
-		context.RegisterEmbeddedAttribute(GeneratorName, GeneratorVersion);
-
-		context.RegisterPostInitializationOutput(spc =>
-			ServiceRegistrationEmitter.EmitAttributeAndEnum(spc, GeneratorName, GeneratorVersion)
-		);
+		context
+			.RegisterEmbeddedAttribute<ServiceRegistrationGenerator>()
+			.RegisterPostInitializationOutput(ServiceRegistrationEmitter.EmitAttributeAndEnum);
 
 		var emitServiceInfo = IncrementalPipeline.PropertyValueProvider(
 			context,
-			ServiceRegistrationGeneratorPropertyLibrary.EmitServiceRegistrationInfo,
+			PropertyLibrary.EmitServiceRegistrationInfo,
 			value => bool.TryParse(value, out var result) && result
 		);
 
-		var generationContext = IncrementalPipeline.DefaultGenerationContextValueProvider(
+		var generationContext = IncrementalPipeline.DefaultGenerationContextValueProvider<ServiceRegistrationGenerator>(
 			context,
-			GeneratorName,
-			GeneratorVersion,
-			ServiceRegistrationGeneratorPropertyLibrary.DisableServiceRegistrationGenerator
+			PropertyLibrary.DisableServiceRegistrationGenerator
 		);
 
 		var targets = IncrementalPipeline.ForAttributeWithMetadataName(
 			context,
-			ServiceRegistrationGeneratorTypeLibrary.GenerateServiceAttribute,
+			TypeLibrary.GenerateServiceAttribute,
 			CreateServiceTarget
 		);
 
@@ -57,7 +50,7 @@ public partial class ServiceRegistrationGenerator : IIncrementalGenerator
 			return ServiceTarget.Empty;
 
 		var attributeData = ctx.Attributes.FirstOrDefault(a =>
-			ServiceRegistrationGeneratorTypeLibrary.GenerateServiceAttribute.Equals(a.AttributeClass)
+			TypeLibrary.GenerateServiceAttribute.Equals(a.AttributeClass)
 		);
 		if (attributeData is null)
 			return ServiceTarget.Empty;
@@ -66,7 +59,7 @@ public partial class ServiceRegistrationGenerator : IIncrementalGenerator
 		if (!model.Exists)
 			return ServiceTarget.Empty;
 
-		var lifetime = model.Lifetime ?? "Purview.SourceGeneratorFramework.Examples.ServiceLifetime.Singleton";
+		var lifetime = model.Lifetime ?? TypeLibrary.ServiceLifetime.StaticMember("Singleton");
 		var memberName = lifetime.Substring(lifetime.LastIndexOf('.') + 1);
 
 		return new ServiceTarget(
@@ -77,23 +70,3 @@ public partial class ServiceRegistrationGenerator : IIncrementalGenerator
 		);
 	}
 }
-
-/// <summary>
-/// Describes a discovered service target.
-/// </summary>
-readonly record struct ServiceTarget(string TypeName, string ClassName, string Name, string LifetimeMemberName)
-{
-	/// <summary>
-	/// An empty <see cref="ServiceTarget"/>.
-	/// </summary>
-	public static readonly ServiceTarget Empty;
-}
-
-/// <summary>
-/// Aggregated generation inputs for the service registration generator.
-/// </summary>
-readonly record struct ServiceRegistrationGenerationModel(
-	GenerationContext Context,
-	EquatableArray<ServiceTarget> Targets,
-	bool EmitServiceInfo = false
-);

@@ -16,17 +16,17 @@ public static class SymbolResolver
 			: compilation.GetTypeByMetadataName(fullyQualifiedName);
 
 	/// <summary>
-	/// Resolves a type from a <see cref="TypeValueObject"/>.
+	/// Resolves a type from a <see cref="TypeIdentity"/>.
 	/// </summary>
-	public static INamedTypeSymbol? Resolve(Compilation compilation, TypeValueObject type) =>
+	public static INamedTypeSymbol? Resolve(Compilation compilation, TypeIdentity type) =>
 		compilation is null
 			? throw new ArgumentNullException(nameof(compilation))
 			: Resolve(compilation, type.MetadataFullName);
 
 	/// <summary>
-	/// Resolves a type from a <see cref="TypeValueObject"/> and returns a value indicating whether it was found.
+	/// Resolves a type from a <see cref="TypeIdentity"/> and returns a value indicating whether it was found.
 	/// </summary>
-	public static bool TryResolve(Compilation compilation, TypeValueObject type, out INamedTypeSymbol? symbol)
+	public static bool TryResolve(Compilation compilation, TypeIdentity type, out INamedTypeSymbol? symbol)
 	{
 		symbol = Resolve(compilation, type);
 		return symbol is not null;

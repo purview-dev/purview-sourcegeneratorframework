@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<RootNamespace>$(NamespacePrefix)</RootNamespace>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\src\SourceGeneratorFramework.Testing.TUnit\SourceGeneratorFramework.Testing.TUnit.csproj" />
+		<ProjectReference Include="..\..\src\SourceGeneratorFramework.Testing\SourceGeneratorFramework.Testing.csproj" />
+	</ItemGroup>
+</Project>

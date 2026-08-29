@@ -2,6 +2,11 @@
 	<PropertyGroup>
 		<_PurviewSourceGeneratorFrameworkAssembly Condition="'$(_PurviewSourceGeneratorFrameworkAssembly)' == ''"
 			>$(MSBuildThisFileDirectory)..\lib\netstandard2.0\Purview.SourceGeneratorFramework.dll</_PurviewSourceGeneratorFrameworkAssembly>
+		<_PurviewSourceGeneratorFrameworkSharedAssembly
+			Condition="'$(_PurviewSourceGeneratorFrameworkSharedAssembly)' == ''"
+			>$(MSBuildThisFileDirectory)..\lib\netstandard2.0\Purview.SourceGeneratorFramework.Shared.dll</_PurviewSourceGeneratorFrameworkSharedAssembly>
+		<_PurviewSourceGeneratorFrameworkSharedPdb>$([System.IO.Path]::ChangeExtension('$(_PurviewSourceGeneratorFrameworkSharedAssembly)', '.pdb'))</_PurviewSourceGeneratorFrameworkSharedPdb>
+		<_PurviewSourceGeneratorFrameworkSharedXml>$([System.IO.Path]::ChangeExtension('$(_PurviewSourceGeneratorFrameworkSharedAssembly)', '.xml'))</_PurviewSourceGeneratorFrameworkSharedXml>
 	</PropertyGroup>
 
 	<!--
@@ -15,9 +20,33 @@
 		<SourceGeneratorRuntimeDependency Include="$(_PurviewSourceGeneratorFrameworkAssembly)">
 			<DestinationSubPath>Purview.SourceGeneratorFramework.dll</DestinationSubPath>
 		</SourceGeneratorRuntimeDependency>
+		<SourceGeneratorRuntimeDependency Include="$(_PurviewSourceGeneratorFrameworkSharedAssembly)">
+			<DestinationSubPath>Purview.SourceGeneratorFramework.Shared.dll</DestinationSubPath>
+		</SourceGeneratorRuntimeDependency>
+
+		<_PurviewSourceGeneratorFrameworkRuntimeSidecar
+			Include="$(_PurviewSourceGeneratorFrameworkSharedPdb)"
+			Condition="Exists('$(_PurviewSourceGeneratorFrameworkSharedPdb)')"
+		/>
+		<_PurviewSourceGeneratorFrameworkRuntimeSidecar
+			Include="$(_PurviewSourceGeneratorFrameworkSharedXml)"
+			Condition="Exists('$(_PurviewSourceGeneratorFrameworkSharedXml)')"
+		/>
 
 		<None
 			Include="$(_PurviewSourceGeneratorFrameworkAssembly)"
+			Pack="true"
+			PackagePath="analyzers/dotnet/cs/"
+			Visible="false"
+		/>
+		<None
+			Include="$(_PurviewSourceGeneratorFrameworkSharedAssembly)"
+			Pack="true"
+			PackagePath="analyzers/dotnet/cs/"
+			Visible="false"
+		/>
+		<None
+			Include="@(_PurviewSourceGeneratorFrameworkRuntimeSidecar)"
 			Pack="true"
 			PackagePath="analyzers/dotnet/cs/"
 			Visible="false"
@@ -34,6 +63,12 @@
 			SourceFiles="@(SourceGeneratorRuntimeDependency)"
 			DestinationFolder="$(TargetDir)"
 			SkipUnchangedFiles="true"
+		/>
+		<Copy
+			SourceFiles="@(_PurviewSourceGeneratorFrameworkRuntimeSidecar)"
+			DestinationFolder="$(TargetDir)"
+			SkipUnchangedFiles="true"
+			Condition="'@(_PurviewSourceGeneratorFrameworkRuntimeSidecar)' != ''"
 		/>
 	</Target>
 </Project>

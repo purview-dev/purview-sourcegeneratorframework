@@ -1,0 +1,10 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<ItemGroup>
+		<ProjectReference Include="..\..\src\SourceGeneratorFramework.Analyzers\SourceGeneratorFramework.Analyzers.csproj" />
+		<ProjectReference Include="..\..\src\SourceGeneratorFramework.Testing.TUnit\SourceGeneratorFramework.Testing.TUnit.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+	</ItemGroup>
+</Project>

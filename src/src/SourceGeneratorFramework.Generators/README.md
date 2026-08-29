@@ -14,17 +14,22 @@ The generator emits marker attributes into your compilation:
 
 - `[GenerateAttributeDataModel(Type targetAttribute)]` — placed on a `readonly partial record struct` to opt into generation.
 - `[GenerateAttributeDataModel(string targetAttribute)]` — same as above, but resolves the attribute by fully-qualified name. Use this when the attribute type is not available in the generator's compilation (e.g., `LengthAttribute` in .NET 8+ or a self-generated attribute).
-- `[AttributeNamedProperty]` — a record parameter is populated from a named attribute property (the property name is inferred from the parameter name unless overridden).
-- `[AttributeNamedProperty(string name)]` — explicit named property source.
-- `[AttributeCtorProperty]` — a record parameter is populated from a constructor argument (the parameter name is inferred from the parameter name unless overridden).
-- `[AttributeCtorProperty(string name)]` — constructor argument by parameter name.
-- `[AttributeCtorProperty(int index)]` — constructor argument by parameter index.
-- `[AttributeNestedModelProperty]` — a record parameter is populated by recursively calling `FromAttributeData` on a nested generated model.
-- `[AttributeExcludeProperty]` — skips auto-discovery for this parameter.
+- `[Property]` — a record parameter is populated from a named attribute property (the property name is inferred from the parameter name unless overridden).
+- `[Property(string name)]` — explicit named property source.
+- `[Property(..., DefaultValue = ...)]` — provides a fallback value when the named property is not present.
+- `[Argument]` — a record parameter is populated from a constructor argument by parameter name.
+- `[Argument(int index)]` — constructor argument by parameter index.
+- `[Argument(string name)]` — constructor argument by parameter name.
+- `[Argument(..., DefaultValue = ...)]` — provides a fallback value when the constructor argument is not present.
+- `[NestedModel]` — a record parameter is populated by recursively calling `FromAttributeData` on a nested generated model.
+- `[Exclude]` — skips auto-discovery for this parameter.
+- `[GenericTypeArgument]` — a record parameter is populated from a generic type argument of the attribute class.
+- `[GenericTypeArgument(int index)]` — generic type argument by position.
+- `[GenericTypeArgument(string name)]` — generic type argument by type parameter name.
 
 ### Default values
 
-`DefaultValue` is a runtime fallback. If the requested property is not found on the attribute, the generated `FromAttributeData` method uses the supplied `DefaultValue` instead of `default(T)`.
+`DefaultValue` is a runtime fallback. If the requested property or argument is not found on the attribute, the generated `FromAttributeData` method uses the supplied `DefaultValue` instead of `default(T)`.
 
 The `Empty` sentinel always uses `default(T)` for every property, including an `Exists` field set to `false`.
 
@@ -84,8 +89,8 @@ A plain type name (`"RequiredAttribute"`) can also be used, which matches an att
 ```csharp
 [GenerateAttributeDataModel(typeof(LengthAttribute))]
 public readonly partial record struct LengthAttributeData(
-    [AttributeCtorProperty(0)] int MinimumLength,
-    [AttributeCtorProperty(1)] int MaximumLength
+    [Argument(0)] int MinimumLength,
+    [Argument(1)] int MaximumLength
 );
 ```
 
@@ -94,7 +99,7 @@ Or by constructor parameter name:
 ```csharp
 [GenerateAttributeDataModel(typeof(StringLengthAttribute))]
 public readonly partial record struct StringLengthAttributeData(
-    [AttributeCtorProperty("maximumLength", DefaultValue = 2147483647)] int MaximumLength,
+    [Argument("maximumLength", DefaultValue = 2147483647)] int MaximumLength,
     int MinimumLength
 );
 ```
@@ -106,19 +111,32 @@ Any property whose type is itself annotated with `[GenerateAttributeDataModel]` 
 ```csharp
 [GenerateAttributeDataModel(typeof(ValidationAttribute), MatchByInheritance = true)]
 public readonly partial record struct ValidationAttributeData(
-    string? ErrorMessage,
-    string? ErrorMessageResourceName,
-    ITypeSymbol? ErrorMessageResourceType
+    [Property] string? ErrorMessage,
+    [Property] string? ErrorMessageResourceName,
+    [Property] ITypeSymbol? ErrorMessageResourceType
 );
 
 [GenerateAttributeDataModel(typeof(RequiredAttribute))]
 public readonly partial record struct RequiredAttributeData(
     bool AllowEmptyStrings,
-    [AttributeNestedModelProperty] ValidationAttributeData ValidationAttribute
+    [NestedModel] ValidationAttributeData ValidationAttribute
 );
 ```
 
 Because `ValidationAttributeData` uses `MatchByInheritance = true`, it matches any attribute that derives from `ValidationAttribute`, including `RequiredAttribute`.
+
+### Generic type arguments
+
+If the attribute class is generic, a record parameter can be populated from the attribute's type argument:
+
+```csharp
+[GenerateAttributeDataModel(typeof(MyGenericAttribute<>))]
+public readonly partial record struct MyGenericAttributeData<T>(
+    [GenericTypeArgument] T Value
+);
+```
+
+Use `[GenericTypeArgument(0)]` or `[GenericTypeArgument("TValue")]` to disambiguate when the attribute has multiple type parameters.
 
 ### Auto-discovery
 
@@ -133,13 +151,13 @@ This generates the same `RequiredAttributeData` as the manual example above. Nes
 
 ### Default values
 
-Use `DefaultValue` to provide a runtime fallback when the attribute does not contain the requested property. The `Empty` sentinel still uses `default(T)`.
+Use `DefaultValue` to provide a runtime fallback when the attribute does not contain the requested property or argument. The `Empty` sentinel still uses `default(T)`.
 
 ```csharp
 [GenerateAttributeDataModel(typeof(HostKitAttribute))]
 public readonly partial record struct HostKitAttributeData(
-    [AttributeCtorProperty("name", DefaultValue = "MyApp")] string Name,
-    [AttributeCtorProperty("generateOptions", DefaultValue = true)] bool GenerateOptions
+    [Argument("name", DefaultValue = "MyApp")] string Name,
+    [Argument("generateOptions", DefaultValue = true)] bool GenerateOptions
 );
 ```
 

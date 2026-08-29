@@ -104,12 +104,12 @@ var options = new SourceGeneratorTestOptions
     IncludeDefaultNamespaces = true,
     AdditionalNamespaces = ["MyNamespace"],
     AdditionalAssemblyTypes = [typeof(SomeExternalType)],
-    CompileToAssembly = true,
     EnableLogging = true,
     AnalyzerConfigOptions = { ["MyGenerator_Disable"] = "true" }
 };
 
-var result = await runner.RunAsync(source, options);
+// Emitting the output to an assembly is opt-in because it is expensive.
+var result = await runner.RunAsync(source, options.Compile());
 ```
 
 Analyzer options are preserved under their supplied keys. Keys without the Roslyn

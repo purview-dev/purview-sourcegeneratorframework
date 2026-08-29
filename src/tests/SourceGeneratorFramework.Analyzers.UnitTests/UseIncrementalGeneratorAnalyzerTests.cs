@@ -1,6 +1,9 @@
+using Purview.SourceGeneratorFramework.Testing.TUnit;
+
 namespace Purview.SourceGeneratorFramework.Analyzers;
 
-public class UseIncrementalGeneratorAnalyzerTests
+public sealed class UseIncrementalGeneratorAnalyzerTests
+	: TUnitDiagnosticAnalyzerTestBase<UseIncrementalGeneratorAnalyzer>
 {
 	[Test]
 	public async Task ISourceGenerator_ReportsDiagnostic(CancellationToken cancellationToken)
@@ -15,13 +18,10 @@ public class UseIncrementalGeneratorAnalyzerTests
 			}
 			""";
 
-		var diagnostics = await new UseIncrementalGeneratorAnalyzer().GetAnalyzerDiagnosticsAsync(
-			source,
-			cancellationToken
-		);
+		var result = await AnalyzeAsync(source, cancellationToken);
 
-		await Assert.That(diagnostics).Count().IsEqualTo(1);
-		await Assert.That(diagnostics.First().Id).IsEqualTo("PSGFR12");
+		await Assert.That(result).HasDiagnostics(1);
+		await Assert.That(result).HasDiagnostic(UseIncrementalGeneratorAnalyzer.Rule.Id);
 	}
 
 	[Test]
@@ -36,11 +36,8 @@ public class UseIncrementalGeneratorAnalyzerTests
 			}
 			""";
 
-		var diagnostics = await new UseIncrementalGeneratorAnalyzer().GetAnalyzerDiagnosticsAsync(
-			source,
-			cancellationToken
-		);
+		var result = await AnalyzeAsync(source, cancellationToken);
 
-		await Assert.That(diagnostics).IsEmpty();
+		await Assert.That(result).HasNoDiagnostics();
 	}
 }

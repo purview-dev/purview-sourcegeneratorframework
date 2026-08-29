@@ -1,6 +1,9 @@
+using Purview.SourceGeneratorFramework.Testing.TUnit;
+
 namespace Purview.SourceGeneratorFramework.Analyzers;
 
-public class PreferForAttributeWithMetadataNameAnalyzerTests
+public sealed class PreferForAttributeWithMetadataNameAnalyzerTests
+	: TUnitDiagnosticAnalyzerTestBase<PreferForAttributeWithMetadataNameAnalyzer>
 {
 	[Test]
 	public async Task CreateSyntaxProvider_ReportsDiagnostic(CancellationToken cancellationToken)
@@ -20,13 +23,10 @@ public class PreferForAttributeWithMetadataNameAnalyzerTests
 			}
 			""";
 
-		var diagnostics = await new PreferForAttributeWithMetadataNameAnalyzer().GetAnalyzerDiagnosticsAsync(
-			source,
-			cancellationToken
-		);
+		var result = await AnalyzeAsync(source, cancellationToken);
 
-		await Assert.That(diagnostics).Count().IsEqualTo(1);
-		await Assert.That(diagnostics.First().Id).IsEqualTo("PSGFR11");
+		await Assert.That(result).HasDiagnostics(1);
+		await Assert.That(result).HasDiagnostic(PreferForAttributeWithMetadataNameAnalyzer.Rule.Id);
 	}
 
 	[Test]
@@ -48,11 +48,8 @@ public class PreferForAttributeWithMetadataNameAnalyzerTests
 			}
 			""";
 
-		var diagnostics = await new PreferForAttributeWithMetadataNameAnalyzer().GetAnalyzerDiagnosticsAsync(
-			source,
-			cancellationToken
-		);
+		var result = await AnalyzeAsync(source, cancellationToken);
 
-		await Assert.That(diagnostics).IsEmpty();
+		await Assert.That(result).HasNoDiagnostics();
 	}
 }
