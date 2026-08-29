@@ -253,6 +253,13 @@ public static partial class AttributeDataExtensions
 			return typeSymbol is T typedValue ? typedValue : default;
 		}
 
+		if (targetType == typeof(TypeIdentity))
+		{
+			return typeSymbol is not null && TypeIdentity.TryCreate(typeSymbol, out var identity)
+				? (T?)(object?)identity
+				: default;
+		}
+
 		// If the target type is not a symbol type, we cannot convert it, so we return default.
 		return default;
 	}

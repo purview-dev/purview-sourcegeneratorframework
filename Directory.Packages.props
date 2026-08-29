@@ -11,6 +11,7 @@
 		<PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="[8.0.0,)" />
 		<PackageVersion Include="Microsoft.SourceLink.GitHub" Version="[10.0.400,)" />
 		<PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="$(RoslynCompilerVersion)" />
+		<PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="$(RoslynCompilerVersion)" />
 		<PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="$(RoslynAnalyzersVersion)" />
 		<PackageVersion Include="TUnit" Version="$(TUnitVersion)" />
 		<PackageVersion Include="TUnit.Core" Version="$(TUnitVersion)" />

@@ -29,7 +29,7 @@ public readonly struct EquatableArray<T>(ImmutableArray<T> array) : IEquatable<E
 			return Empty;
 
 		// All valid...
-		return new EquatableArray<T>(ImmutableArray.Create(items));
+		return new(ImmutableArray.Create(items));
 	}
 
 	public bool Equals(EquatableArray<T> other) => AsImmutableArray().SequenceEqual(other.AsImmutableArray());
@@ -43,6 +43,7 @@ public readonly struct EquatableArray<T>(ImmutableArray<T> array) : IEquatable<E
 			var hash = 17;
 			foreach (var item in AsImmutableArray())
 				hash = (hash * 31) + (item?.GetHashCode() ?? 0);
+
 			return hash;
 		}
 	}
@@ -52,6 +53,9 @@ public readonly struct EquatableArray<T>(ImmutableArray<T> array) : IEquatable<E
 	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
 	public static implicit operator EquatableArray<T>(ImmutableArray<T> array) => new(array);
+
+	public static implicit operator EquatableArray<T>(ImmutableArray<T>.Builder builder) =>
+		builder is null || builder.Count == 0 ? Empty : new(builder.ToImmutable());
 
 	public static implicit operator ImmutableArray<T>(EquatableArray<T> array) => array.AsImmutableArray();
 

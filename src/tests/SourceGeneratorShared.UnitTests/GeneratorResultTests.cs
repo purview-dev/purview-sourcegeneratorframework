@@ -5,7 +5,7 @@ public class GeneratorResultTests
 	[Test]
 	public async Task Ok_WithValue_IsSuccess()
 	{
-		var result = GeneratorResult<string>.Ok("value");
+		var result = GeneratorResult<string>.Create("value");
 
 		await Assert.That(result.HasValue).IsTrue();
 		await Assert.That(result.IsEmpty).IsFalse();
@@ -27,7 +27,7 @@ public class GeneratorResultTests
 				true
 			)
 		);
-		var result = GeneratorResult<string>.Ok("value", diagnostic);
+		var result = GeneratorResult<string>.Create("value", diagnostic);
 
 		await Assert.That(result.HasValue).IsTrue();
 		await Assert.That(result.HasDiagnostics).IsTrue();
@@ -47,7 +47,7 @@ public class GeneratorResultTests
 				true
 			)
 		);
-		var result = GeneratorResult<string>.Fail(diagnostic);
+		var result = GeneratorResult<string>.Create(diagnostic);
 
 		await Assert.That(result.HasValue).IsFalse();
 		await Assert.That(result.ShouldProcess).IsFalse();
@@ -59,7 +59,7 @@ public class GeneratorResultTests
 	[Test]
 	public void Fail_WithoutDiagnostics_Throws()
 	{
-		Assert.Throws<ArgumentException>(() => GeneratorResult<string>.Fail());
+		Assert.Throws<ArgumentException>(() => GeneratorResult<string>.Create());
 	}
 
 	[Test]
@@ -98,7 +98,7 @@ public class GeneratorResultTests
 			)
 		);
 
-		var result = GeneratorResult<int>.Fail(diagnostic);
+		var result = GeneratorResult<int>.Create(diagnostic);
 
 		await Assert.That(result.HasValue).IsFalse();
 		await Assert.That(result.IsEmpty).IsFalse();

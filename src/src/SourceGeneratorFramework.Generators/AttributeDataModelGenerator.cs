@@ -83,9 +83,8 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 
 	static void WriteStruct(CodeWriter writer, AttributeDataModelTarget target)
 	{
-		TypeDeclarationOptions options = new(target.StructName)
+		TypeDeclarationOptions options = new(target.StructName, target.Accessibility)
 		{
-			Accessibility = target.Accessibility,
 			IsReadOnly = target.IsReadOnly,
 			IsPartial = true,
 		};
@@ -116,11 +115,24 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 			WriteEmptyField(writer, target);
 			WriteAllAttributeDataMethod(writer, target);
 			WriteAllAttributeDataSymbolMethod(writer, target);
+
 			WriteFromAttributeDataArrayMethod(writer, target);
+
+			// ISymbol attribute extraction methods with out parameters
 			WriteFromAttributeDataSymbolMethod(writer, target);
+			WriteTryFromAttributeDataSymbolMethod(writer, target);
+
+			// AttributeData array extraction methods with out parameters
 			WriteFromAttributeDataArrayWithOutMethod(writer, target);
+			WriteTryFromAttributeDataArrayWithOutMethod(writer, target);
+
+			// ISymbol attribute extraction methods with out parameters
 			WriteFromAttributeDataSymbolWithOutMethod(writer, target);
+			WriteTryFromAttributeDataSymbolWithOutMethod(writer, target);
+
+			// AttributeData extraction methods
 			WriteFromAttributeDataMethod(writer, target);
+			WriteTryFromAttributeDataMethod(writer, target);
 		}
 	}
 
@@ -135,19 +147,18 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 		}
 
 		writer.WriteConstructor(
-			new(target.StructName)
+			new(target.StructName, TypeDeclarationAccessibility.Public)
 			{
-				Accessibility = TypeDeclarationAccessibility.Public,
 				Parameters = [.. parameters],
 				Initializer = GetPrimaryConstructorInitializer(target),
 			},
 			body =>
 			{
-				body.WriteLine("Exists = exists;");
+				body.WriteAssignment("Exists", "exists");
 				foreach (var property in target.Properties)
 				{
 					if (!property.IsExplicit)
-						body.WriteLine($"this.{property.PropertyName} = {property.PropertyName};");
+						body.WriteAssignment($"this.{property.PropertyName}", property.PropertyName);
 				}
 			}
 		);
@@ -189,9 +200,8 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 		}
 
 		writer.WriteField(
-			new FieldDeclarationOptions("Empty", TypeReference(target.StructName))
+			new("Empty", TypeReference(target.StructName), TypeDeclarationAccessibility.Public)
 			{
-				Accessibility = TypeDeclarationAccessibility.Public,
 				IsStatic = true,
 				IsReadOnly = true,
 				Initializer = $"new({string.Join(", ", values)})",
@@ -204,9 +214,12 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 		var returnType = TypeReference(
 			$"global::System.Collections.Generic.IEnumerable<({target.StructName} Instance, global::Microsoft.CodeAnalysis.AttributeData Attribute)>"
 		);
-		var methodOptions = new MethodDeclarationOptions("AllAttributeData", returnType)
+		var methodOptions = new MethodDeclarationOptions(
+			"AllAttributeData",
+			returnType,
+			TypeDeclarationAccessibility.Public
+		)
 		{
-			Accessibility = TypeDeclarationAccessibility.Public,
 			IsStatic = true,
 			Parameters =
 			[
@@ -246,9 +259,8 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 			$"global::System.Collections.Generic.IEnumerable<({target.StructName} Instance, global::Microsoft.CodeAnalysis.AttributeData Attribute)>"
 		);
 		writer.WriteMethod(
-			new MethodDeclarationOptions("AllAttributeData", returnType)
+			new MethodDeclarationOptions("AllAttributeData", returnType, TypeDeclarationAccessibility.Public)
 			{
-				Accessibility = TypeDeclarationAccessibility.Public,
 				IsStatic = true,
 				Parameters = [new("symbol", TypeReference("global::Microsoft.CodeAnalysis.ISymbol"))],
 			},
@@ -258,9 +270,12 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 
 	static void WriteFromAttributeDataArrayMethod(CodeWriter writer, AttributeDataModelTarget target)
 	{
-		MethodDeclarationOptions methodOptions = new("FromAttributeData", TypeReference(target.StructName))
+		MethodDeclarationOptions methodOptions = new(
+			"FromAttributeData",
+			TypeReference(target.StructName),
+			TypeDeclarationAccessibility.Public
+		)
 		{
-			Accessibility = TypeDeclarationAccessibility.Public,
 			IsStatic = true,
 			Parameters =
 			[
@@ -295,9 +310,8 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 	static void WriteFromAttributeDataSymbolMethod(CodeWriter writer, AttributeDataModelTarget target)
 	{
 		writer.WriteMethod(
-			new MethodDeclarationOptions("FromAttributeData", TypeReference(target.StructName))
+			new("FromAttributeData", TypeReference(target.StructName), TypeDeclarationAccessibility.Public)
 			{
-				Accessibility = TypeDeclarationAccessibility.Public,
 				IsStatic = true,
 				Parameters = [new("symbol", TypeReference("global::Microsoft.CodeAnalysis.ISymbol"))],
 			},
@@ -305,11 +319,30 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 		);
 	}
 
+	static void WriteTryFromAttributeDataSymbolMethod(CodeWriter writer, AttributeDataModelTarget target)
+	{
+		writer.WriteMethod(
+			new("TryFromAttributeData", PurviewTypeLibrary.System.Boolean, TypeDeclarationAccessibility.Public)
+			{
+				IsStatic = true,
+				Parameters =
+				[
+					new("symbol", TypeReference("global::Microsoft.CodeAnalysis.ISymbol")),
+					new("attributeData", TypeReference(target.StructName), ParameterModifier.Out),
+				],
+			},
+			body => body.WriteLine("return TryFromAttributeData(symbol.GetAttributes(), out attributeData, out _);")
+		);
+	}
+
 	static void WriteFromAttributeDataArrayWithOutMethod(CodeWriter writer, AttributeDataModelTarget target)
 	{
-		var methodOptions = new MethodDeclarationOptions("FromAttributeData", TypeReference(target.StructName))
+		var methodOptions = new MethodDeclarationOptions(
+			"FromAttributeData",
+			TypeReference(target.StructName),
+			TypeDeclarationAccessibility.Public
+		)
 		{
-			Accessibility = TypeDeclarationAccessibility.Public,
 			IsStatic = true,
 			Parameters =
 			[
@@ -353,12 +386,70 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 		);
 	}
 
+	static void WriteTryFromAttributeDataArrayWithOutMethod(CodeWriter writer, AttributeDataModelTarget target)
+	{
+		var methodOptions = new MethodDeclarationOptions(
+			"TryFromAttributeData",
+			PurviewTypeLibrary.System.Boolean,
+			TypeDeclarationAccessibility.Public
+		)
+		{
+			IsStatic = true,
+			Parameters =
+			[
+				new(
+					"attributes",
+					TypeReference(
+						"global::System.Collections.Immutable.ImmutableArray<global::Microsoft.CodeAnalysis.AttributeData>"
+					)
+				),
+				new("attributeData", TypeReference(target.StructName)) { Modifier = ParameterModifier.Out },
+				new("attribute", TypeReference("global::Microsoft.CodeAnalysis.AttributeData?"))
+				{
+					Modifier = ParameterModifier.Out,
+				},
+			],
+		};
+
+		writer.WriteMethod(
+			methodOptions,
+			w =>
+			{
+				w.WriteAssignment("attributeData", "Empty");
+				w.WriteAssignment("attribute", "null");
+
+				w.WriteLine("for (var i = 0; i < attributes.Length; i++)");
+				w.WriteBlock(
+					null,
+					body =>
+					{
+						body.WriteLine("var result = FromAttributeData(attributes[i]);");
+						body.WriteLine("if (result.Exists)");
+						body.WriteBlock(
+							null,
+							inner =>
+							{
+								inner.WriteLine("attribute = attributes[i];");
+								inner.WriteLine("attributeData = result;");
+								inner.WriteLine("return true;");
+							}
+						);
+					}
+				);
+				w.WriteLine("return false;");
+			}
+		);
+	}
+
 	static void WriteFromAttributeDataSymbolWithOutMethod(CodeWriter writer, AttributeDataModelTarget target)
 	{
 		writer.WriteMethod(
-			new MethodDeclarationOptions("FromAttributeData", TypeReference(target.StructName))
+			new MethodDeclarationOptions(
+				"FromAttributeData",
+				TypeReference(target.StructName),
+				TypeDeclarationAccessibility.Public
+			)
 			{
-				Accessibility = TypeDeclarationAccessibility.Public,
 				IsStatic = true,
 				Parameters =
 				[
@@ -373,11 +464,43 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 		);
 	}
 
+	static void WriteTryFromAttributeDataSymbolWithOutMethod(CodeWriter writer, AttributeDataModelTarget target)
+	{
+		writer.WriteMethod(
+			new MethodDeclarationOptions(
+				"TryFromAttributeData",
+				TypeReference(PurviewTypeLibrary.System.Boolean),
+				TypeDeclarationAccessibility.Public
+			)
+			{
+				IsStatic = true,
+				Parameters =
+				[
+					new("symbol", TypeReference("global::Microsoft.CodeAnalysis.ISymbol")),
+					new("attributeData", TypeReference(target.StructName), ParameterModifier.Out),
+					new(
+						"attribute",
+						TypeReference("global::Microsoft.CodeAnalysis.AttributeData?"),
+						ParameterModifier.Out
+					)
+					{
+						Modifier = ParameterModifier.Out,
+					},
+				],
+			},
+			body =>
+				body.WriteLine("return TryFromAttributeData(symbol.GetAttributes(), out attributeData, out attribute);")
+		);
+	}
+
 	static void WriteFromAttributeDataMethod(CodeWriter writer, AttributeDataModelTarget target)
 	{
-		var methodOptions = new MethodDeclarationOptions("FromAttributeData", TypeReference(target.StructName))
+		var methodOptions = new MethodDeclarationOptions(
+			"FromAttributeData",
+			TypeReference(target.StructName),
+			TypeDeclarationAccessibility.Public
+		)
 		{
-			Accessibility = TypeDeclarationAccessibility.Public,
 			IsStatic = true,
 			Parameters = [new("attributeData", TypeReference("global::Microsoft.CodeAnalysis.AttributeData"))],
 		};
@@ -415,11 +538,66 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 		);
 	}
 
+	static void WriteTryFromAttributeDataMethod(CodeWriter writer, AttributeDataModelTarget target)
+	{
+		var methodOptions = new MethodDeclarationOptions(
+			"TryFromAttributeData",
+			PurviewTypeLibrary.System.Boolean,
+			TypeDeclarationAccessibility.Public
+		)
+		{
+			IsStatic = true,
+			Parameters =
+			[
+				new("attributeData", TypeReference("global::Microsoft.CodeAnalysis.AttributeData")),
+				new("attribute", TypeReference(target.StructName), ParameterModifier.Out),
+			],
+		};
+
+		writer.WriteMethod(
+			methodOptions,
+			w =>
+			{
+				w.WriteAssignment("attribute", "Empty");
+				if (target.MatchByInheritance)
+				{
+					w.WriteLine(
+						"if (attributeData.AttributeClass is null || (!TargetAttribute.Equals(attributeData.AttributeClass) && !global::Purview.SourceGeneratorFramework.Helpers.TypeHelpers.InheritsFrom(attributeData.AttributeClass, TargetAttribute)))"
+					);
+				}
+				else
+				{
+					w.WriteLine("if (!TargetAttribute.Equals(attributeData.AttributeClass))");
+				}
+				w.WriteBlock(null, body => body.WriteLine("return false;"));
+
+				foreach (var property in target.Properties)
+				{
+					WritePropertyExtraction(w, property);
+				}
+
+				var returnValues = new List<string> { "true" };
+				foreach (var property in target.Properties)
+				{
+					var value = ToCamelCase(property.PropertyName);
+					returnValues.Add(property.IsNonNullableReferenceType ? value + "!" : value);
+				}
+
+				w.WriteAssignment("attribute", $"new({string.Join(", ", returnValues)})");
+
+				w.WriteReturn("attribute.Exists");
+			}
+		);
+	}
+
 	static void WritePropertyExtraction(CodeWriter writer, AttributeDataModelProperty property)
 	{
 		var variableName = ToCamelCase(property.PropertyName);
 		var typeName = GetNonNullableTypeName(property.FullyQualifiedTypeName);
-		var localTypeName = property.IsNonNullableReferenceType ? typeName + "?" : property.FullyQualifiedTypeName;
+		var localTypeName =
+			property.IsNullableValueType ? typeName
+			: property.IsNonNullableReferenceType ? typeName + "?"
+			: property.FullyQualifiedTypeName;
 
 		if (property.IsNestedModel)
 		{

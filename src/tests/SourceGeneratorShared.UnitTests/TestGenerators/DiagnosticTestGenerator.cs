@@ -25,7 +25,7 @@ public sealed class DiagnosticTestGenerator : IIncrementalGenerator
 					),
 					Location.None
 				);
-				return GeneratorResult<TargetInfo>.Ok(new TargetInfo(name), diagnostic);
+				return GeneratorResult<TargetInfo>.Create(new TargetInfo(name), diagnostic);
 			}
 		);
 

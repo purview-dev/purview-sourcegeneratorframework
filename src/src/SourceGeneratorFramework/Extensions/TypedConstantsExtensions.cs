@@ -31,6 +31,16 @@ public static partial class TypedConstantsExtensions
 				return constant.Kind == TypedConstantKind.Type && constant.Value is T typedValue ? typedValue : default;
 			}
 
+			if (targetType == typeof(TypeIdentity))
+			{
+				return
+					constant.Kind == TypedConstantKind.Type
+					&& constant.Value is ITypeSymbol typeSymbol
+					&& TypeIdentity.TryCreate(typeSymbol, out var identity)
+					? (T?)(object?)identity
+					: default;
+			}
+
 			if (constant.Kind == TypedConstantKind.Array)
 			{
 				if (targetType == typeof(ImmutableArray<TypedConstant>))

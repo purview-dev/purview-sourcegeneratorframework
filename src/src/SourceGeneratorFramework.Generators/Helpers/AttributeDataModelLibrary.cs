@@ -115,8 +115,8 @@ static class AttributeDataModelLibrary
 		);
 
 		return diagnostics.Count > 0
-			? GeneratorResult<AttributeDataModelTarget>.Fail([.. diagnostics])
-			: GeneratorResult<AttributeDataModelTarget>.Ok(target);
+			? GeneratorResult<AttributeDataModelTarget>.Create([.. diagnostics])
+			: GeneratorResult<AttributeDataModelTarget>.Create(target);
 	}
 
 	static EquatableArray<string> GetPrimaryConstructorArguments(
@@ -175,6 +175,19 @@ static class AttributeDataModelLibrary
 				continue;
 			}
 
+			if (IsSymbolOrSystemType(propertyType))
+			{
+				diagnostics.Add(
+					DiagnosticInfo.Create(
+						AttributeDataModelDiagnosticRules.SymbolPropertyNotCacheable,
+						parameter.Locations.FirstOrDefault(static loc => loc.IsInSource),
+						propertyName,
+						TypeHelpers.ToFullyQualifiedDisplayString(propertyType)
+					)
+				);
+				continue;
+			}
+
 			var info = ReadParameterAttributes(parameter, propertyName);
 
 			if (info.IsExcluded)
@@ -194,7 +207,7 @@ static class AttributeDataModelLibrary
 				);
 			}
 
-			if (info.IsTypeArgument && !IsTypeSymbolType(propertyType))
+			if (info.IsTypeArgument && !IsTypeIdentityType(propertyType))
 			{
 				diagnostics.Add(
 					DiagnosticInfo.Create(
@@ -241,6 +254,9 @@ static class AttributeDataModelLibrary
 					IsNonNullableReferenceType: isNonNullableReferenceType,
 					IsNestedModel: info.IsNestedModel,
 					IsEnum: info.IsEnum,
+					IsTypeIdentity: IsTypeIdentityType(propertyType),
+					IsNullableValueType: propertyType.IsValueType
+						&& propertyType.NullableAnnotation == NullableAnnotation.Annotated,
 					NestedModelTypeName: info.IsNestedModel ? modelTypeName : null
 				)
 			);
@@ -466,6 +482,19 @@ static class AttributeDataModelLibrary
 					continue;
 				}
 
+				if (IsSymbolOrSystemType(parameter.Type))
+				{
+					diagnostics.Add(
+						DiagnosticInfo.Create(
+							AttributeDataModelDiagnosticRules.SymbolPropertyNotCacheable,
+							Location.None,
+							propertyName,
+							TypeHelpers.ToFullyQualifiedDisplayString(parameter.Type)
+						)
+					);
+					continue;
+				}
+
 				discoveredNames.Add(propertyName);
 
 				var (modelTypeName, isNonNullableReferenceType) = GetModelTypeInfo(parameter.Type, autoDiscover: true);
@@ -482,6 +511,9 @@ static class AttributeDataModelLibrary
 						IsNonNullableReferenceType: isNonNullableReferenceType,
 						IsNestedModel: false,
 						IsEnum: false,
+						IsTypeIdentity: IsTypeIdentityType(parameter.Type),
+						IsNullableValueType: parameter.Type.IsValueType
+							&& parameter.Type.NullableAnnotation == NullableAnnotation.Annotated,
 						NestedModelTypeName: null
 					)
 				);
@@ -518,6 +550,19 @@ static class AttributeDataModelLibrary
 				continue;
 			}
 
+			if (IsSymbolOrSystemType(property.Type))
+			{
+				diagnostics.Add(
+					DiagnosticInfo.Create(
+						AttributeDataModelDiagnosticRules.SymbolPropertyNotCacheable,
+						Location.None,
+						propertyName,
+						TypeHelpers.ToFullyQualifiedDisplayString(property.Type)
+					)
+				);
+				continue;
+			}
+
 			discoveredNames.Add(propertyName);
 
 			var (modelTypeName, isNonNullableReferenceType) = GetModelTypeInfo(property.Type, autoDiscover: true);
@@ -534,6 +579,9 @@ static class AttributeDataModelLibrary
 					IsNonNullableReferenceType: isNonNullableReferenceType,
 					IsNestedModel: false,
 					IsEnum: false,
+					IsTypeIdentity: IsTypeIdentityType(property.Type),
+					IsNullableValueType: property.Type.IsValueType
+						&& property.Type.NullableAnnotation == NullableAnnotation.Annotated,
 					NestedModelTypeName: null
 				)
 			);
@@ -680,9 +728,6 @@ static class AttributeDataModelLibrary
 		bool autoDiscover
 	)
 	{
-		if (IsSystemType(typeSymbol))
-			return ("global::Microsoft.CodeAnalysis.INamedTypeSymbol?", false);
-
 		var knownType = KnownLangTypes.Get(typeSymbol.SpecialType);
 		var typeName = knownType.IsEmpty ? TypeHelpers.ToFullyQualifiedDisplayString(typeSymbol) : knownType.Keyword;
 
@@ -721,6 +766,33 @@ static class AttributeDataModelLibrary
 
 		return namespaceName == "Microsoft.CodeAnalysis"
 			&& namedType.Name is "ITypeSymbol" or "INamedTypeSymbol" or "ISymbol";
+	}
+
+	static bool IsSymbolOrSystemType(ITypeSymbol typeSymbol) =>
+		IsTypeSymbolType(typeSymbol) || IsSystemType(typeSymbol);
+
+	static bool IsTypeIdentityType(ITypeSymbol typeSymbol)
+	{
+		var candidate = typeSymbol;
+		if (
+			candidate is INamedTypeSymbol nullableType
+			&& nullableType.IsValueType
+			&& nullableType.ContainingNamespace?.ToDisplayString() == "System"
+			&& nullableType.Name == "Nullable"
+			&& nullableType.TypeArguments.Length == 1
+		)
+		{
+			candidate = nullableType.TypeArguments[0];
+		}
+
+		if (candidate is not INamedTypeSymbol namedType)
+			return false;
+
+		var namespaceName = namedType.ContainingNamespace.IsGlobalNamespace
+			? null
+			: namedType.ContainingNamespace.ToDisplayString();
+
+		return namespaceName == "Purview.SourceGeneratorFramework" && namedType.Name == "TypeIdentity";
 	}
 
 	static bool IsSupportedType(ITypeSymbol typeSymbol)

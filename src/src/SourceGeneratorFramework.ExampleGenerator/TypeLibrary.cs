@@ -5,6 +5,8 @@ namespace Purview.SourceGeneratorFramework.ExampleGenerator;
 /// </summary>
 static class TypeLibrary
 {
+	const string ExpamplesNamespace = "Purview.SourceGeneratorFramework.Examples";
+
 	/// <summary>
 	/// Common types from the <c>Microsoft.Extensions.DependencyInjection</c> namespace.
 	/// </summary>
@@ -20,20 +22,19 @@ static class TypeLibrary
 			/// </summary>
 			public static class DependencyInjection
 			{
+				const string DINamespace = "Microsoft.Extensions.DependencyInjection";
+
 				/// <summary>
 				/// <c>Microsoft.Extensions.DependencyInjection.IServiceCollection</c>.
 				/// </summary>
-				public static readonly TypeIdentity IServiceCollection = new(
-					"IServiceCollection",
-					"Microsoft.Extensions.DependencyInjection"
-				);
+				public static readonly TypeIdentity IServiceCollection = new(nameof(IServiceCollection), DINamespace);
 
 				/// <summary>
 				/// <c>Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions</c>.
 				/// </summary>
 				public static readonly TypeIdentity ServiceCollectionServiceExtensions = new(
-					"ServiceCollectionServiceExtensions",
-					"Microsoft.Extensions.DependencyInjection"
+					nameof(ServiceCollectionServiceExtensions),
+					DINamespace
 				);
 			}
 		}
@@ -43,28 +44,25 @@ static class TypeLibrary
 	/// The <c>[GenerateService]</c> attribute type.
 	/// </summary>
 	public static readonly TypeIdentity GenerateServiceAttribute = new(
-		"GenerateServiceAttribute",
-		"Purview.SourceGeneratorFramework.Examples"
+		nameof(GenerateServiceAttribute),
+		ExpamplesNamespace
 	);
 
 	/// <summary>
 	/// The <c>ServiceLifetime</c> enum type.
 	/// </summary>
-	public static readonly TypeIdentity ServiceLifetime = new(
-		"ServiceLifetime",
-		"Purview.SourceGeneratorFramework.Examples"
-	);
+	public static readonly TypeIdentity ServiceLifetime = new(nameof(ServiceLifetime), ExpamplesNamespace);
 
 	/// <summary>
 	/// The static <c>ServiceCollectionExtensions</c> class.
 	/// </summary>
 	public static readonly TypeIdentity ServiceCollectionExtensions = new(
-		"ServiceCollectionExtensions",
-		"Purview.SourceGeneratorFramework.Examples"
+		nameof(ServiceCollectionExtensions),
+		ExpamplesNamespace
 	);
 
 	/// <summary>
 	/// The static <c>ServiceInfo</c> class.
 	/// </summary>
-	public static readonly TypeIdentity ServiceInfo = new("ServiceInfo", "Purview.SourceGeneratorFramework.Examples");
+	public static readonly TypeIdentity ServiceInfo = new(nameof(ServiceInfo), ExpamplesNamespace);
 }

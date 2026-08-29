@@ -14,6 +14,8 @@ sealed record AttributeDataModelProperty(
 	bool IsNonNullableReferenceType,
 	bool IsNestedModel,
 	bool IsEnum,
+	bool IsTypeIdentity,
+	bool IsNullableValueType,
 	string? NestedModelTypeName = null
 )
 {

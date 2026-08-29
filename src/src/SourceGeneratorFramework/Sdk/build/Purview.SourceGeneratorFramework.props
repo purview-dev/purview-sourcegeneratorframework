@@ -28,6 +28,7 @@
 			Condition="$(DisablePurviewAttributeDataSourceGenerator) != 'true'"
 			Include="Purview.SourceGeneratorFramework.Generators"
 		/>
+		<Using Include="Purview.SourceGeneratorFramework.XmlCommentWriter" Static="true" />
 	</ItemGroup>
 
 	<ItemGroup>

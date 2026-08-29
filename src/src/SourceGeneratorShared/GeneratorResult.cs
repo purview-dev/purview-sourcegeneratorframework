@@ -48,7 +48,13 @@ public readonly record struct GeneratorResult<T>
 	/// </summary>
 	public bool IsEmpty => this == Empty;
 
-	public static GeneratorResult<T> Ok(T value, ImmutableArray<DiagnosticInfo> diagnostics)
+	/// <summary>
+	/// Creates a successful generator result with the specified value and diagnostics.
+	/// </summary>
+	/// <param name="value">The value of the generator result.</param>
+	/// <param name="diagnostics">The diagnostics associated with the result.</param>
+	/// <returns>A successful generator result.</returns>
+	public static GeneratorResult<T> Create(T value, ImmutableArray<DiagnosticInfo> diagnostics)
 	{
 		var hasValue = value is not null && !EqualityComparer<T>.Default.Equals(value, default!);
 		var hasDiagnostics = !diagnostics.IsDefaultOrEmpty;
@@ -73,8 +79,8 @@ public readonly record struct GeneratorResult<T>
 	/// <param name="value">The value of the generator result.</param>
 	/// <param name="diagnostics">Optional diagnostics associated with the result.</param>
 	/// <returns>A successful generator result.</returns>
-	public static GeneratorResult<T> Ok(T value, params DiagnosticInfo[] diagnostics) =>
-		Ok(
+	public static GeneratorResult<T> Create(T value, params DiagnosticInfo[] diagnostics) =>
+		Create(
 			value,
 			diagnostics is null || diagnostics.Length == 0
 				? EquatableArray<DiagnosticInfo>.Empty
@@ -87,7 +93,7 @@ public readonly record struct GeneratorResult<T>
 	/// <param name="diagnostics">The diagnostics associated with the failure result.</param>
 	/// <returns>A failed generator result.</returns>
 	/// <exception cref="ArgumentException">Thrown when no diagnostics are provided.</exception>
-	public static GeneratorResult<T> Fail(params DiagnosticInfo[] diagnostics)
+	public static GeneratorResult<T> Create(params DiagnosticInfo[] diagnostics)
 	{
 		if (diagnostics is null || diagnostics.Length == 0)
 		{
@@ -107,10 +113,16 @@ public readonly record struct GeneratorResult<T>
 			Diagnostics = EquatableArray<DiagnosticInfo>.Create(diagnostics),
 			HasValue = false,
 			HasDiagnostics = true,
-			ShouldProcess = !hasErrorDiagnostics,
+			ShouldProcess = false,
 			HasErrorDiagnostics = hasErrorDiagnostics,
 		};
 	}
+
+	/// <summary>
+	/// Implicitly converts a value of type T to a successful GeneratorResult{T} with that value and no diagnostics.
+	/// </summary>
+	/// <param name="value">The value to convert to a successful GeneratorResult{T}.</param>
+	public static implicit operator GeneratorResult<T>(T value) => Create(value);
 
 	/// <summary>
 	/// Represents an empty generator result with no value and no diagnostics.
