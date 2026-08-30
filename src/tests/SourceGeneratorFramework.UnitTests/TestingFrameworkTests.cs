@@ -8,6 +8,8 @@ public class TestingFrameworkTests
 	sealed record CustomSourceGeneratorTestOptions : SourceGeneratorTestOptions
 	{
 		public string CustomValue { get; init; } = "custom";
+
+		public static new CustomSourceGeneratorTestOptions Default => new();
 	}
 
 	const string GenerateAttributeSource = """
@@ -335,6 +337,18 @@ namespace Test
 	public async Task Compile_OnCustomDerivedOptions_PreservesConcreteTypeAndProperties()
 	{
 		var options = new CustomSourceGeneratorTestOptions();
+
+		var result = options.Compile();
+
+		await Assert.That(result.CompileToAssembly).IsTrue();
+		await Assert.That(result.GetType()).IsEqualTo(typeof(CustomSourceGeneratorTestOptions));
+		await Assert.That(result.CustomValue).IsEqualTo("custom");
+	}
+
+	[Test]
+	public async Task Compile_OnTypedStaticDefault_PreservesConcreteTypeAndProperties()
+	{
+		var options = CustomSourceGeneratorTestOptions.Default;
 
 		var result = options.Compile();
 

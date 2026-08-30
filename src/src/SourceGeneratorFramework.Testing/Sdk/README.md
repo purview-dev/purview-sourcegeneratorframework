@@ -112,6 +112,20 @@ var options = new SourceGeneratorTestOptions
 var result = await runner.RunAsync(source, options.Compile());
 ```
 
+`Compile()` is an extension method that preserves the concrete options type. A derived options record
+that wants a typed default must hide the inherited `SourceGeneratorTestOptions.Default` with a typed
+static, otherwise `Default.Compile()` returns the base type:
+
+```csharp
+public record MyTestOptions : SourceGeneratorTestOptions
+{
+    public static new MyTestOptions Default => new();
+}
+
+// Returns MyTestOptions with CompileToAssembly enabled.
+var result = await runner.RunAsync(source, MyTestOptions.Default.Compile());
+```
+
 Analyzer options are preserved under their supplied keys. Keys without the Roslyn
 `build_property.` prefix are additionally exposed as compiler-visible MSBuild properties, so either
 `MyGenerator_Disable` or `build_property.MyGenerator_Disable` can be used in tests.

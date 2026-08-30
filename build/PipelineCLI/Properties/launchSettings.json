@@ -1,7 +1,7 @@
 {
   "profiles": {
     "Run": {
-      "commandName": "Project",
+      "commandName": "Project"
     },
     "Local-NuGet": {
       "commandName": "Project",
