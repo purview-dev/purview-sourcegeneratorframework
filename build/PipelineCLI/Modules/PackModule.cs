@@ -9,7 +9,7 @@ using ModularPipelines.Modules;
 namespace Purview.Aspire.ResourceKit.PipelineCLI.Modules;
 
 [ModuleCategory("Build")]
-[DependsOn<BuildModule>]
+[DependsOn<RunTestsModule>]
 [DependsOn<VersionModule>]
 public sealed class PackModule(IOptions<BuildSettings> settings, IOptions<ReleaseSettings> releaseSettings)
 	: Module<CommandResult>
