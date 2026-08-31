@@ -202,7 +202,9 @@ IncrementalPipeline.RegisterSourceOutput(
 
 Treat `GenerationContext` values as cached incremental-pipeline state and each `CodeWriter` as
 mutable, output-scoped execution state. Create the writer inside the registered source-output
-callback, after the incremental cache boundary:
+callback, after the incremental cache boundary. Creating it in the callback and passing it to
+emitter/helper methods called from that same callback is the intended pattern; the only thing that
+is forbidden is persisting the writer in pipeline state, where Roslyn caches it:
 
 ```csharp
 IncrementalPipeline.RegisterSourceOutput(

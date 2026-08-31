@@ -18,7 +18,41 @@ When creating source output, favor this shape:
 5. Write structured types and members using declaration options records.
 6. Add source once per output artifact.
 
-Never store `CodeWriter` in `GenerationContext` or custom contexts.
+### CodeWriter lifetime: created in the output callback, never in pipeline state
+
+The line between "fine" and "forbidden" is the **incremental-cache boundary**, not the act of
+creating a writer or handing it to a helper.
+
+**Fine — output-scoped use inside a `RegisterSourceOutput` callback.** Create the writer inside the
+callback and pass it to any emitter/helper methods called from that same callback. It may be held in
+local variables, passed as a parameter, or wrapped in a short-lived output context:
+
+```csharp
+context.RegisterSourceOutput(
+    targets.CombineWithContext(contextProvider),
+    static (spc, pair) =>
+    {
+        var (model, generationContext) = pair;
+        var writer = generationContext.CreateCodeWriter();
+        EmitHeader(writer, model);
+        EmitType(writer, model);
+        spc.AddSource($"{model.Name}.g.cs", writer.ToString());
+    }
+);
+```
+
+**Forbidden — persisting the writer across the incremental-cache boundary.** Do not create it earlier
+in the pipeline and pass it down, and do not store it anywhere Roslyn caches or another callback can
+observe it:
+
+- Do not create a `CodeWriter` in a provider stage and carry it through the pipeline.
+- Do not store a `CodeWriter` as a property or field on `GenerationContext` or a custom context.
+- Do not return a `CodeWriter` (or an object holding one) from an incremental provider.
+- Do not cache or reuse a writer for a later callback or a different output.
+
+A cached writer can retain previously written source, mix output from concurrently running
+callbacks, and defeat scope tracking. A writer created in the callback and used only within that
+callback is safe and expected.
 
 ## Source generator & analyser best practices
 
@@ -265,14 +299,17 @@ Apply this checklist in order:
 - Manually writing `{` / `}` around methods and types where scope APIs exist.
 - Hard-coded nullable type suffixes and generic syntax in arbitrary strings when `TypeReferenceOptions` is available.
 - Raw XML tag string composition when XML extension methods can enforce consistency.
-- Sharing one `CodeWriter` across multiple generated outputs.
+- Creating a `CodeWriter` before the output callback and passing it through the pipeline.
+- Storing a `CodeWriter` on `GenerationContext`, a custom context, or any incremental pipeline model.
+- Sharing one `CodeWriter` across multiple generated outputs or callbacks.
 - Keeping Roslyn objects, `CodeWriter`, or mutable state in incremental pipeline models.
 
 ## Review checklist for pull requests
 
 - Generated declarations use structured APIs for types and members.
 - XML docs use XML extension methods rather than raw `///` fragments.
-- `CodeWriter` is created per output callback and not cached.
+- `CodeWriter` is created inside each output callback and never persists in pipeline state; passing it
+  to helper methods within that callback is expected.
 - Header and generated attributes are deterministic and consistent.
 - Existing diagnostics, generated member names, and public behavior are preserved.
 - Roslyn objects are removed from pipeline models; `EquatableArray<T>` is used for collections.

@@ -67,7 +67,10 @@ public class PublishLocalNuGetModule(
 		if (!Directory.Exists(fullLocalFeedPath))
 			Directory.CreateDirectory(fullLocalFeedPath);
 
-		var packages = Directory.GetFiles(buildSettings.Value.ArtifactsFolder, "*.s*nupkg").ToArray();
+		var packages = Directory
+			.GetFiles(buildSettings.Value.ArtifactsFolder, "*.nupkg")
+			.Concat(Directory.GetFiles(buildSettings.Value.ArtifactsFolder, "*.snupkg"))
+			.ToArray();
 		if (packages.Length == 0)
 		{
 			throw new InvalidOperationException(

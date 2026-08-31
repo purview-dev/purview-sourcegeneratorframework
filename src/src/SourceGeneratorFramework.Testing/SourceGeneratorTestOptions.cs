@@ -24,6 +24,12 @@ public record SourceGeneratorTestOptions
 	/// <remarks>
 	/// Configure this once during test-assembly initialization, before tests execute in parallel.
 	/// Existing options instances are snapshots and are not changed when this property is updated.
+	/// <para>
+	/// This property is typed as <see cref="SourceGeneratorTestOptions"/>. A derived record that needs
+	/// a default of its own type should hide it with a typed static, for example
+	/// <c>public static new MyTestOptions Default => new();</c>, so fluent extensions such as
+	/// <c>Compile()</c> preserve the derived type.
+	/// </para>
 	/// </remarks>
 	public static SourceGeneratorTestOptions Default
 	{

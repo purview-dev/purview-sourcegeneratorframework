@@ -8,7 +8,7 @@ charset = utf-8
 csharp_style_prefer_method_group_conversion = true:silent
 csharp_style_prefer_primary_constructors = true:suggestion
 csharp_style_prefer_top_level_statements = true:silent
-end_of_line = crlf
+end_of_line = lf
 indent_size = 4
 indent_style = tab
 insert_final_newline = true
@@ -2662,6 +2662,9 @@ dotnet_diagnostic.RCS1205.severity = none
 
 [**/Extensions/**.{cs,vb}]
 dotnet_diagnostic.IDE0130.severity = none
+dotnet_diagnostic.CA1034.severity = none
+
+[**/{Extension,Extensions}.{cs,vb}]
 dotnet_diagnostic.CA1034.severity = none
 
 [**/Generated/**/*.{cs,vb}]

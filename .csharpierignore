@@ -1,1 +1,4 @@
-/src/tests/SourceGeneratorFramework.UnitTests/Resources/**
+**/bin/
+**/obj/
+**/generated/**
+**/Resources/**
