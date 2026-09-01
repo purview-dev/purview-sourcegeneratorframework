@@ -4,8 +4,9 @@ using ModularPipelines.DotNet.Extensions;
 using ModularPipelines.DotNet.Options;
 using ModularPipelines.Models;
 using ModularPipelines.Modules;
+using Purview.SourceGeneratorFramework.PipelineCLI.Settings;
 
-namespace Purview.Aspire.ResourceKit.PipelineCLI.Modules;
+namespace Purview.SourceGeneratorFramework.PipelineCLI.Modules;
 
 [ModuleCategory("Build")]
 public class RestoreModule(IOptions<BuildSettings> settings) : Module<CommandResult>

@@ -1,3 +1,7 @@
+using Purview.SourceGeneratorFramework.PipelineCLI.Helpers;
+using Purview.SourceGeneratorFramework.PipelineCLI.Modules;
+using Purview.SourceGeneratorFramework.PipelineCLI.Settings;
+
 var pipelineDirectory = PipelineProjectDirectory.Find();
 var repositoryRoot = PathHelpers.FindRepositoryRoot(pipelineDirectory);
 
