@@ -11,7 +11,7 @@ public sealed class GenerationContext<TCapabilities>(
 	TCapabilities Capabilities,
 	GenerationSettings Settings,
 	ISourceGenLogger? Logger = null
-) : ISourceGenLogger, IEqualityComparer<GenerationContext<TCapabilities>>
+) : ISourceGenLogger, IEqualityComparer<GenerationContext<TCapabilities>>, IEquatable<GenerationContext<TCapabilities>>
 	where TCapabilities : class, IGenerationCapabilities
 {
 	/// <summary>
@@ -34,6 +34,12 @@ public sealed class GenerationContext<TCapabilities>(
 	/// <inheritdoc />
 	public void Log(SourceGenLogLevel level, int indentation, string message, params object[] args) =>
 		Logger?.Log(level, indentation, message, args);
+
+	/// <inheritdoc cref="IEquatable{T}.Equals(T)" />
+	public bool Equals(GenerationContext<TCapabilities>? other) => Equals(this, other);
+
+	/// <inheritdoc />
+	public override bool Equals(object? obj) => obj is GenerationContext<TCapabilities> other && Equals(other);
 
 	/// <inheritdoc />
 	public bool Equals(GenerationContext<TCapabilities>? x, GenerationContext<TCapabilities>? y) =>
