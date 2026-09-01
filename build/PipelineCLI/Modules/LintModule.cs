@@ -4,8 +4,6 @@ using ModularPipelines.Context;
 using ModularPipelines.DotNet.Extensions;
 using ModularPipelines.Models;
 using ModularPipelines.Modules;
-using Purview.SourceGeneratorFramework.PipelineCLI.Helpers;
-using Purview.SourceGeneratorFramework.PipelineCLI.Settings;
 
 namespace Purview.SourceGeneratorFramework.PipelineCLI.Modules;
 
