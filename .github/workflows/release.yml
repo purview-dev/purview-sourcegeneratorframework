@@ -47,4 +47,5 @@ jobs:
         env:
           Release__Mode: NuGet
           NuGet__ApiKey: ${{ secrets.NUGET__APIKEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: dotnet run --project build/PipelineCLI/PipelineCLI.csproj --configuration Release
