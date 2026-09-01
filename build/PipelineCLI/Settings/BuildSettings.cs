@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Purview.Aspire.ResourceKit.PipelineCLI.Settings;
+namespace Purview.SourceGeneratorFramework.PipelineCLI.Settings;
 
 public sealed class BuildSettings
 {
@@ -21,4 +21,14 @@ public sealed class BuildSettings
 
 	[Required(AllowEmptyStrings = false)]
 	public string TestFilter { get; init; } = "/*/*/*/*/";
+
+	/// <summary>
+	/// Comma-separated list of test project file names (or glob patterns) to run.
+	/// Empty or "*" runs every test project under <c>src/tests</c>.
+	/// </summary>
+	public string TestProjects { get; init; } = "*";
+
+	public bool RunLint { get; init; } = true;
+
+	public bool RunPack { get; init; } = true;
 }

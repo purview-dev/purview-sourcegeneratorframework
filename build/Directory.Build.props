@@ -1,6 +1,6 @@
 <Project>
 	<PropertyGroup>
-		<NamespacePrefix>Purview.Aspire.ResourceKit</NamespacePrefix>
+		<NamespacePrefix>Purview.SourceGeneratorFramework</NamespacePrefix>
 		<ExcludePurviewTelemetry>true</ExcludePurviewTelemetry>
 	</PropertyGroup>
 

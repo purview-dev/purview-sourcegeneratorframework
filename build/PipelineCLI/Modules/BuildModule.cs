@@ -4,7 +4,7 @@ using ModularPipelines.DotNet.Extensions;
 using ModularPipelines.Models;
 using ModularPipelines.Modules;
 
-namespace Purview.Aspire.ResourceKit.PipelineCLI.Modules;
+namespace Purview.SourceGeneratorFramework.PipelineCLI.Modules;
 
 [ModuleCategory("Build")]
 [DependsOn<RestoreModule>]

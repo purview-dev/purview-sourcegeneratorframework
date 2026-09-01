@@ -6,7 +6,7 @@ using ModularPipelines.DotNet.Options;
 using ModularPipelines.Models;
 using ModularPipelines.Modules;
 
-namespace Purview.Aspire.ResourceKit.PipelineCLI.Modules;
+namespace Purview.SourceGeneratorFramework.PipelineCLI.Modules;
 
 [ModuleCategory("Build")]
 [DependsOn<RunTestsModule>]
@@ -18,11 +18,11 @@ public sealed class PackModule(IOptions<BuildSettings> settings, IOptions<Releas
 		ModuleConfiguration
 			.Create()
 			.WithSkipWhen(_ =>
-				releaseSettings.Value.Mode != ReleaseMode.None
-					? SkipDecision.DoNotSkip
-					: SkipDecision.Skip(
-						"Packing is disabled. Set Release__Mode to something other than None to enable it."
+				!settings.Value.RunPack || releaseSettings.Value.Mode == ReleaseMode.None
+					? SkipDecision.Skip(
+						"Packing is disabled. Set Build__RunPack=true and Release__Mode to something other than None to enable it."
 					)
+					: SkipDecision.DoNotSkip
 			)
 			.Build();
 

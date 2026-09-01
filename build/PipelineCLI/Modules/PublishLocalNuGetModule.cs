@@ -6,7 +6,7 @@ using ModularPipelines.Models;
 using ModularPipelines.Modules;
 using NuGet.Versioning;
 
-namespace Purview.Aspire.ResourceKit.PipelineCLI.Modules;
+namespace Purview.SourceGeneratorFramework.PipelineCLI.Modules;
 
 [ModuleCategory("Build")]
 [DependsOn<PackModule>]
@@ -20,16 +20,11 @@ public class PublishLocalNuGetModule(
 		ModuleConfiguration
 			.Create()
 			.WithSkipWhen(ctx =>
-				ctx.IsRunningLocally()
-					? SkipDecision.DoNotSkip
-					: SkipDecision.Skip("Local NuGet Feed publishing is disabled. This module can only be run locally.")
-			)
-			.WithSkipWhen(_ =>
-				releaseSettings.Value.Mode == ReleaseMode.LocalNuGet
-					? SkipDecision.DoNotSkip
-					: SkipDecision.Skip(
-						"Local NuGet Feed publishing is disabled. Set Release__Mode=LocalNuGet to enable it."
+				!ctx.IsRunningLocally() || releaseSettings.Value.Mode != ReleaseMode.LocalNuGet
+					? SkipDecision.Skip(
+						"Local NuGet Feed publishing is disabled. Run the pipeline locally with Release__Mode=LocalNuGet to enable it."
 					)
+					: SkipDecision.DoNotSkip
 			)
 			.Build();
 

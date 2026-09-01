@@ -1,4 +1,4 @@
-namespace Purview.Aspire.ResourceKit.PipelineCLI.Helpers;
+namespace Purview.SourceGeneratorFramework.PipelineCLI.Helpers;
 
 static class TestHelpers
 {
