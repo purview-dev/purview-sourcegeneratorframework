@@ -689,8 +689,9 @@ static class AttributeDataModelLibrary
 
 		if (typeSymbol.TypeKind == TypeKind.Enum)
 		{
+			// ToFullyQualifiedDisplayString already includes the global:: prefix.
 			var enumTypeName = TypeHelpers.ToFullyQualifiedDisplayString(typeSymbol);
-			expression = $"(global::{enumTypeName}){Convert.ToString(value, CultureInfo.InvariantCulture)}";
+			expression = $"({enumTypeName}){Convert.ToString(value, CultureInfo.InvariantCulture)}";
 			return true;
 		}
 

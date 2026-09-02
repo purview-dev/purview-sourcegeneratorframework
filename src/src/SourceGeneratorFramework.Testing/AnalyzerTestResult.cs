@@ -12,5 +12,14 @@ public sealed record CodeFixTestResult(
 	ImmutableArray<Diagnostic> Diagnostics,
 	ImmutableArray<CodeAction> CodeActions,
 	string FixedSource,
-	Compilation Compilation
+	Compilation Compilation,
+	Solution? ChangedSolution = null
+);
+
+/// <summary>The result of a fix-all code fix test run.</summary>
+public sealed record CodeFixFixAllResult(
+	ImmutableArray<Diagnostic> Diagnostics,
+	ImmutableArray<CodeAction> CodeActions,
+	ImmutableDictionary<string, string> FixedSources,
+	Solution ChangedSolution
 );

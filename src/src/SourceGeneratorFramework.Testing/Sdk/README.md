@@ -132,6 +132,71 @@ Analyzer options are preserved under their supplied keys. Keys without the Rosly
 
 See [`SourceGeneratorFramework.Testing.TUnit`](../SourceGeneratorFramework.Testing.TUnit) for a ready-made TUnit integration.
 
+## Querying produced code with `CodeQuery`
+
+Every result type exposes a `CodeQuery` so tests can locate syntax nodes in the produced code:
+
+```csharp
+result.Generated()          // DriverRunResult: generated trees (generated-first default)
+result.Output()             // DriverRunResult: whole output compilation
+analyzerResult.Code()       // AnalyzerTestResult / CodeFixTestResult: input compilation
+codeFixResult.FixedCode()   // CodeFixTestResult: fixed source
+fixAllResult.FixedCode()    // CodeFixFixAllResult / RefactorTestResult: changed documents
+```
+
+`CodeQuery` provides a `Get`/`Has`/`TryGet` family for declarations and members, generic `Get<T>`/`Has<T>`,
+syntax-tree lookup, and type-aware matching against `TypeReference`:
+
+```csharp
+var query = result.Generated();
+query.GetClass("ServiceCollectionExtensions").HasMethod(query, "Add", TypeReference.Create<int>());
+query.HasProperty("Count", TypeReference.Create<int>());
+query.GetMethod("DoWork").HasParameters(query, intType, nullableInt, complexType);
+query.GetClass("Widget", "Example.Models");   // namespace-scoped lookup
+```
+
+`Get` throws `SyntaxNotFoundException` when nothing matches; `Has` returns `bool`. See the
+`source-generator-testing` agent skill for the full reference.
+
+## Refactoring tests
+
+`RefactoringTestRunner<TRefactoring>` runs a `CodeRefactoringProvider` against a test document:
+
+```csharp
+var runner = new RefactoringTestRunner<MyRefactoringProvider>();
+var result = await runner.RunAsync(
+    source,
+    new RefactorTestOptions
+    {
+        NodeSelector = query => query.GetMethod("M"),
+        EquivalenceKey = MyRefactoringProvider.EquivalenceKey,
+    });
+
+result.FixedCode().HasMethod("M");   // query the refactored output
+```
+
+The trigger is a `Span` or a `NodeSelector` (which runs against a `CodeQuery` of the input compilation).
+
+## Incremental cache testing
+
+`SourceGeneratorTestRunner.RunIncrementalAsync` runs the generator over a sequence of source sets using a
+single shared driver and captures each run's tracked incremental steps, so tests can prove each pipeline
+stage caches correctly:
+
+```csharp
+var result = await runner.RunIncrementalAsync([firstSources, secondSources], options);
+
+var reasons = result.Runs[1].Steps["ForAttribute_MyAttribute"]
+    .SelectMany(step => step.Outputs.Select(output => output.Reason));
+```
+
+`RunIncrementalAsync(sources, options, ct)` runs the same source set twice (the common "unchanged rerun is
+cached" case). Per-run MSBuild-property changes use `new IncrementalRunInput(sources, [...])`. Reference
+cache tests live in the `Purview.SourceGeneratorFramework` source repository —
+`SourceGeneratorShared.UnitTests/IncrementalPipelineCacheTests` (framework stages) and
+`SourceGeneratorFramework.ExampleGenerator.UnitTests/ServiceRegistrationCacheTests` (an end-to-end
+generator) — and should be replicated into your own test project rather than copied from the package.
+
 ## License
 
 This project is licensed under the MIT license.

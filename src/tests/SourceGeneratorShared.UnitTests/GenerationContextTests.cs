@@ -32,6 +32,23 @@ public class GenerationContextTests
 	}
 
 	[Test]
+	public async Task CreateCodeWriter_GivenNullableDirectiveSettings_PropagatesToWriter()
+	{
+		var context = CreateGenerationContext(
+			new GenerationSettings("TestGenerator", "1.0.0")
+			{
+				NullableDirectiveMode = NullableDirectiveMode.Disable,
+				IsNullableContextEnabled = true,
+			}
+		);
+
+		var writer = context.CreateCodeWriter();
+
+		await Assert.That(writer.NullableDirectiveMode).IsEqualTo(NullableDirectiveMode.Disable);
+		await Assert.That(writer.IsNullableContextEnabled).IsTrue();
+	}
+
+	[Test]
 	public async Task Constructor_GivenLogger_ExposesLogger()
 	{
 		// Arrange

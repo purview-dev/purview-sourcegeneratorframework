@@ -68,7 +68,12 @@ public abstract class RoslynTestRunner
 				LanguageNames.CSharp
 			)
 			.WithProjectParseOptions(projectId, new CSharpParseOptions(options.LanguageVersion))
-			.WithProjectCompilationOptions(projectId, new CSharpCompilationOptions(options.OutputKind))
+			.WithProjectCompilationOptions(
+				projectId,
+				new CSharpCompilationOptions(options.OutputKind).WithNullableContextOptions(
+					options.NullableContextOptions
+				)
+			)
 			.AddMetadataReferences(projectId, SourceGeneratorHelpers.ResolveReferences(options, componentAssembly));
 
 		var documentIds = ImmutableArray.CreateBuilder<DocumentId>();

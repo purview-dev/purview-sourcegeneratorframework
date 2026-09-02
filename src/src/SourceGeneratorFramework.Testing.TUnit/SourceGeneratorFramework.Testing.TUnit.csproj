@@ -1,9 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeSourceGeneratorShared</TargetsForTfmSpecificContentInPackage>
-		<TargetFrameworks>$(TestingTargetFrameworks)</TargetFrameworks>
+		<TargetFrameworks>netstandard2.0;$(TestingTargetFrameworks)</TargetFrameworks>
 		<IsPackable>true</IsPackable>
 		<AssemblyName>$(RootNamespace)</AssemblyName>
+		<!-- TUnit.Core's netstandard2.0 asset requires System.Collections.Immutable >= 9.0.0, which
+		     conflicts with the repo-wide 8.0.0 pin under transitive pinning. -->
+		<CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
 	</PropertyGroup>
 
 	<ItemGroup>

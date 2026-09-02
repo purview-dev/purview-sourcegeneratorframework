@@ -855,6 +855,45 @@ public readonly partial record struct RequiredAttributeData;
 		await Assert.That(generated).Contains("var value = __valueTc.ToEnumString() ?? \"Test.MyEnum.B\";");
 	}
 
+	[Test]
+	public async Task Generate_EnumLiteralDefaultValue_RendersQualifiedCast(CancellationToken cancellationToken)
+	{
+		var source = """
+			using Purview.SourceGeneratorFramework.Generators;
+
+			namespace Test
+			{
+				public enum LogLevel { Trace, Debug, Information }
+
+				[Generate(typeof(MyAttribute))]
+				public readonly partial record struct MyAttributeData(
+					[Property(DefaultValue = LogLevel.Information)] LogLevel Level
+				);
+
+				public class MyAttribute : System.Attribute
+				{
+					public LogLevel Level { get; set; }
+				}
+			}
+			""";
+
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
+
+		result.AssertNoGenerationExceptions().AssertNoLogErrors();
+
+		var generated = await GetGeneratedStringAsync(
+			result,
+			"MyAttributeData.AttributeDataModel.g.cs",
+			cancellationToken
+		);
+
+		await Assert.That(generated).IsNotNull();
+		await Assert
+			.That(generated)
+			.Contains("attributeData.GetNamedArgument<global::Test.LogLevel>(\"Level\", (global::Test.LogLevel)2);");
+		await Assert.That(generated).DoesNotContain("global::global::");
+	}
+
 	static async Task<string?> GetGeneratedStringAsync(
 		DriverRunResult result,
 		string fileName,

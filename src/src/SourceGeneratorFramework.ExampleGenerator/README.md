@@ -33,6 +33,66 @@ Reference implementation of an incremental C# source generator built with `Purvi
 - Generator disabling via MSBuild properties.
 - Unit testing with `Purview.SourceGeneratorFramework.Testing`.
 
+## Inherited attribute mapping (Log → Debug)
+
+`LogAttribute` and its derived `DebugAttribute` demonstrate mapping an attribute hierarchy with `AttributeDataModelGenerator`. `DebugAttribute` inherits every property from `LogAttribute` but pins `Level` to `LogLevel.Debug`:
+
+```csharp
+[Generate(typeof(LogAttribute), MatchByInheritance = true)]
+public readonly partial record struct LogAttributeData(
+    [Property] string? Message,
+    [Property] int EventId,
+    [Property] string? CategoryName,
+    [Property(DefaultValue = LogLevel.Information)] LogLevel Level
+);
+
+[Generate(typeof(DebugAttribute))]
+public readonly partial record struct DebugAttributeData(
+    [NestedModel] LogAttributeData Log,
+    [Property(DefaultValue = LogLevel.Debug)] LogLevel Level
+);
+```
+
+- `MatchByInheritance = true` makes `LogAttributeData` accept `[Debug]` applications too.
+- `[NestedModel]` reuses the parent's full mapping without duplicating the property list.
+- `[Property(DefaultValue = ...)]` supplies the fallback. Roslyn's `AttributeData` does not surface values assigned inside the attribute constructor body, so the "Debug through inheritance" default is declared on the model rather than relied on from `DebugAttribute`'s constructor.
+
+Tests are in [`LogAttributeDataTests`](../../tests/SourceGeneratorFramework.ExampleGenerator.UnitTests).
+
+## Refactoring sample (Logging)
+
+`LoggingRefactoringProvider` lives in the separate
+[`SourceGeneratorFramework.ExampleGenerator.CodeFixers`](../SourceGeneratorFramework.ExampleGenerator.CodeFixers)
+assembly — Roslyn requires compiler extensions (generators) and code fix/refactoring providers to be in
+separate assemblies, because generators must not reference `Microsoft.CodeAnalysis.Workspaces` (RS1038). It
+adds a `[Debug]` attribute (from the logging sample) to the method under the cursor, and demonstrates the
+refactoring test infrastructure and the `CodeQuery` API for locating the trigger node and asserting on the
+refactored output:
+
+```csharp
+var result = await RefactorAsync(
+    source,
+    new RefactorTestOptions
+    {
+        NodeSelector = query => query.GetMethod("Process"),
+        EquivalenceKey = LoggingRefactoringProvider.EquivalenceKey,
+    },
+    cancellationToken);
+
+var method = result.FixedCode().GetMethod("Process");
+await Assert.That(method.AttributeLists).IsNotEmpty();
+```
+
+Tests are in [`LoggingRefactoringTests`](../../tests/SourceGeneratorFramework.ExampleGenerator.CodeFixers.UnitTests).
+
+## Testing
+
+Tests in [`SourceGeneratorFramework.ExampleGenerator.UnitTests`](../../tests/SourceGeneratorFramework.ExampleGenerator.UnitTests) exercise the `CodeQuery` syntax-lookup API and the TUnit assertion extensions (`HasGeneratedMethod`, `HasGeneratedClass`, `HasGeneratedProperty`, `HasGeneratedField`, `HasGeneratedSyntaxTree`) in addition to the raw generated-text assertions.
+
+### Incremental cache tests
+
+[`ServiceRegistrationCacheTests`](../../tests/SourceGeneratorFramework.ExampleGenerator.UnitTests) proves the pipeline caches correctly stage-by-stage using `GenerateIncrementalAsync`: the first run reports every framework stage as `New`, an identical rerun keeps them `Cached`/`Unchanged`, and a property-only or source-only change marks only the affected stage `Modified`. Other generator projects should mirror this pattern with `RunIncrementalAsync`/`GenerateIncrementalAsync`.
+
 ## Usage
 
 ```csharp

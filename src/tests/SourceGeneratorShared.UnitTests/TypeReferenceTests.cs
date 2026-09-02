@@ -34,6 +34,214 @@ public sealed class TypeReferenceTests
 	}
 
 	// ---------------------------------------------------------------------------------------------
+	// Nullable-aware rendering
+	// ---------------------------------------------------------------------------------------------
+
+	[Test]
+	public async Task RenderFullNameForNullable_GivenDisabledContext_StripsReferenceAnnotationsOnly()
+	{
+		var @string = TypeIdentity.Create<string>();
+		var @int = TypeIdentity.Create<int>();
+
+		await Assert.That(@string.MakeNullable().RenderFullNameForNullable(false)).IsEqualTo("string");
+		await Assert.That(@string.MakeNullable().RenderFullNameForNullable(true)).IsEqualTo("string?");
+		await Assert.That(@int.MakeNullable().RenderFullNameForNullable(false)).IsEqualTo("int?");
+		await Assert.That(@int.MakeNullable().RenderFullNameForNullable(true)).IsEqualTo("int?");
+	}
+
+	[Test]
+	public async Task RenderFullNameForNullable_GivenArrayAnnotations_StripsThem()
+	{
+		var @string = TypeIdentity.Create<string>();
+
+		await Assert.That(@string.MakeNullable().MakeArray().RenderFullNameForNullable(false)).IsEqualTo("string[]");
+		await Assert
+			.That(@string.MakeNullable().MakeArray().Nullable().RenderFullNameForNullable(false))
+			.IsEqualTo("string[]");
+		await Assert.That(@string.MakeArray().Nullable().RenderFullNameForNullable(false)).IsEqualTo("string[]");
+	}
+
+	[Test]
+	public async Task RenderFullNameForNullable_GivenValueTypeArray_KeepsNullableElement()
+	{
+		var @int = TypeIdentity.Create<int>();
+
+		await Assert.That(@int.MakeNullable().MakeArray().RenderFullNameForNullable(false)).IsEqualTo("int?[]");
+	}
+
+	[Test]
+	public async Task RenderFullNameForNullable_GivenUnknownType_KeepsAnnotation()
+	{
+		var unknown = new TypeIdentity("MyClass", "Sample").MakeNullable();
+
+		await Assert.That(unknown.RenderFullNameForNullable(false)).IsEqualTo("global::Sample.MyClass?");
+	}
+
+	[Test]
+	public async Task RenderFullNameForNullable_ThreadsThroughGenericArguments()
+	{
+		var list = new TypeIdentity(typeof(List<>)).MakeGeneric(TypeIdentity.Create<string>().MakeNullable());
+		var reference = list.AsTypeReference();
+
+		await Assert
+			.That(reference.RenderFullNameForNullable(true))
+			.IsEqualTo("global::System.Collections.Generic.List<string?>");
+		await Assert
+			.That(reference.RenderFullNameForNullable(false))
+			.IsEqualTo("global::System.Collections.Generic.List<string>");
+	}
+
+	// ---------------------------------------------------------------------------------------------
+	// Conditional nullable composition
+	// ---------------------------------------------------------------------------------------------
+
+	[Test]
+	public async Task Nullable_GivenDisabledSettings_DoesNotAppendAnnotation()
+	{
+		var settings = new GenerationSettings("TestGenerator", "1.0.0") { IsNullableContextEnabled = false };
+		var @string = TypeIdentity.Create<string>();
+
+		await Assert.That(@string.MakeNullable(settings).RenderFullName).IsEqualTo("string");
+		await Assert.That(@string.MakeNullable(settings).IsNullable).IsFalse();
+	}
+
+	[Test]
+	public async Task Nullable_GivenEnabledOrUnknownSettings_AppendsAnnotation()
+	{
+		var enabled = new GenerationSettings("TestGenerator", "1.0.0") { IsNullableContextEnabled = true };
+		var unknown = new GenerationSettings("TestGenerator", "1.0.0");
+
+		await Assert.That(TypeIdentity.Create<string>().MakeNullable(enabled).RenderFullName).IsEqualTo("string?");
+		await Assert.That(TypeIdentity.Create<string>().MakeNullable(unknown).RenderFullName).IsEqualTo("string?");
+	}
+
+	[Test]
+	public async Task Nullable_GivenWriterContext_BehavesLikeSettings()
+	{
+		var disabled = new CodeWriter(
+			new GenerationSettings("TestGenerator", "1.0.0") { IsNullableContextEnabled = false }
+		);
+		var enabled = new CodeWriter(
+			new GenerationSettings("TestGenerator", "1.0.0") { IsNullableContextEnabled = true }
+		);
+		var @string = TypeIdentity.Create<string>();
+
+		await Assert.That(@string.MakeNullable(disabled).RenderFullName).IsEqualTo("string");
+		await Assert.That(@string.MakeNullable(enabled).RenderFullName).IsEqualTo("string?");
+	}
+
+	[Test]
+	public async Task Nullable_GivenNullSettingsOrWriter_Throws()
+	{
+		var @string = TypeIdentity.Create<string>();
+
+		await Assert.That(() => @string.MakeNullable((GenerationSettings)null!)).Throws<ArgumentNullException>();
+		await Assert.That(() => @string.MakeNullable((CodeWriter)null!)).Throws<ArgumentNullException>();
+	}
+
+	// ---------------------------------------------------------------------------------------------
+	// Similarity (nullable reference annotations are metadata)
+	// ---------------------------------------------------------------------------------------------
+
+	[Test]
+	public async Task Similar_IgnoresNullableReferenceAnnotations()
+	{
+		var @string = TypeIdentity.Create<string>();
+
+		await Assert.That(@string.MakeNullable().Similar(@string.AsTypeReference())).IsTrue();
+		await Assert.That(@string.AsTypeReference().Similar(@string.MakeNullable())).IsTrue();
+		await Assert.That(TypeModifier.NullableReference).IsEqualTo(TypeModifier.Nullable);
+	}
+
+	[Test]
+	public async Task Similar_KeepsNullableValueTypesSignificant()
+	{
+		var @int = TypeIdentity.Create<int>();
+
+		await Assert.That(@int.MakeNullable().Similar(@int.AsTypeReference())).IsFalse();
+		await Assert.That(@int.MakeNullable()).IsNotEqualTo(@int.AsTypeReference());
+	}
+
+	[Test]
+	public async Task Equality_RemainsStructural_GivenReferenceAnnotationDifference()
+	{
+		var @string = TypeIdentity.Create<string>();
+
+		await Assert.That(@string.MakeNullable()).IsNotEqualTo(@string.AsTypeReference());
+		await Assert.That(@string.MakeNullable() == @string.AsTypeReference()).IsFalse();
+	}
+
+	[Test]
+	public async Task Equality_MixedTypeIdentityAndTypeReference_ComparesStructurally()
+	{
+		var @string = TypeIdentity.Create<string>();
+		var plain = @string.AsTypeReference();
+		var nullable = @string.AsTypeReference().Nullable();
+
+		await Assert.That(@string == plain).IsTrue();
+		await Assert.That(plain == @string).IsTrue();
+		await Assert.That(@string != nullable).IsTrue();
+		await Assert.That(nullable != @string).IsTrue();
+		await Assert.That(@string == nullable).IsFalse();
+		await Assert.That(nullable == @string).IsFalse();
+	}
+
+	[Test]
+	public async Task Equality_MixedTypeIdentityAndTypeReference_NullableValueTypeIsSignificant()
+	{
+		var @int = TypeIdentity.Create<int>();
+		var nullableInt = @int.AsTypeReference().Nullable();
+
+		await Assert.That(@int == nullableInt).IsFalse();
+		await Assert.That(nullableInt == @int).IsFalse();
+		await Assert.That(@int != nullableInt).IsTrue();
+	}
+
+	[Test]
+	public async Task Similar_GivenNestedGeneric_DiffersOnlyByReferenceAnnotation_ReturnsTrue()
+	{
+		// IEnumerable<KeyValuePair<string, object>> versus
+		// IEnumerable<KeyValuePair<string, object?>> — the annotation is metadata, so the two are similar.
+		var withObject = TypeIdentity.Create<IEnumerable<KeyValuePair<string, object>>>().AsTypeReference();
+		var withNullableObject = new TypeIdentity(typeof(IEnumerable<>))
+			.MakeGeneric(
+				new TypeReference(
+					new TypeIdentity("KeyValuePair", "System.Collections.Generic").MakeGeneric(
+						TypeIdentity.Create<string>().AsTypeReference(),
+						TypeIdentity.Create<object>().AsTypeReference().Nullable()
+					)
+				)
+			)
+			.AsTypeReference();
+
+		await Assert.That(withNullableObject.Similar(withObject)).IsTrue();
+		await Assert.That(withObject.Similar(withNullableObject)).IsTrue();
+		await Assert.That(withNullableObject).IsNotEqualTo(withObject);
+	}
+
+	[Test]
+	public async Task Similar_GivenSymbolSource_ComparesEqualToHandBuiltReference()
+	{
+		var symbol = TestCompilation.FieldType(
+			"public System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, object>> Value = null!;"
+		);
+		var handBuilt = new TypeIdentity(typeof(IEnumerable<>))
+			.MakeGeneric(
+				new TypeReference(
+					new TypeIdentity("KeyValuePair", "System.Collections.Generic").MakeGeneric(
+						TypeIdentity.Create<string>().AsTypeReference(),
+						TypeIdentity.Create<object>().AsTypeReference().Nullable()
+					)
+				)
+			)
+			.AsTypeReference();
+
+		await Assert.That(handBuilt.Similar(symbol)).IsTrue();
+		await Assert.That(handBuilt.Matches(symbol)).IsTrue();
+		await Assert.That(TypeReference.Create(symbol).Similar(handBuilt)).IsTrue();
+	}
+
+	// ---------------------------------------------------------------------------------------------
 	// Round-tripping from symbols
 	// ---------------------------------------------------------------------------------------------
 
