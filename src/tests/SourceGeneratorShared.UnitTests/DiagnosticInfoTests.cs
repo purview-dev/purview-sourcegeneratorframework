@@ -60,4 +60,46 @@ public class DiagnosticInfoTests
 		await Assert.That(diagnostic.Location.SourceSpan.End).IsEqualTo(7);
 		await Assert.That(diagnostic.Location.GetLineSpan().Path).IsEqualTo("Test.cs");
 	}
+
+	[Test]
+	public async Task EqualDiagnostics_WithFreshArgumentArrays_CompareEqual()
+	{
+		var first = DiagnosticInfo.Create(TestDescriptor, (Location?)null, "first");
+		var second = DiagnosticInfo.Create(TestDescriptor, (Location?)null, "first");
+
+		await Assert.That(first).IsEqualTo(second);
+		await Assert.That(first.GetHashCode()).IsEqualTo(second.GetHashCode());
+	}
+
+	[Test]
+	public async Task EqualDiagnostics_WithAdditionalLocations_CompareEqual()
+	{
+		var locations = new[]
+		{
+			Location.Create(
+				"File.cs",
+				new TextSpan(0, 5),
+				new LinePositionSpan(new LinePosition(0, 0), new LinePosition(0, 5))
+			),
+			Location.Create(
+				"File.cs",
+				new TextSpan(8, 3),
+				new LinePositionSpan(new LinePosition(1, 0), new LinePosition(1, 3))
+			),
+		};
+		var first = DiagnosticInfo.Create(TestDescriptor, locations, "value");
+		var second = DiagnosticInfo.Create(TestDescriptor, locations, "value");
+
+		await Assert.That(first).IsEqualTo(second);
+		await Assert.That(first.GetHashCode()).IsEqualTo(second.GetHashCode());
+	}
+
+	[Test]
+	public async Task DifferentMessageArgs_AreNotEqual()
+	{
+		var first = DiagnosticInfo.Create(TestDescriptor, (Location?)null, "first");
+		var second = DiagnosticInfo.Create(TestDescriptor, (Location?)null, "second");
+
+		await Assert.That(first).IsNotEqualTo(second);
+	}
 }

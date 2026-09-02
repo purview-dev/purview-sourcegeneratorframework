@@ -10,9 +10,5 @@ sealed record AttributeDataModelTarget(
 	bool MatchByInheritance,
 	bool AutoDiscover,
 	EquatableArray<string> PrimaryConstructorArguments,
-	EquatableArray<AttributeDataModelProperty> Properties,
-	EquatableArray<DiagnosticInfo> Diagnostics
-)
-{
-	public bool HasDiagnostics => !Diagnostics.IsEmpty;
-}
+	EquatableArray<AttributeDataModelProperty> Properties
+);

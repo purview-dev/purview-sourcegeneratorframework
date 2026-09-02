@@ -2,7 +2,6 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Purview.SourceGeneratorFramework.Generators.Helpers;
 
 namespace Purview.SourceGeneratorFramework.Generators;
 
@@ -278,7 +277,7 @@ public readonly partial record struct RequiredAttributeData;
 	}
 
 	[Test]
-	public async Task Generate_NestedModelNotGenerated_ReportsDiagnostic(CancellationToken cancellationToken)
+	public async Task Generate_NestedModelNotGenerated_SkipsGeneration(CancellationToken cancellationToken)
 	{
 		var source = """
 			using Purview.SourceGeneratorFramework.Generators;
@@ -297,7 +296,15 @@ public readonly partial record struct RequiredAttributeData;
 
 		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
-		await Assert.That(result).HasDiagnostic(DiagnosticLibrary.NestedModelNotGenerated);
+		// ADM0004 is reported by the analyzer; the generator only skips processing the invalid model.
+		await Assert.That(result.DriverResult.Diagnostics).DoesNotContain(d => d.Id == "ADM0004");
+
+		var generated = await GetGeneratedStringAsync(
+			result,
+			"RequiredAttributeData.AttributeDataModel.g.cs",
+			cancellationToken
+		);
+		await Assert.That(generated).IsNull();
 	}
 
 	[Test]
@@ -334,7 +341,7 @@ public readonly partial record struct RequiredAttributeData;
 	}
 
 	[Test]
-	public async Task Generate_StringTarget_WithAutoDiscover_ReportsDiagnostic(CancellationToken cancellationToken)
+	public async Task Generate_StringTarget_WithAutoDiscover_SkipsGeneration(CancellationToken cancellationToken)
 	{
 		var source = """
 			using Purview.SourceGeneratorFramework.Generators;
@@ -349,7 +356,15 @@ public readonly partial record struct RequiredAttributeData;
 
 		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
-		await Assert.That(result.DriverResult.Diagnostics).Contains(d => d.Id == "ADM0007");
+		// ADM0007 is reported by the analyzer; the generator only skips processing the invalid model.
+		await Assert.That(result.DriverResult.Diagnostics).DoesNotContain(d => d.Id == "ADM0007");
+
+		var generated = await GetGeneratedStringAsync(
+			result,
+			"RequiredAttributeData.AttributeDataModel.g.cs",
+			cancellationToken
+		);
+		await Assert.That(generated).IsNull();
 	}
 
 	[Test]
@@ -397,9 +412,7 @@ public readonly partial record struct RequiredAttributeData;
 	}
 
 	[Test]
-	public async Task Generate_TypedConstantWithStringDefault_ReportsUnsupportedDefaultDiagnostic(
-		CancellationToken cancellationToken
-	)
+	public async Task Generate_TypedConstantWithStringDefault_SkipsGeneration(CancellationToken cancellationToken)
 	{
 		var source = """
 			using Microsoft.CodeAnalysis;
@@ -418,7 +431,15 @@ public readonly partial record struct RequiredAttributeData;
 
 		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
 
-		await Assert.That(result.DriverResult.Diagnostics).Contains(d => d.Id == "ADM0005");
+		// ADM0005 is reported by the analyzer; the generator only skips processing the invalid model.
+		await Assert.That(result.DriverResult.Diagnostics).DoesNotContain(d => d.Id == "ADM0005");
+
+		var generated = await GetGeneratedStringAsync(
+			result,
+			"TestAttributeData.AttributeDataModel.g.cs",
+			cancellationToken
+		);
+		await Assert.That(generated).IsNull();
 	}
 
 	[Test]

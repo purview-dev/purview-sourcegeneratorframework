@@ -19,29 +19,17 @@ public sealed class TestGenerator : IIncrementalGenerator
 			predicate: static (node, _) => node is Microsoft.CodeAnalysis.CSharp.Syntax.ClassDeclarationSyntax
 		);
 
-		var inputs = isDisabled
-			.CombineWith(
-				context.CompilationProvider.Select(static (compilation, _) => compilation.AssemblyName ?? "Unknown"),
-				static (disabled, assemblyName, _) => new GenerationInputs(disabled, assemblyName),
-				"CreateGenerationInputs"
-			)
-			.CollectWith(
-				targets,
-				static (state, collectedTargets, _) => state with { Targets = collectedTargets },
-				"AddGenerationTargets"
-			);
-
+		// Combine each target with the global disable flag so output stays per-item and only the
+		// affected target invalidates on change, rather than collecting everything into one aggregate.
 		context.RegisterSourceOutput(
-			inputs,
-			static (spc, source) =>
+			targets.CombineWith(isDisabled, static (target, disabled, _) => (target, disabled)),
+			static (spc, pair) =>
 			{
-				if (source.IsDisabled)
+				var (target, isDisabled) = pair;
+				if (isDisabled)
 					return;
 
-				foreach (var target in source.Targets)
-				{
-					spc.AddSource($"{target.Name}.g.cs", $"partial class {target.Name} {{ }}");
-				}
+				spc.AddSource($"{target.Name}.g.cs", $"partial class {target.Name} {{ }}");
 			}
 		);
 	}
