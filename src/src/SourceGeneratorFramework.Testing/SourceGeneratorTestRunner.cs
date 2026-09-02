@@ -77,9 +77,7 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		Assembly? assembly = null;
 		ImmutableArray<Diagnostic> compilationDiagnostics = [];
 		if (options.CompileToAssembly)
-		{
-			(assembly, compilationDiagnostics) = await CompileToAssemblyAsync(outputCompilation, cancellationToken);
-		}
+			(assembly, compilationDiagnostics) = CompileToAssembly(outputCompilation, cancellationToken);
 
 		var excludedGeneratedSource = ExcludeGeneratedSources(result, options.ExcludeGeneratedSourceHintNames);
 
@@ -91,6 +89,123 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 			excludedGeneratedSource,
 			[.. logEntries]
 		);
+	}
+
+	/// <summary>
+	/// Runs the generator against a sequence of source sets using a single shared driver, capturing each run's
+	/// tracked incremental steps so tests can prove which pipeline stages were recomputed (<c>Modified</c>) and
+	/// which were reused (<c>Cached</c>/<c>Unchanged</c>) between runs.
+	/// </summary>
+	public Task<IncrementalCacheResult> RunIncrementalAsync(
+		IEnumerable<IncrementalRunInput> inputs,
+		SourceGeneratorTestOptions? options = null,
+		CancellationToken cancellationToken = default
+	) => Task.FromResult(RunIncremental(inputs, options, cancellationToken));
+
+	/// <summary>
+	/// Runs the generator against the same source set twice using a single shared driver, the common case for
+	/// proving that an unchanged input is fully cached on the second run.
+	/// </summary>
+	public Task<IncrementalCacheResult> RunIncrementalAsync(
+		IEnumerable<string> sources,
+		SourceGeneratorTestOptions? options = null,
+		CancellationToken cancellationToken = default
+	) =>
+		RunIncrementalAsync(
+			[new IncrementalRunInput(sources), new IncrementalRunInput(sources)],
+			options,
+			cancellationToken
+		);
+
+	/// <summary>
+	/// Runs the generator incrementally over the supplied source sets and returns each run's tracked steps.
+	/// </summary>
+	public IncrementalCacheResult RunIncremental(
+		IEnumerable<IncrementalRunInput> inputs,
+		SourceGeneratorTestOptions? options = null,
+		CancellationToken cancellationToken = default
+	)
+	{
+		var materializedInputs = inputs?.ToList() ?? throw new ArgumentNullException(nameof(inputs));
+		if (materializedInputs.Count == 0)
+			throw new ArgumentException("At least one run is required.", nameof(inputs));
+
+		options ??= new();
+		if (options.AnalyzerOptions is not null && options.CompilationWithAnalyzersOptions is not null)
+		{
+			throw new ArgumentException(
+				$"{nameof(options.AnalyzerOptions)} and {nameof(options.CompilationWithAnalyzersOptions)} cannot be provided at the same time.",
+				nameof(options)
+			);
+		}
+
+		TGenerator generator = new();
+		var loggingSessionId = options.EnableLogging ? Guid.NewGuid().ToString("N") : null;
+		var driver = CreateDriver(generator, options, loggingSessionId);
+		var references = SourceGeneratorHelpers.ResolveReferences(options, typeof(TGenerator).Assembly);
+		var runs = ImmutableArray.CreateBuilder<IncrementalCacheRun>(materializedInputs.Count);
+		var compilationCache = new Dictionary<string, Compilation>(StringComparer.Ordinal);
+
+		foreach (var input in materializedInputs)
+		{
+			// Reuse the compilation for identical source sets so Roslyn can report the unchanged pipeline
+			// stages as cached rather than modified on the second run.
+			var key = string.Join("\u0001", input.Sources.Select(source => PrepareSource(source, options)));
+			if (!compilationCache.TryGetValue(key, out var compilation))
+			{
+				compilation = BuildCompilation(input.Sources, options, references, cancellationToken);
+				compilationCache[key] = compilation;
+			}
+
+			if (input.AnalyzerConfig is not null)
+			{
+				var analyzerOptions = BuildAnalyzerConfig(options, loggingSessionId, input.AnalyzerConfig);
+				driver = driver.WithUpdatedAnalyzerConfigOptions(
+					new TestAnalyzerConfigOptionsProvider(analyzerOptions)
+				);
+			}
+
+			driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out _, out _, cancellationToken);
+			runs.Add(CaptureRun(driver));
+		}
+
+		return new(runs.ToImmutable());
+	}
+
+	static CSharpCompilation BuildCompilation(
+		IEnumerable<string> sources,
+		SourceGeneratorTestOptions options,
+		ImmutableArray<MetadataReference> references,
+		CancellationToken cancellationToken
+	)
+	{
+		if (!options.AdditionalSources.IsDefaultOrEmpty)
+			sources = sources.Concat(options.AdditionalSources);
+
+		var syntaxTrees = sources
+			.Select(source =>
+				CSharpSyntaxTree.ParseText(
+					PrepareSource(source, options),
+					encoding: System.Text.Encoding.UTF8,
+					options: new CSharpParseOptions(options.LanguageVersion),
+					cancellationToken: cancellationToken
+				)
+			)
+			.ToImmutableArray();
+
+		return SourceGeneratorHelpers.CreateCompilation(syntaxTrees, references, options);
+	}
+
+	static IncrementalCacheRun CaptureRun(GeneratorDriver driver)
+	{
+		var runResult = driver.GetRunResult().Results.FirstOrDefault(run => run.Generator is not null);
+		var steps = runResult.Generator is null
+#pragma warning disable IDE0301
+			? ImmutableDictionary<string, ImmutableArray<IncrementalGeneratorRunStep>>.Empty
+#pragma warning restore IDE0301
+			: runResult.TrackedSteps;
+
+		return new(runResult, steps);
 	}
 
 	static async Task<AnalyzerCompilationRunResult?> GetAnalyzerResultsAsync(
@@ -147,19 +262,36 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		GeneratorDriver driver = CSharpGeneratorDriver.Create(
 			[generator.AsSourceGenerator()],
 			additionalTexts: options.AdditionalText,
-			parseOptions: new(options.LanguageVersion)
+			parseOptions: new(options.LanguageVersion),
+			driverOptions: new GeneratorDriverOptions(
+				IncrementalGeneratorOutputKind.None,
+				trackIncrementalGeneratorSteps: true
+			)
 		);
 
+		var analyzerOptions = BuildAnalyzerConfig(options, loggingSessionId);
+		if (analyzerOptions.Count > 0)
+			driver = driver.WithUpdatedAnalyzerConfigOptions(new TestAnalyzerConfigOptionsProvider(analyzerOptions));
+
+		return driver;
+	}
+
+	static Dictionary<string, string> BuildAnalyzerConfig(
+		SourceGeneratorTestOptions options,
+		string? loggingSessionId,
+		IEnumerable<(string Key, string Value)>? overrides = null
+	)
+	{
 		Dictionary<string, string> analyzerOptions = new(options.AnalyzerConfigOptions)
 		{
 			[SourceGeneratorBuildProperties.ValidateCodeWriterScopes] = options.ValidateCodeWriterScopes.ToString(),
 			[SourceGeneratorBuildProperties.EnableLogging] = options.EnableLogging.ToString(),
 		};
 
-		foreach (var (key, value) in options.AnalyzerConfigOptions)
+		foreach (var pair in options.AnalyzerConfigOptions)
 		{
-			if (!key.StartsWith(SourceGeneratorBuildProperties.BuildProperty, StringComparison.Ordinal))
-				analyzerOptions.TryAdd(SourceGeneratorBuildProperties.BuildProperty + key, value);
+			if (!pair.Key.StartsWith(SourceGeneratorBuildProperties.BuildProperty, StringComparison.Ordinal))
+				analyzerOptions[SourceGeneratorBuildProperties.BuildProperty + pair.Key] = pair.Value;
 		}
 
 		if (loggingSessionId is not null)
@@ -176,10 +308,13 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 			analyzerOptions[disablePropertyName] = options.DisableSourceGeneratorValue.Value.ToString();
 		}
 
-		if (analyzerOptions.Count > 0)
-			driver = driver.WithUpdatedAnalyzerConfigOptions(new TestAnalyzerConfigOptionsProvider(analyzerOptions));
+		if (overrides is not null)
+		{
+			foreach (var (key, value) in overrides)
+				analyzerOptions[key] = value;
+		}
 
-		return driver;
+		return analyzerOptions;
 	}
 
 	static LoggingRegistrations? ConfigureLogging(
@@ -256,12 +391,12 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		}
 	}
 
-	static async Task<(Assembly?, ImmutableArray<Diagnostic>)> CompileToAssemblyAsync(
+	static (Assembly?, ImmutableArray<Diagnostic>) CompileToAssembly(
 		Compilation compilation,
 		CancellationToken cancellationToken
 	)
 	{
-		await using var assemblyStream = new MemoryStream();
+		MemoryStream assemblyStream = new();
 		var emitResult = compilation.Emit(assemblyStream, cancellationToken: cancellationToken);
 
 		if (!emitResult.Success)

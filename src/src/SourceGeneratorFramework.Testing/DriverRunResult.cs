@@ -50,7 +50,7 @@ public sealed record class DriverRunResult(
 			.Where(d => d.Severity == DiagnosticSeverity.Error)
 			.ToList();
 		var logErrors = LogEntries.Where(e => e.Type == SourceGenLogLevel.Fatal).ToList();
-		var compilationErrorKeys = compilationErrors.Select(GetDiagnosticKey).ToHashSet();
+		var compilationErrorKeys = new HashSet<string>(compilationErrors.Select(GetDiagnosticKey));
 		var emitErrors = CompilationResult
 			.Diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
 			.Where(diagnostic => !compilationErrorKeys.Contains(GetDiagnosticKey(diagnostic)))

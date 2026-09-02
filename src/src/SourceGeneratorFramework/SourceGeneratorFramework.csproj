@@ -1,14 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFrameworks></TargetFrameworks>
-		<TargetFramework>netstandard2.0</TargetFramework>
-		<IsPackable>true</IsPackable>
-		<!-- This library is loaded inside the compiler alongside the generator, but it must
-		     remain normal package build output and therefore is not an IsRoslynComponent. -->
-		<DisableSourceLink>true</DisableSourceLink>
-		<NoWarn>$(NoWarn);CS1591;</NoWarn>
-		<AssemblyName>$(RootNamespace)</AssemblyName>
-		<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+		<IsRoslynComponent>true</IsRoslynComponent>
 		<TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeSourceGeneratorShared;IncludeAnalyzerAssembly</TargetsForTfmSpecificContentInPackage>
 	</PropertyGroup>
 

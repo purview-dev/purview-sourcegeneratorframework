@@ -97,6 +97,50 @@ public abstract class SourceGeneratorTestBase<TGenerator, TOptions>(ITestOutput 
 	}
 
 	/// <summary>
+	/// Runs the generator incrementally over the supplied source sets using a single shared driver, so tests can
+	/// inspect each pipeline stage's cache reason per run.
+	/// </summary>
+	/// <summary>
+	/// Runs the generator incrementally over the supplied source sets using a single shared driver, so tests can
+	/// inspect each pipeline stage's cache reason per run.
+	/// </summary>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage(
+		"Performance",
+		"CA1849:Call async methods when in an async method"
+	)]
+	protected Task<IncrementalCacheResult> GenerateIncrementalAsync(
+		IEnumerable<IncrementalRunInput> inputs,
+		TOptions? options = null,
+		CancellationToken cancellationToken = default
+	)
+	{
+		if (inputs is null)
+			throw new ArgumentNullException(nameof(inputs));
+
+		options ??= new();
+		var allSources = inputs.SelectMany(input => input.Sources).ToList();
+		options = OnBeforeRun(allSources, options, cancellationToken);
+		options = OnBeforeRunAsync(allSources, options, cancellationToken).GetAwaiter().GetResult();
+
+		return _runner.RunIncrementalAsync(inputs, options, cancellationToken);
+	}
+
+	/// <summary>
+	/// Runs the generator against the same source set twice using a single shared driver, proving that an
+	/// unchanged input is fully cached on the second run.
+	/// </summary>
+	protected Task<IncrementalCacheResult> GenerateIncrementalAsync(
+		IEnumerable<string> sources,
+		TOptions? options = null,
+		CancellationToken cancellationToken = default
+	) =>
+		GenerateIncrementalAsync(
+			[new IncrementalRunInput(sources), new IncrementalRunInput(sources)],
+			options,
+			cancellationToken
+		);
+
+	/// <summary>
 	/// Called after the generator is run, allowing for inspection of the results.
 	/// </summary>
 	/// <param name="result">The result of the generator run.</param>

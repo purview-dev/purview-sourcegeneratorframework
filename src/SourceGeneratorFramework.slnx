@@ -22,6 +22,7 @@
 		<Project Path="src/SourceGeneratorShared/SourceGeneratorShared.csproj" />
 	</Folder>
 	<Folder Name="/src/examples/">
+		<Project Path="src/SourceGeneratorFramework.ExampleGenerator.CodeFixers/SourceGeneratorFramework.ExampleGenerator.CodeFixers.csproj" />
 		<Project Path="src/SourceGeneratorFramework.ExampleGenerator/SourceGeneratorFramework.ExampleGenerator.csproj" />
 	</Folder>
 	<Folder Name="/tests/">
@@ -36,6 +37,7 @@
 		<Project Path="tests/SourceGeneratorShared.UnitTests/SourceGeneratorShared.UnitTests.csproj" />
 	</Folder>
 	<Folder Name="/tests/examples/">
+		<Project Path="tests/SourceGeneratorFramework.ExampleGenerator.CodeFixers.UnitTests/SourceGeneratorFramework.ExampleGenerator.CodeFixers.UnitTests.csproj" />
 		<Project Path="tests/SourceGeneratorFramework.ExampleGenerator.UnitTests/SourceGeneratorFramework.ExampleGenerator.UnitTests.csproj" />
 	</Folder>
 </Solution>

@@ -89,6 +89,66 @@ compatible Roslyn version (Roslyn 4.13 for a .NET 8–10 test matrix) and avoid 
 `RegisterEmbeddedAttribute` helper can be used instead of Roslyn 4.14's
 `AddEmbeddedAttributeDefinition` API when .NET 8 compatibility is required.
 
+## Which base class and method
+
+| Roslyn type | Base class | Method |
+|---|---|---|
+| Generator | `TUnitSourceGeneratorTestBase<TGenerator>` | `GenerateAsync(source, options, ct)` |
+| Diagnostic analyzer | `TUnitDiagnosticAnalyzerTestBase<TAnalyzer>` | `AnalyzeAsync(source, options, ct)` |
+| Code fix (single) | `TUnitCodeFixTestBase<TAnalyzer, TCodeFix>` | `ApplyCodeFixAsync(source, options, ct)` |
+| Code fix (fix-all) | `TUnitCodeFixTestBase<TAnalyzer, TCodeFix>` | `ApplyFixAllAsync(sources, options, ct)` |
+| Refactoring | `TUnitRefactoringTestBase<TRefactoring>` | `RefactorAsync(source, options, ct)` |
+
+For cache tests, `TUnitSourceGeneratorTestBase` also exposes `GenerateIncrementalAsync(...)`.
+
+## Easy starting point: derived options
+
+Derive a `SourceGeneratorTestOptions` record that seeds namespaces and additional assemblies, then pass it
+to every test:
+
+```csharp
+public sealed record MyTestOptions : SourceGeneratorTestOptions
+{
+    public MyTestOptions()
+    {
+        AdditionalNamespaces = AdditionalNamespaces.Add("My.Namespace");
+        AdditionalAssemblyTypes = AdditionalAssemblyTypes.AddRange(typeof(SomeDependencyType), typeof(TypeIdentity));
+        DisableSourceGeneratorPropertyName = "DisableMyGenerator";
+    }
+}
+
+public class MyGeneratorTests : TUnitSourceGeneratorTestBase<MyGenerator, MyTestOptions> { ... }
+```
+
+Use `options.Compile()` for `CompileToAssembly`, and the `OnBeforeRun`/`OnBeforeRunAsync`/`OnAfterRun`
+hooks for per-run customisation. Code-fix/refactoring tests select actions with `EquivalenceKey` or
+`CodeActionIndex` (and `RefactorTestOptions.NodeSelector`/`Span`).
+
+## Assertion extensions
+
+All assertion extensions are under `Purview.SourceGeneratorFramework.Testing.TUnit.Assertions` (globally
+imported). `await Assert.That(...)` is terminal and returns the value:
+
+- `HasGeneratedMethod` / `HasGeneratedMethodReturnType` / `HasGeneratedClass` / `HasGeneratedProperty` /
+  `HasGeneratedField` / `HasGeneratedSyntaxTree` — return the syntax node; `HasGeneratedMethod(name, TypeReference[])`
+  matches parameter types.
+- `HasFixedMethod` — same for code-fix and refactoring results.
+- `HasDiagnostic` / `HasDiagnostics` / `HasNoDiagnostics` / `DoesNotHaveDiagnostic` / `HasNoErrorDiagnostics`.
+- `HasSymbol(TypeIdentity)` / `HasSymbol("Namespace.Type")`.
+- `GeneratesCode(expected)` / `ContainsGeneratedCode(expected)` (whitespace-flattened).
+
+```csharp
+MethodDeclarationSyntax method = await Assert.That(result).HasGeneratedMethod("DoWork", [intType, nullableInt]);
+await Assert.That(result).HasGeneratedSyntaxTree("Service.g.cs");
+```
+
+## Incremental cache tests
+
+`GenerateIncrementalAsync` proves the pipeline caches stage-by-stage (first run `New`, identical rerun
+`Cached`/`Unchanged`, targeted changes mark only the affected stage `Modified`). A reference
+implementation (`ServiceRegistrationCacheTests`) lives in the `Purview.SourceGeneratorFramework` source
+repository's example generator tests; replicate it in your own project with your own stage names.
+
 ## License
 
 This project is licensed under the MIT license.

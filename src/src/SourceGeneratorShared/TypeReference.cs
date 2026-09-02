@@ -96,48 +96,71 @@ public sealed record TypeReference
 	/// <summary>
 	/// Gets the fully-qualified reference as it should be rendered in generated code.
 	/// </summary>
+	/// <remarks>
+	/// Equivalent to <see cref="RenderFullNameForNullable(bool)"/> with <see langword="true"/>, so nullable
+	/// reference annotations are always rendered.
+	/// </remarks>
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0072:Add missing cases")]
-	public string RenderFullName
+	public string RenderFullName => RenderFullNameForNullable(nullableSupported: true);
+
+	/// <summary>
+	/// Gets the fully-qualified reference as it should be rendered in generated code.
+	/// </summary>
+	/// <param name="nullableSupported">
+	/// When <see langword="false"/>, nullable <i>reference</i> annotations (<c>string?</c>) are elided because
+	/// they are invalid outside a nullable context. Nullable <i>value</i> types (<c>int?</c>) and unclassified
+	/// annotations are always rendered.
+	/// </param>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0072:Add missing cases")]
+	public string RenderFullNameForNullable(bool nullableSupported)
 	{
-		get
+		var core = Kind switch
 		{
-			var core = Kind switch
+			TypeReferenceKind.Named => Identity.RenderFullNameForNullable(nullableSupported),
+			TypeReferenceKind.TypeParameter => TypeParameterName ?? string.Empty,
+			TypeReferenceKind.Dynamic => "dynamic",
+			_ => string.Empty,
+		};
+
+		if (Modifiers.IsDefaultOrEmpty)
+			return core;
+
+		StringBuilder builder = new(core);
+
+		// `?` and `*` read innermost-first, but a run of array declarators reads outermost-first:
+		// `int[][,]` is a rank-1 array of rank-2 arrays. Each contiguous array run is therefore emitted
+		// in reverse.
+		var index = 0;
+		while (index < Modifiers.Length)
+		{
+			if (Modifiers[index].Kind != TypeModifierKind.Array)
 			{
-				TypeReferenceKind.Named => Identity.RenderFullName,
-				TypeReferenceKind.TypeParameter => TypeParameterName ?? string.Empty,
-				TypeReferenceKind.Dynamic => "dynamic",
-				_ => string.Empty,
-			};
+				var modifier = Modifiers[index];
+				if (ShouldRender(modifier, nullableSupported))
+					builder.Append(modifier.Suffix);
+				index++;
 
-			if (Modifiers.IsDefaultOrEmpty)
-				return core;
-
-			StringBuilder builder = new(core);
-
-			// `?` and `*` read innermost-first, but a run of array declarators reads outermost-first:
-			// `int[][,]` is a rank-1 array of rank-2 arrays. Each contiguous array run is therefore emitted
-			// in reverse.
-			var index = 0;
-			while (index < Modifiers.Length)
-			{
-				if (Modifiers[index].Kind != TypeModifierKind.Array)
-				{
-					builder.Append(Modifiers[index].Suffix);
-					index++;
-
-					continue;
-				}
-
-				var start = index;
-				while (index < Modifiers.Length && Modifiers[index].Kind == TypeModifierKind.Array)
-					index++;
-
-				for (var reverse = index - 1; reverse >= start; reverse--)
-					builder.Append(Modifiers[reverse].Suffix);
+				continue;
 			}
 
-			return builder.ToString();
+			var start = index;
+			while (index < Modifiers.Length && Modifiers[index].Kind == TypeModifierKind.Array)
+				index++;
+
+			for (var reverse = index - 1; reverse >= start; reverse--)
+				builder.Append(Modifiers[reverse].Suffix);
 		}
+
+		return builder.ToString();
+	}
+
+	static bool ShouldRender(TypeModifier modifier, bool nullableSupported)
+	{
+		if (modifier.Kind != TypeModifierKind.Nullable)
+			return true;
+
+		// Nullable value types and unclassified annotations are always rendered, because they are part of the type identity.
+		return nullableSupported || modifier.NullableKind != NullableModifierKind.Reference;
 	}
 
 	/// <summary>
@@ -189,13 +212,93 @@ public sealed record TypeReference
 	// ---------------------------------------------------------------------------------------------
 
 	/// <summary>Appends a nullable annotation.</summary>
-	public TypeReference Nullable() => Append(TypeModifier.Nullable);
+	/// <remarks>
+	/// The annotation is classified from the annotated type where possible, so a nullable value type such as
+	/// <c>int?</c> is never elided when the target compilation does not support nullable annotations, while a
+	/// nullable reference annotation such as <c>string?</c> is.
+	/// </remarks>
+	public TypeReference Nullable() => AppendNullable(TypeModifier.Nullable);
+
+	/// <summary>
+	/// Appends a nullable annotation if the given settings indicate that nullable context is enabled or unknown.
+	/// </summary>
+	/// <param name="settings">The generation settings to use.</param>
+	/// <returns>The modified type reference.</returns>
+	/// <exception cref="ArgumentNullException">If <paramref name="settings"/> is <see langword="null"/>.</exception>
+	public TypeReference Nullable(GenerationSettings settings) =>
+		settings == null ? throw new ArgumentNullException(nameof(settings))
+		: settings.IsNullableContextEnabled is null or true ? AppendNullable(TypeModifier.Nullable)
+		: this;
+
+	/// <summary>
+	/// Appends a nullable annotation if the given settings indicate that nullable context is enabled or unknown.
+	/// </summary>
+	/// <param name="writer">The code writer to use.</param>
+	/// <returns>The modified type reference.</returns>
+	/// <exception cref="ArgumentNullException">If <paramref name="writer"/> is <see langword="null"/>.</exception>
+	public TypeReference Nullable(CodeWriter writer) =>
+		writer == null ? throw new ArgumentNullException(nameof(writer))
+		: writer.IsNullableContextEnabled is null or true ? AppendNullable(TypeModifier.Nullable)
+		: this;
 
 	/// <summary>Appends an array of the given rank.</summary>
 	public TypeReference MakeArray(int rank = 1) => Append(TypeModifier.Array(rank));
 
 	/// <summary>Appends a pointer indirection.</summary>
 	public TypeReference MakePointer() => Append(TypeModifier.PointerModifier);
+
+	TypeReference AppendNullable(TypeModifier nullable)
+	{
+		if (nullable.Kind == TypeModifierKind.Nullable && nullable.NullableKind == NullableModifierKind.Unknown)
+		{
+			var inferred = InferNullableKind();
+			if (inferred != NullableModifierKind.Unknown)
+				nullable = nullable with { NullableKind = inferred };
+		}
+
+		return Append(nullable);
+	}
+
+	/// <summary>
+	/// Classifies a nullable annotation appended to this reference from the annotated type, when it can be
+	/// determined without a compilation. Arrays and <see langword="dynamic"/> are reference types; pointers are
+	/// value types; a keyword <see cref="TypeIdentity"/> answers from its runtime <see cref="Type"/>; anything
+	/// else is unknown.
+	/// </summary>
+	NullableModifierKind InferNullableKind()
+	{
+		if (!Modifiers.IsDefaultOrEmpty)
+		{
+			foreach (var modifier in Modifiers)
+			{
+				if (modifier.Kind == TypeModifierKind.Array)
+					return NullableModifierKind.Reference;
+				if (modifier.Kind == TypeModifierKind.PointerModifier)
+					return NullableModifierKind.ValueType;
+			}
+		}
+
+#pragma warning disable IDE0072 // Add missing cases
+		return Kind switch
+		{
+			TypeReferenceKind.Named => InferNamedNullableKind(Identity),
+			TypeReferenceKind.Dynamic => NullableModifierKind.Reference,
+			_ => NullableModifierKind.Unknown,
+		};
+#pragma warning restore IDE0072 // Add missing cases
+	}
+
+	static NullableModifierKind InferNamedNullableKind(TypeIdentity identity)
+	{
+		if (identity.SpecialType == SpecialType.None)
+			return NullableModifierKind.Unknown;
+
+		var mapping = KnownLangTypes.Get(identity.SpecialType);
+
+		return mapping.IsEmpty ? NullableModifierKind.Unknown
+			: mapping.Type.IsValueType ? NullableModifierKind.ValueType
+			: NullableModifierKind.Reference;
+	}
 
 	TypeReference Append(TypeModifier modifier)
 	{
@@ -304,12 +407,29 @@ public sealed record TypeReference
 	public bool Equals(TypeIdentity other) => IsPlainNamedType && Identity.Equals(other);
 
 	/// <summary>
+	/// Compares this reference against an identity. Because both types define implicit conversions to one
+	/// another, this operator pins the comparison so that <c>reference == identity</c> resolves without the
+	/// ambiguity that the two record <c>==</c> operators would otherwise introduce. The reference matches only
+	/// when it is an unmodified reference to the identity.
+	/// </summary>
+	public static bool operator ==(TypeReference? left, TypeIdentity right) =>
+		left is not null && left.IsPlainNamedType && left.Identity.Equals(right);
+
+	/// <summary>Negates <see cref="operator ==(TypeReference?, TypeIdentity)"/>.</summary>
+	public static bool operator !=(TypeReference? left, TypeIdentity right) => !(left == right);
+
+	/// <summary>
 	/// Determines whether the specified reference describes the same composed type.
 	/// </summary>
 	/// <remarks>
 	/// Declared explicitly because the synthesised record equality would compare
 	/// <see cref="ImmutableArray{T}"/> by its default comparer, which is reference equality on the underlying
 	/// array rather than structural equality of the modifiers.
+	/// <para>
+	/// This comparison is structural: nullable reference annotations are significant, so <c>string?</c> is not
+	/// equal to <c>string</c>. Use <see cref="Similar(TypeReference?)"/> when annotations should be treated as
+	/// metadata.
+	/// </para>
 	/// </remarks>
 	public bool Equals(TypeReference? other)
 	{
@@ -339,6 +459,90 @@ public sealed record TypeReference
 
 		return true;
 	}
+
+	/// <summary>
+	/// Determines whether the specified reference describes the same composed type, ignoring nullable
+	/// <i>reference</i> annotations.
+	/// </summary>
+	/// <remarks>
+	/// Nullable reference annotations are metadata rather than identity, so a provable reference annotation
+	/// (<see cref="NullableModifierKind.Reference"/>) is ignored on either side. Nullable <i>value</i> types
+	/// and unclassified annotations remain significant, so <c>int?</c> is never similar to <c>int</c> while
+	/// <c>string?</c> is similar to <c>string</c>.
+	/// </remarks>
+	public bool Similar(TypeReference? other)
+	{
+		if (ReferenceEquals(this, other))
+			return true;
+
+		if (other is null || Kind != other.Kind)
+			return false;
+
+		if (!string.Equals(TypeParameterName, other.TypeParameterName, StringComparison.Ordinal))
+			return false;
+
+		if (Kind == TypeReferenceKind.Named && !Identity.Similar(other.Identity))
+			return false;
+
+		var index = 0;
+		var otherIndex = 0;
+		var count = Modifiers.IsDefaultOrEmpty ? 0 : Modifiers.Length;
+		var otherCount = other.Modifiers.IsDefaultOrEmpty ? 0 : other.Modifiers.Length;
+
+		while (index < count || otherIndex < otherCount)
+		{
+			var modifier = index < count ? Modifiers[index] : (TypeModifier?)null;
+			var otherModifier = otherIndex < otherCount ? other.Modifiers[otherIndex] : (TypeModifier?)null;
+
+			if (IsReferenceAnnotation(modifier))
+			{
+				index++;
+				continue;
+			}
+
+			if (IsReferenceAnnotation(otherModifier))
+			{
+				otherIndex++;
+				continue;
+			}
+
+			if (modifier is null || otherModifier is null)
+				return false;
+
+			if (
+				modifier.Value.Kind != otherModifier.Value.Kind
+				|| modifier.Value.Rank != otherModifier.Value.Rank
+				|| modifier.Value.NullableKind != otherModifier.Value.NullableKind
+			)
+				return false;
+
+			index++;
+			otherIndex++;
+		}
+
+		return true;
+	}
+
+	static bool IsReferenceAnnotation(TypeModifier? modifier) =>
+		modifier is { Kind: TypeModifierKind.Nullable, NullableKind: NullableModifierKind.Reference };
+
+	/// <summary>
+	/// Determines whether the type of the specified symbol is similar to this reference, ignoring nullable
+	/// reference annotations.
+	/// </summary>
+	/// <remarks>
+	/// An alias for <see cref="Matches(ITypeSymbol?)"/> retained for call-site ergonomics.
+	/// </remarks>
+	public bool Similar(ITypeSymbol? other) => Matches(other);
+
+	/// <summary>
+	/// Determines whether the type of the specified member symbol is similar to this reference, ignoring
+	/// nullable reference annotations.
+	/// </summary>
+	/// <remarks>
+	/// An alias for <see cref="Matches(ISymbol?)"/> retained for call-site ergonomics.
+	/// </remarks>
+	public bool Similar(ISymbol? other) => Matches(other);
 
 	/// <inheritdoc />
 	public override int GetHashCode()
@@ -459,7 +663,7 @@ public sealed record TypeReference
 		while (true)
 		{
 			if (current.IsReferenceType && current.NullableAnnotation == NullableAnnotation.Annotated)
-				modifiers.Add(TypeModifier.Nullable);
+				modifiers.Add(TypeModifier.NullableReference);
 
 			switch (current)
 			{
@@ -478,7 +682,7 @@ public sealed record TypeReference
 				case INamedTypeSymbol nullable
 					when nullable.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T
 						&& nullable.TypeArguments.Length == 1:
-					modifiers.Add(TypeModifier.Nullable);
+					modifiers.Add(TypeModifier.NullableValueType);
 					current = nullable.TypeArguments[0];
 
 					continue;
@@ -549,7 +753,7 @@ public sealed record TypeReference
 			var underlying = System.Nullable.GetUnderlyingType(current);
 			if (underlying is not null)
 			{
-				modifiers.Add(TypeModifier.Nullable);
+				modifiers.Add(TypeModifier.NullableValueType);
 				current = underlying;
 
 				continue;

@@ -8,9 +8,7 @@ namespace Purview.SourceGeneratorFramework.Testing;
 
 static class SourceGeneratorHelpers
 {
-	public static readonly string[] TrustedAssemblies = (
-		(string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") ?? ""
-	).Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries);
+	public static readonly string[] TrustedAssemblies = ResolveTrustedAssemblies();
 
 	public static ImmutableArray<MetadataReference> ResolveTrustedReferences { get; } =
 		CreateMetadataReferences(TrustedAssemblies);
@@ -31,7 +29,7 @@ static class SourceGeneratorHelpers
 			options.CompilationAssemblyName,
 			syntaxTrees,
 			references,
-			new CSharpCompilationOptions(options.OutputKind)
+			new CSharpCompilationOptions(options.OutputKind).WithNullableContextOptions(options.NullableContextOptions)
 		);
 	}
 
@@ -81,6 +79,24 @@ static class SourceGeneratorHelpers
 		builder.AppendLine();
 
 		return builder.Append(source).ToString();
+	}
+
+	static string[] ResolveTrustedAssemblies()
+	{
+		var trusted = (string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") ?? string.Empty;
+		if (!string.IsNullOrWhiteSpace(trusted))
+			return trusted.Split([Path.PathSeparator], StringSplitOptions.RemoveEmptyEntries);
+
+		// .NET Framework does not populate TRUSTED_PLATFORM_ASSEMBLIES; fall back to the loaded
+		// framework assemblies so test compilations still have their core references.
+		return
+		[
+			.. AppDomain
+				.CurrentDomain.GetAssemblies()
+				.Where(static assembly => !assembly.IsDynamic && !string.IsNullOrEmpty(assembly.Location))
+				.Select(static assembly => assembly.Location)
+				.Distinct(StringComparer.OrdinalIgnoreCase),
+		];
 	}
 
 	static ImmutableArray<MetadataReference> CreateMetadataReferences(string[] paths)

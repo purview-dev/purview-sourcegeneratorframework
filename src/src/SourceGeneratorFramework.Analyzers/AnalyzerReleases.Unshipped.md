@@ -1,4 +1,5 @@
 ### New Rules
+
 Rule ID | Category | Severity | Notes
 --------|----------|----------|-------
 PSGF001 | Purview.SourceGeneratorFramework | Error | Generation capabilities must be a record
@@ -6,4 +7,14 @@ PSGFR11 | Purview.SourceGeneratorFramework | Warning | Prefer ForAttributeWithMe
 PSGFR12 | Purview.SourceGeneratorFramework | Warning | Use IIncrementalGenerator instead of ISourceGenerator
 PSGFR14 | Purview.SourceGeneratorFramework | Warning | Avoid RegisterImplementationSourceOutput
 PSGFR15 | Purview.SourceGeneratorFramework | Warning | Pipeline model collection lacks sequence equality
+PSGFR16 | Purview.SourceGeneratorFramework | Info | Prefer the nullable-context overload
+ADM0001 | Target | Error | Target attribute type cannot be resolved
+ADM0002 | Property | Error | Property type is not supported for attribute extraction
+ADM0003 | Source | Error | Specified constructor index/name does not exist on the target attribute
+ADM0004 | NestedModel | Error | Nested model type is not annotated with GenerateAttributeDataModel
+ADM0005 | DefaultValue | Error | Default value cannot be emitted for the property type
+ADM0006 | DefaultValue | Error | Non-nullable reference type property requires a default value
+ADM0007 | AutoDiscovery | Error | Auto-discovery requires a target attribute type
+ADM0008 | TypeArgument | Error | Type argument property type must be TypeIdentity
+ADM0009 | Property | Error | IsEnum property must be a string type
 ADM0010 | Property | Error | Attribute data model property type is not cacheable |

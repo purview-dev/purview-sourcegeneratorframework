@@ -1,4 +1,5 @@
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Purview.SourceGeneratorFramework.Logging;
 
 namespace Purview.SourceGeneratorFramework.Helpers;
@@ -34,6 +35,15 @@ public static class IncrementalPipeline
 		if (!propertyName.StartsWith(SourceGeneratorBuildProperties.BuildProperty, StringComparison.Ordinal))
 			msbuildPropertyValue = SourceGeneratorBuildProperties.BuildProperty + propertyName;
 
+		// Use the bare property name for the tracking name so cache tests reference the human-readable
+		// stage (for example GetMSBuildPropertyValue_EmitServiceInfo) rather than the build_property.* key.
+		var trackingName = propertyName.StartsWith(
+			SourceGeneratorBuildProperties.BuildProperty,
+			StringComparison.Ordinal
+		)
+			? propertyName.Substring(SourceGeneratorBuildProperties.BuildProperty.Length)
+			: propertyName;
+
 		// All valid...
 		return context
 			.AnalyzerConfigOptionsProvider.Select(
@@ -44,7 +54,7 @@ public static class IncrementalPipeline
 					return converter(value);
 				}
 			)
-			.WithTrackingName($"GetMSBuildPropertyValue_{propertyName}");
+			.WithTrackingName($"GetMSBuildPropertyValue_{trackingName}");
 	}
 
 	/// <summary>
@@ -93,6 +103,7 @@ public static class IncrementalPipeline
 						ValidateCodeWriterScopes = configuration.ValidateCodeWriterScopes,
 						IsSourceGeneratorDisabled = configuration.IsSourceGeneratorDisabled,
 						IsLoggingEnabled = logger is not null,
+						IsNullableContextEnabled = IsNullableContextEnabled(compilation),
 					};
 
 					var capabilities = factory(compilation, settings, logger, cancellationToken);
@@ -102,6 +113,20 @@ public static class IncrementalPipeline
 			)
 			.WithTrackingName($"GetGenerationContext_{typeof(TCapabilities).Name}");
 	}
+
+	/// <summary>
+	/// Determines whether the compilation has nullable annotations enabled, which is the case when
+	/// the compilation options allow nullable annotations. Returns <see langword="null"/> when the
+	/// compilation is not a C# compilation.
+	/// </summary>
+#pragma warning disable format
+	static bool? IsNullableContextEnabled(Compilation compilation) =>
+		compilation
+			is CSharpCompilation
+			{
+				Options.NullableContextOptions: NullableContextOptions.Annotations or NullableContextOptions.Enable
+			};
+#pragma warning restore format
 
 	static IncrementalValueProvider<GenerationConfiguration> GenerationConfigurationValueProvider(
 		IncrementalGeneratorInitializationContext context,

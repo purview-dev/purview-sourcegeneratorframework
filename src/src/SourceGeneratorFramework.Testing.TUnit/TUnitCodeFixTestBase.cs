@@ -32,4 +32,18 @@ public abstract class TUnitCodeFixTestBase<TAnalyzer, TCodeFix, TOptions>
 		TOptions options,
 		CancellationToken cancellationToken = default
 	) => _runner.RunAsync(source, options ?? new(), cancellationToken);
+
+	/// <summary>Runs the analyzer and applies the code fix to every diagnostic in the project.</summary>
+	protected Task<CodeFixFixAllResult> ApplyFixAllAsync(
+		IEnumerable<string> sources,
+		TOptions? options = null,
+		CancellationToken cancellationToken = default
+	) => _runner.RunFixAllAsync(sources, options ?? new(), cancellationToken);
+
+	/// <summary>Runs the analyzer and applies the code fix to every diagnostic in the project.</summary>
+	protected Task<CodeFixFixAllResult> ApplyFixAllAsync(
+		string source,
+		TOptions? options = null,
+		CancellationToken cancellationToken = default
+	) => _runner.RunFixAllAsync([source], options ?? new(), cancellationToken);
 }

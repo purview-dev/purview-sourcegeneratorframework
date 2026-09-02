@@ -320,20 +320,30 @@ public readonly record struct TypeIdentity
 	/// <summary>
 	/// Gets the fully-qualified global type name for use in generated code.
 	/// </summary>
-	public string RenderFullName => RenderFullNameCore(omitAttributeSuffix: false);
+	public string RenderFullName => RenderFullNameForNullable(nullableSupported: true);
+
+	/// <summary>
+	/// Gets the fully-qualified global type name for use in generated code.
+	/// </summary>
+	/// <param name="nullableSupported">
+	/// When <see langword="false"/>, nullable reference annotations on generic arguments (such as the
+	/// <c>string?</c> in <c>List&lt;string?&gt;</c>) are elided.
+	/// </param>
+	public string RenderFullNameForNullable(bool nullableSupported) =>
+		RenderFullNameCore(omitAttributeSuffix: false, nullableSupported);
 
 	/// <summary>
 	/// Gets the fully-qualified name for use in an attribute application, omitting the optional
 	/// <c>Attribute</c> suffix from the outer type name.
 	/// </summary>
-	public string RenderAttributeName => RenderFullNameCore(omitAttributeSuffix: true);
+	public string RenderAttributeName => RenderFullNameCore(omitAttributeSuffix: true, nullableSupported: true);
 
-	string RenderFullNameCore(bool omitAttributeSuffix)
+	string RenderFullNameCore(bool omitAttributeSuffix, bool nullableSupported)
 	{
 		if (SpecialType != SpecialType.None)
 			return Keyword!;
 
-		var name = RenderTypeNameCore(omitAttributeSuffix);
+		var name = RenderTypeNameCore(omitAttributeSuffix, nullableSupported);
 		if (IsNested)
 			name = $"{string.Join(".", ContainingTypes.Select(static type => type.RenderTypeName))}.{name}";
 
@@ -343,15 +353,15 @@ public readonly record struct TypeIdentity
 	/// <summary>
 	/// Gets the type name suitable for use in generated code, without namespace or containing types.
 	/// </summary>
-	public string RenderTypeName => RenderTypeNameCore(omitAttributeSuffix: false);
+	public string RenderTypeName => RenderTypeNameCore(omitAttributeSuffix: false, nullableSupported: true);
 
 	/// <summary>
 	/// Gets the unqualified type name for use in an attribute application, omitting the optional
 	/// <c>Attribute</c> suffix while retaining generic arguments.
 	/// </summary>
-	public string RenderAttributeTypeName => RenderTypeNameCore(omitAttributeSuffix: true);
+	public string RenderAttributeTypeName => RenderTypeNameCore(omitAttributeSuffix: true, nullableSupported: true);
 
-	string RenderTypeNameCore(bool omitAttributeSuffix)
+	string RenderTypeNameCore(bool omitAttributeSuffix, bool nullableSupported)
 	{
 		if (SpecialType != SpecialType.None)
 			return Keyword!;
@@ -367,7 +377,7 @@ public readonly record struct TypeIdentity
 		// Render the open generic definition with commas for each type parameter, or the constructed form with
 		return TypeArguments.IsDefaultOrEmpty
 			? $"{name}<{new string(',', GenericArity - 1)}>"
-			: $"{name}<{string.Join(", ", TypeArguments.Select(static argument => argument.RenderFullName))}>";
+			: $"{name}<{string.Join(", ", TypeArguments.Select(argument => argument.RenderFullNameForNullable(nullableSupported)))}>";
 	}
 
 	/// <summary>
@@ -470,6 +480,54 @@ public readonly record struct TypeIdentity
 		&& TypeArgumentsEqual(TypeArguments, other.TypeArguments);
 
 	/// <summary>
+	/// Determines whether the specified value represents the same type, ignoring nullable <i>reference</i>
+	/// annotations on generic arguments.
+	/// </summary>
+	/// <remarks>
+	/// Nullable reference annotations are metadata rather than identity, so a provable reference annotation
+	/// is ignored. Nullable <i>value</i> types remain significant, so <c>int?</c> is never similar to
+	/// <c>int</c>.
+	/// </remarks>
+	public bool Similar(TypeIdentity other) =>
+		string.Equals(Name, other.Name, StringComparison.Ordinal)
+		&& GenericArity == other.GenericArity
+		&& SpecialType == other.SpecialType
+		&& string.Equals(Namespace, other.Namespace, StringComparison.Ordinal)
+		&& string.Equals(Keyword, other.Keyword, StringComparison.Ordinal)
+		&& ContainingTypesEqual(ContainingTypes, other.ContainingTypes)
+		&& TypeArgumentsSimilar(TypeArguments, other.TypeArguments);
+
+	/// <summary>
+	/// Determines whether the type of the specified symbol is similar to this type, ignoring nullable
+	/// reference annotations.
+	/// </summary>
+	/// <remarks>
+	/// An alias for <see cref="Matches(ITypeSymbol?)"/> retained for call-site ergonomics.
+	/// </remarks>
+	public bool Similar(ITypeSymbol? other) => Matches(other);
+
+	/// <summary>
+	/// Determines whether the type of the specified member symbol is similar to this type, ignoring nullable
+	/// reference annotations.
+	/// </summary>
+	/// <remarks>
+	/// An alias for <see cref="Matches(ISymbol?)"/> retained for call-site ergonomics.
+	/// </remarks>
+	public bool Similar(ISymbol? other) => Matches(other);
+
+	/// <summary>
+	/// Compares this identity against a reference. Because both types define implicit conversions to one
+	/// another, this operator pins the comparison so that <c>identity == reference</c> resolves without the
+	/// ambiguity that the two record <c>==</c> operators would otherwise introduce. The reference matches only
+	/// when it is an unmodified reference to this identity.
+	/// </summary>
+	public static bool operator ==(TypeIdentity left, TypeReference? right) =>
+		right is not null && right.IsPlainNamedType && right.Identity.Equals(left);
+
+	/// <summary>Negates <see cref="operator ==(TypeIdentity, TypeReference?)"/>.</summary>
+	public static bool operator !=(TypeIdentity left, TypeReference? right) => !(left == right);
+
+	/// <summary>
 	/// Returns a structural hash code for this type, its containing types and its generic arguments.
 	/// </summary>
 	public override int GetHashCode()
@@ -512,6 +570,10 @@ public readonly record struct TypeIdentity
 
 	/// <summary>Creates a nullable structured type reference.</summary>
 	public TypeReference MakeNullable() => AsTypeReference().Nullable();
+
+	public TypeReference MakeNullable(GenerationSettings settings) => AsTypeReference().Nullable(settings);
+
+	public TypeReference MakeNullable(CodeWriter writer) => AsTypeReference().Nullable(writer);
 
 	/// <summary>Creates an array structured type reference with the specified rank.</summary>
 	public TypeReference MakeArray(int rank = 1) => AsTypeReference().MakeArray(rank);
@@ -637,7 +699,7 @@ public readonly record struct TypeIdentity
 	/// </summary>
 	/// <remarks>
 	/// Runtime <see cref="Type"/> values do not retain nullable-reference annotations. To represent
-	/// <c>string?</c>, create the <c>string</c> value then call <see cref="MakeNullable"/>, or use
+	/// <c>string?</c>, create the <c>string</c> value then call <see cref="MakeNullable()"/>, or use
 	/// <see cref="TypeReference.TryCreate(ITypeSymbol?, out TypeReference)"/> when working
 	/// with Roslyn symbols.
 	/// </remarks>
@@ -848,6 +910,23 @@ public readonly record struct TypeIdentity
 		for (var index = 0; index < leftCount; index++)
 		{
 			if (!Equals(left[index], right[index]))
+				return false;
+		}
+
+		return true;
+	}
+
+	static bool TypeArgumentsSimilar(ImmutableArray<TypeReference> left, ImmutableArray<TypeReference> right)
+	{
+		var leftCount = left.IsDefaultOrEmpty ? 0 : left.Length;
+		var rightCount = right.IsDefaultOrEmpty ? 0 : right.Length;
+
+		if (leftCount != rightCount)
+			return false;
+
+		for (var index = 0; index < leftCount; index++)
+		{
+			if (!left[index].Similar(right[index]))
 				return false;
 		}
 

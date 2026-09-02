@@ -86,6 +86,154 @@ public class XmlCommentWriterTests
 			.IsEqualTo("/// <cref cref=\"string\">\n/// first\n/// second\n/// </cref>\n");
 	}
 
+	// ---------------------------------------------------------------------------------------------
+	// cref-safe rendering
+	// ---------------------------------------------------------------------------------------------
+
+	[Test]
+	public async Task ToXmlCref_KeywordType_RendersKeyword()
+	{
+		await Assert.That(XmlCommentWriter.ToXmlCref(new TypeIdentity(typeof(string)))).IsEqualTo("string");
+		await Assert.That(XmlCommentWriter.ToXmlCref(new TypeIdentity(typeof(int)))).IsEqualTo("int");
+	}
+
+	[Test]
+	public async Task ToXmlCref_NamedType_RendersGlobalPrefixedName()
+	{
+		await Assert
+			.That(XmlCommentWriter.ToXmlCref(new TypeIdentity(typeof(ArgumentException))))
+			.IsEqualTo("global::System.ArgumentException");
+	}
+
+	[Test]
+	public async Task ToXmlCref_ConstructedGeneric_UsesBraceForm()
+	{
+		var dictionary = new TypeIdentity(typeof(Dictionary<,>)).MakeGeneric(
+			TypeIdentity.Create<string>(),
+			TypeIdentity.Create<int>()
+		);
+
+		await Assert
+			.That(XmlCommentWriter.ToXmlCref(dictionary))
+			.IsEqualTo("global::System.Collections.Generic.Dictionary{string,int}");
+	}
+
+	[Test]
+	public async Task ToXmlCref_OpenGeneric_UsesReadablePlaceholders()
+	{
+		await Assert
+			.That(XmlCommentWriter.ToXmlCref(new TypeIdentity(typeof(List<>))))
+			.IsEqualTo("global::System.Collections.Generic.List{T0}");
+		await Assert
+			.That(XmlCommentWriter.ToXmlCref(new TypeIdentity(typeof(Dictionary<,>))))
+			.IsEqualTo("global::System.Collections.Generic.Dictionary{T0,T1}");
+	}
+
+	[Test]
+	public async Task ToXmlCref_NestedType_RendersDottedChain()
+	{
+		var nested = new TypeIdentity(typeof(Dictionary<,>)).Nested("Entry");
+
+		await Assert
+			.That(XmlCommentWriter.ToXmlCref(nested))
+			.IsEqualTo("global::System.Collections.Generic.Dictionary{T0,T1}.Entry");
+	}
+
+	[Test]
+	public async Task ToXmlCref_TypeReference_ValueTypeNullable_UsesNullableWrapper()
+	{
+		await Assert
+			.That(XmlCommentWriter.ToXmlCref(TypeIdentity.Create<int>().MakeNullable()))
+			.IsEqualTo("global::System.Nullable{int}");
+	}
+
+	[Test]
+	public async Task ToXmlCref_TypeReference_ReferenceAnnotation_IsOmitted()
+	{
+		await Assert.That(XmlCommentWriter.ToXmlCref(TypeIdentity.Create<string>().MakeNullable())).IsEqualTo("string");
+	}
+
+	[Test]
+	public async Task ToXmlCref_TypeReference_ComposesModifiers()
+	{
+		await Assert.That(XmlCommentWriter.ToXmlCref(TypeIdentity.Create<int>().MakeArray())).IsEqualTo("int[]");
+		await Assert.That(XmlCommentWriter.ToXmlCref(TypeIdentity.Create<int>().MakeArray(2))).IsEqualTo("int[,]");
+		await Assert.That(XmlCommentWriter.ToXmlCref(TypeIdentity.Create<int>().MakePointer())).IsEqualTo("int*");
+		await Assert
+			.That(XmlCommentWriter.ToXmlCref(TypeIdentity.Create<int>().MakeNullable().MakeArray()))
+			.IsEqualTo("global::System.Nullable{int}[]");
+		await Assert
+			.That(XmlCommentWriter.ToXmlCref(TypeIdentity.Create<string>().MakeNullable().MakeArray().Nullable()))
+			.IsEqualTo("string[]");
+	}
+
+	[Test]
+	public async Task ToXmlCref_TypeReference_TypeParameter_UsesBraces()
+	{
+		await Assert.That(XmlCommentWriter.ToXmlCref(TypeReference.ForTypeParameter("T"))).IsEqualTo("{T}");
+	}
+
+	[Test]
+	public async Task ToXmlCref_TypeReference_GenericArgumentNullability_IsOmitted()
+	{
+		var list = new TypeIdentity(typeof(List<>)).MakeGeneric(TypeIdentity.Create<string>().MakeNullable());
+
+		await Assert
+			.That(XmlCommentWriter.ToXmlCref(list.AsTypeReference()))
+			.IsEqualTo("global::System.Collections.Generic.List{string}");
+	}
+
+	[Test]
+	public async Task XmlCref_TypeReference_WritesCrefAttribute()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.XmlCref(TypeIdentity.Create<int>().MakeNullable(), "value description");
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("/// <cref cref=\"global::System.Nullable{int}\">value description</cref>\n");
+	}
+
+	[Test]
+	public async Task XmlException_TypeReference_WritesCrefAttribute()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.XmlException(TypeIdentity.Create<InvalidOperationException>().AsTypeReference(), "reason");
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("/// <exception cref=\"global::System.InvalidOperationException\">reason</exception>\n");
+	}
+
+	[Test]
+	public async Task XmlSee_TypeReference_ReturnsSelfClosingSee()
+	{
+		var see = XmlCommentWriter.XmlSee(TypeIdentity.Create<InvalidOperationException>().AsTypeReference());
+
+		await Assert.That(see).IsEqualTo("<see cref=\"global::System.InvalidOperationException\" />");
+	}
+
+	[Test]
+	public async Task XmlSeeAlso_TypeReference_WritesSelfClosingSeeAlso()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.XmlSeeAlso(TypeIdentity.Create<string>().MakeNullable());
+
+		await Assert.That(writer.ToString()).IsEqualTo("/// <seealso cref=\"string\" />\n");
+	}
+
+	[Test]
+	public async Task XmlCref_TypeReference_Null_Throws()
+	{
+		var writer = CodeWriterFactory.ForTests();
+		TypeReference reference = null!;
+
+		await Assert.That(() => writer.XmlCref(reference)).Throws<ArgumentNullException>();
+	}
+
 	[Test]
 	[Arguments(null)]
 	[Arguments("")]

@@ -1,10 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\src\SourceGeneratorFramework.Testing\SourceGeneratorFramework.Testing.csproj" />
+		<ProjectReference Include="..\..\src\SourceGeneratorFramework.Testing.TUnit\SourceGeneratorFramework.Testing.TUnit.csproj" />
+		<ProjectReference Include="..\SharedTestingInfra\SharedTestingInfra.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

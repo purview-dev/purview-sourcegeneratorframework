@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
+using Microsoft.CodeAnalysis;
 
 namespace Purview.SourceGeneratorFramework;
 
@@ -89,22 +90,46 @@ public static class XmlCommentWriter
 				: XmlCore(writer, BuildXmlTag("exception", ("cref", exceptionType)), "exception", content);
 
 		/// <summary>
-		/// Writes an XML <c>&lt;returns&gt;</c> documentation block with the specified content.
+		/// Writes an XML <c>&lt;exception&gt;</c> documentation block with the specified exception type and content.
 		/// </summary>
-		/// <param name="exceptionType">The type of the exception.</param>
+		/// <param name="exceptionType">The exception type.</param>
 		/// <param name="content">The content lines.</param>
 		/// <returns>The current writer.</returns>
 		public CodeWriter XmlException(TypeIdentity exceptionType, params string[] content) =>
-			XmlCore(writer, BuildXmlTag("exception", ("cref", exceptionType)), "exception", content);
+			XmlCore(writer, BuildXmlTag("exception", ("cref", ToXmlCref(exceptionType))), "exception", content);
 
 		/// <summary>
-		/// Writes an XML <c>cref</c> documentation block with the specified type name and content.
+		/// Writes an XML <c>&lt;exception&gt;</c> documentation block with the specified exception type and content.
 		/// </summary>
-		/// <param name="typeName">The name of the type.</param>
+		/// <param name="exceptionType">The exception type reference.</param>
+		/// <param name="content">The content lines.</param>
+		/// <returns>The current writer.</returns>
+		/// <exception cref="ArgumentNullException">If <paramref name="exceptionType"/> is <see langword="null"/>.</exception>
+		public CodeWriter XmlException(TypeReference exceptionType, params string[] content) =>
+			exceptionType == null
+				? throw new ArgumentNullException(nameof(exceptionType))
+				: XmlCore(writer, BuildXmlTag("exception", ("cref", ToXmlCref(exceptionType))), "exception", content);
+
+		/// <summary>
+		/// Writes an XML <c>cref</c> documentation block with the specified type and content.
+		/// </summary>
+		/// <param name="typeName">The type.</param>
 		/// <param name="content">The content lines.</param>
 		/// <returns>The current writer.</returns>
 		public CodeWriter XmlCref(TypeIdentity typeName, params string[] content) =>
-			XmlCore(writer, BuildXmlTag("cref", ("cref", typeName)), "cref", content);
+			XmlCore(writer, BuildXmlTag("cref", ("cref", ToXmlCref(typeName))), "cref", content);
+
+		/// <summary>
+		/// Writes an XML <c>cref</c> documentation block with the specified type and content.
+		/// </summary>
+		/// <param name="typeName">The type reference.</param>
+		/// <param name="content">The content lines.</param>
+		/// <returns>The current writer.</returns>
+		/// <exception cref="ArgumentNullException">If <paramref name="typeName"/> is <see langword="null"/>.</exception>
+		public CodeWriter XmlCref(TypeReference typeName, params string[] content) =>
+			typeName == null
+				? throw new ArgumentNullException(nameof(typeName))
+				: XmlCore(writer, BuildXmlTag("cref", ("cref", ToXmlCref(typeName))), "cref", content);
 
 		/// <summary>
 		/// Writes an XML <c>&lt;c&gt;</c> documentation block with the specified content.
@@ -138,6 +163,30 @@ public static class XmlCommentWriter
 				throw new ArgumentException("The XML cref cannot be null or empty.", nameof(cref));
 
 			// If no content is provided, write a self-closing <seealso /> tag. Otherwise, write a <seealso> block with the provided content.
+			return content is null || content.Length == 0
+				? writer.Write("/// ").WriteLine(BuildSelfClosingXmlTag("seealso", ("cref", cref)))
+				: XmlCore(writer, BuildXmlTag("seealso", ("cref", cref)), "seealso", content);
+		}
+
+		/// <summary>Writes an XML <c>&lt;seealso&gt;</c> documentation element for a type.</summary>
+		public CodeWriter XmlSeeAlso(TypeIdentity type, params string[] content)
+		{
+			var cref = ToXmlCref(type);
+
+			return content is null || content.Length == 0
+				? writer.Write("/// ").WriteLine(BuildSelfClosingXmlTag("seealso", ("cref", cref)))
+				: XmlCore(writer, BuildXmlTag("seealso", ("cref", cref)), "seealso", content);
+		}
+
+		/// <summary>Writes an XML <c>&lt;seealso&gt;</c> documentation element for a type reference.</summary>
+		/// <exception cref="ArgumentNullException">If <paramref name="type"/> is <see langword="null"/>.</exception>
+		public CodeWriter XmlSeeAlso(TypeReference type, params string[] content)
+		{
+			if (type is null)
+				throw new ArgumentNullException(nameof(type));
+
+			var cref = ToXmlCref(type);
+
 			return content is null || content.Length == 0
 				? writer.Write("/// ").WriteLine(BuildSelfClosingXmlTag("seealso", ("cref", cref)))
 				: XmlCore(writer, BuildXmlTag("seealso", ("cref", cref)), "seealso", content);
@@ -388,6 +437,147 @@ public static class XmlCommentWriter
 			return string.IsNullOrWhiteSpace(description)
 				? BuildSelfClosingXmlTag("see", ("cref", cref))
 				: BuildXmlTag("see", ("cref", cref)) + description + "</see>";
+		}
+
+		/// <summary>Returns an inline XML reference to a type.</summary>
+		public static string XmlSee(TypeIdentity type, string? description = null) =>
+			XmlSee(ToXmlCref(type), description);
+
+		/// <summary>Returns an inline XML reference to a type reference.</summary>
+		/// <exception cref="ArgumentNullException">If <paramref name="type"/> is <see langword="null"/>.</exception>
+		public static string XmlSee(TypeReference type, string? description = null) =>
+			type == null ? throw new ArgumentNullException(nameof(type)) : XmlSee(ToXmlCref(type), description);
+
+		/// <summary>
+		/// Returns the XML-documentation <c>cref</c> name for a type, using the brace form for generics that
+		/// XML documentation requires (<c>&lt;see cref="global::System.Collections.Generic.List{global::System.String}" /&gt;</c>).
+		/// </summary>
+		/// <param name="type">The type.</param>
+		/// <returns>The cref-safe name.</returns>
+		public static string ToXmlCref(TypeIdentity type)
+		{
+			if (type == TypeIdentity.Empty)
+				return string.Empty;
+
+			if (type.SpecialType != SpecialType.None)
+				return type.Keyword!;
+
+			var name = ToXmlCrefTypeName(type, omitAttributeSuffix: false);
+			if (type.IsNested)
+				name =
+					$"{string.Join(".", type.ContainingTypes.Select(static containing => ToXmlCrefContainingName(containing)))}.{name}";
+
+			return type.IsGlobalNamespace ? name : $"global::{type.Namespace}.{name}";
+		}
+
+		/// <summary>
+		/// Returns the XML-documentation <c>cref</c> name for a type reference, using the brace form for
+		/// generics that XML documentation requires. Nullable value types are rendered as
+		/// <c>global::System.Nullable{...}</c>; nullable reference annotations are not representable in a
+		/// <c>cref</c> and are rendered as their base type.
+		/// </summary>
+		/// <param name="reference">The type reference.</param>
+		/// <returns>The cref-safe name.</returns>
+		/// <exception cref="ArgumentNullException">If <paramref name="reference"/> is <see langword="null"/>.</exception>
+		public static string ToXmlCref(TypeReference reference)
+		{
+			if (reference is null)
+				throw new ArgumentNullException(nameof(reference));
+			if (reference.IsEmpty)
+				return string.Empty;
+
+#pragma warning disable IDE0072 // Add missing cases
+			var core = reference.Kind switch
+			{
+				TypeReferenceKind.Named => ToXmlCref(reference.Identity),
+				TypeReferenceKind.TypeParameter => "{" + (reference.TypeParameterName ?? string.Empty) + "}",
+				TypeReferenceKind.Dynamic => "dynamic",
+				_ => string.Empty,
+			};
+#pragma warning restore IDE0072 // Add missing cases
+
+			if (reference.Modifiers.IsDefaultOrEmpty)
+				return core;
+
+			StringBuilder builder = new(core);
+			var modifiers = reference.Modifiers;
+			var index = 0;
+			while (index < modifiers.Length)
+			{
+				var modifier = modifiers[index];
+				switch (modifier.Kind)
+				{
+					case TypeModifierKind.Array:
+#pragma warning disable format
+					{
+						var start = index;
+						while (index < modifiers.Length && modifiers[index].Kind == TypeModifierKind.Array)
+							index++;
+
+						for (var reverse = index - 1; reverse >= start; reverse--)
+							AppendArraySuffix(builder, modifiers[reverse].Rank);
+
+						continue;
+					}
+#pragma warning restore format
+
+					case TypeModifierKind.Nullable:
+						if (modifier.NullableKind == NullableModifierKind.ValueType)
+							WrapInNullable(builder);
+
+						break;
+
+					case TypeModifierKind.PointerModifier:
+						builder.Append('*');
+						break;
+
+					default:
+						break;
+				}
+
+				index++;
+			}
+
+			return builder.ToString();
+		}
+
+		static string ToXmlCrefTypeName(TypeIdentity type, bool omitAttributeSuffix)
+		{
+			var name =
+				omitAttributeSuffix && type.IsAttribute
+					? type.Name.Substring(0, type.Name.Length - TypeHelpers.AttributeSuffix.Length)
+					: type.Name;
+
+			if (type.GenericArity == 0)
+				return name;
+
+			// Constructed generics use their actual arguments; an open definition uses readable placeholders
+			// because the type parameter names are not retained by the value object.
+			var arguments = type.TypeArguments.IsDefaultOrEmpty
+				? Enumerable.Range(0, type.GenericArity).Select(static index => $"T{index}")
+				: type.TypeArguments.Select(static argument => ToXmlCref(argument));
+
+			return $"{name}{{{string.Join(",", arguments)}}}";
+		}
+
+		static string ToXmlCrefContainingName(ContainingType containing) =>
+			containing.GenericArity == 0
+				? containing.Name
+				: $"{containing.Name}{{{string.Join(",", Enumerable.Range(0, containing.GenericArity).Select(static index => $"T{index}"))}}}";
+
+		static void AppendArraySuffix(StringBuilder builder, int rank)
+		{
+			builder.Append('[');
+			if (rank > 1)
+				builder.Append(',', rank - 1);
+			builder.Append(']');
+		}
+
+		static void WrapInNullable(StringBuilder builder)
+		{
+			var inner = builder.ToString();
+			builder.Clear();
+			builder.Append("global::System.Nullable{").Append(inner).Append('}');
 		}
 
 		/// <summary>Returns an inline XML &lt;para&gt; element containing the provided content.</summary>

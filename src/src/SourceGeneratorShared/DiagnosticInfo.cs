@@ -12,10 +12,44 @@ public sealed record DiagnosticInfo(
 	string FilePath,
 	TextSpan TextSpan,
 	LinePositionSpan LinePositionSpan,
-	ImmutableArray<LinePositionSpan> AdditionalLinePositions,
+	EquatableArray<LinePositionSpan> AdditionalLinePositions,
 	ImmutableArray<object> MessageArgs
 )
 {
+	/// <inheritdoc />
+	/// <remarks>
+	/// <see cref="MessageArgs"/> is compared by content (<c>object.Equals</c> per argument, which is
+	/// value-based for the primitive/string/enum values used as message arguments) so that two diagnostics
+	/// created in separate generator runs are equal and do not invalidate the incremental cache.
+	/// </remarks>
+	public bool Equals(DiagnosticInfo? other) =>
+		other is not null
+		&& Descriptor.Equals(other.Descriptor)
+		&& string.Equals(FilePath, other.FilePath, StringComparison.Ordinal)
+		&& TextSpan == other.TextSpan
+		&& LinePositionSpan == other.LinePositionSpan
+		&& AdditionalLinePositions.Equals(other.AdditionalLinePositions)
+		&& MessageArgs.SequenceEqual(other.MessageArgs);
+
+	/// <inheritdoc />
+	public override int GetHashCode()
+	{
+		unchecked
+		{
+			var hash = 17;
+			hash = (hash * 31) + Descriptor.GetHashCode();
+			hash = (hash * 31) + (FilePath?.GetHashCode() ?? 0);
+			hash = (hash * 31) + TextSpan.GetHashCode();
+			hash = (hash * 31) + LinePositionSpan.GetHashCode();
+			foreach (var span in AdditionalLinePositions.AsImmutableArray())
+				hash = (hash * 31) + span.GetHashCode();
+			foreach (var argument in MessageArgs)
+				hash = (hash * 31) + (argument?.GetHashCode() ?? 0);
+
+			return hash;
+		}
+	}
+
 	/// <summary>
 	/// Converts this <see cref="DiagnosticInfo"/> back into a Roslyn <see cref="Diagnostic"/>.
 	/// </summary>

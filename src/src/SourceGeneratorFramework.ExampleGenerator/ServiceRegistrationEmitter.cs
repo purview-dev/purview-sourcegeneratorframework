@@ -51,7 +51,7 @@ static class ServiceRegistrationEmitter
 				cw.WriteProperty(new("Lifetime", TypeLibrary.ServiceLifetime, TypeDeclarationAccessibility.Public));
 
 				cw.WriteProperty(
-					new("Name", PurviewTypeLibrary.System.String.MakeNullable(), TypeDeclarationAccessibility.Public)
+					new("Name", PurviewTypeLibrary.System.String.MakeNullable(cw), TypeDeclarationAccessibility.Public)
 					{
 						HasSetter = true,
 						Initializer = "null",

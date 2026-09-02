@@ -18,14 +18,8 @@ public static partial class GeneratedCodeAssertionsExtensions
 
 		if (flattenWhitespace)
 		{
-			actualCode = actualCode
-				.ReplaceLineEndings("")
-				.Replace("\t", "", StringComparison.Ordinal)
-				.Replace(" ", "", StringComparison.Ordinal);
-			expectedCode = expectedCode
-				.ReplaceLineEndings("")
-				.Replace("\t", "", StringComparison.Ordinal)
-				.Replace(" ", "", StringComparison.Ordinal);
+			actualCode = FlattenWhitespace(actualCode);
+			expectedCode = FlattenWhitespace(expectedCode);
 		}
 
 		return actualCode.Trim() == expectedCode.Trim();
@@ -47,16 +41,27 @@ public static partial class GeneratedCodeAssertionsExtensions
 
 		if (flattenWhitespace)
 		{
-			actualCode = actualCode
-				.ReplaceLineEndings("")
-				.Replace("\t", "", StringComparison.Ordinal)
-				.Replace(" ", "", StringComparison.Ordinal);
-			expectedCode = expectedCode
-				.ReplaceLineEndings("")
-				.Replace("\t", "", StringComparison.Ordinal)
-				.Replace(" ", "", StringComparison.Ordinal);
+			actualCode = FlattenWhitespace(actualCode);
+			expectedCode = FlattenWhitespace(expectedCode);
 		}
 
-		return actualCode.Contains(expectedCode, StringComparison.Ordinal);
+		return
+#if NETSTANDARD2_0
+			actualCode.IndexOf(expectedCode, StringComparison.Ordinal) >= 0;
+#else
+		actualCode.Contains(expectedCode, StringComparison.Ordinal);
+#endif
 	}
+
+	// netstandard2.0 lacks the StringComparison overloads for Replace/Contains.
+	static string FlattenWhitespace(string value) =>
+#if NETSTANDARD2_0
+		value.Replace("\r", "").Replace("\n", "").Replace("\t", "").Replace(" ", "");
+#else
+		value
+			.Replace("\r", "", StringComparison.Ordinal)
+			.Replace("\n", "", StringComparison.Ordinal)
+			.Replace("\t", "", StringComparison.Ordinal)
+			.Replace(" ", "", StringComparison.Ordinal);
+#endif
 }

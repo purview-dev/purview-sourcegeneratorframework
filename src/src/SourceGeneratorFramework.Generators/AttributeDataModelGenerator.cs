@@ -40,9 +40,8 @@ public sealed class AttributeDataModelGenerator : IIncrementalGenerator
 					return;
 				}
 
-				if (target.HasDiagnostics)
-					spc.ReportDiagnostics(target.Diagnostics);
-
+				// Validation diagnostics (ADM0001-ADM0010) are reported by the analyzers; the generator only
+				// skips processing targets that carry a blocking error.
 				if (!target.ShouldProcess)
 					return;
 
