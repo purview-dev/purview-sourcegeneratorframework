@@ -65,6 +65,27 @@ public class IncrementalPipelineTests_ExplicitNullableContextTestGenerator
 	}
 }
 
+public class IncrementalPipelineTests_AlwaysNullableContextTestGenerator
+	: TUnitSourceGeneratorTestBase<AlwaysNullableContextTestGenerator>
+{
+	[Test]
+	public async Task GenerationContext_GivenAlwaysModeAndDisabledCompilation_WritesDirectiveAndAnnotation(
+		CancellationToken cancellationToken
+	)
+	{
+		var result = await GenerateAsync(
+			"public sealed class Sample { }",
+			new() { NullableContextOptions = NullableContextOptions.Disable },
+			cancellationToken
+		);
+
+		var source = result.GetSource();
+
+		await Assert.That(source).Contains("#nullable enable");
+		await Assert.That(source).Contains("string? Name");
+	}
+}
+
 public class IncrementalPipelineNullableDetectionTests
 {
 	[Test]
