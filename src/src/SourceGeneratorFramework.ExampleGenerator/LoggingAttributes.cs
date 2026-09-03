@@ -5,22 +5,34 @@ namespace Purview.SourceGeneratorFramework.Examples;
 /// </summary>
 public enum LogLevel
 {
-	/// <summary>Trace-level detail.</summary>
+	/// <summary>
+	/// Trace-level detail.
+	/// </summary>
 	Trace = 0,
 
-	/// <summary>Debug-level detail.</summary>
+	/// <summary>
+	/// Debug-level detail.
+	/// </summary>
 	Debug = 1,
 
-	/// <summary>Informational messages.</summary>
+	/// <summary>
+	/// Informational messages.
+	/// </summary>
 	Information = 2,
 
-	/// <summary>Warnings.</summary>
+	/// <summary>
+	/// Warnings.
+	/// </summary>
 	Warning = 3,
 
-	/// <summary>Errors.</summary>
+	/// <summary>
+	/// Errors.
+	/// </summary>
 	Error = 4,
 
-	/// <summary>Critical failures.</summary>
+	/// <summary>
+	/// Critical failures.
+	/// </summary>
 	Critical = 5,
 }
 

@@ -107,6 +107,7 @@ public static class IncrementalPipeline
 						IsLoggingEnabled = logger is not null,
 						IsNullableContextEnabled =
 							settings.IsNullableContextEnabled ?? IsNullableContextEnabled(compilation),
+						LanguageVersion = configuration.LanguageVersion ?? settings.LanguageVersion,
 					};
 
 					var capabilities = factory(compilation, resolvedSettings, logger, cancellationToken);
@@ -127,6 +128,7 @@ public static class IncrementalPipeline
 		if (compilation is not CSharpCompilation csharpCompilation)
 			return null;
 
+		// Nullable annotations are enabled when the compilation's nullable context options are either
 		return csharpCompilation.Options.NullableContextOptions
 			is NullableContextOptions.Annotations
 				or NullableContextOptions.Enable;
@@ -152,6 +154,15 @@ public static class IncrementalPipeline
 						SourceGeneratorBuildProperties.LoggingSessionId,
 						out var loggingSessionId
 					);
+					if (
+						!options.GlobalOptions.TryGetValue(
+							SourceGeneratorBuildProperties.LanguageVersion,
+							out var languageVersionValue
+						)
+					)
+					{
+						options.GlobalOptions.TryGetValue("build_property.LangVersion", out languageVersionValue);
+					}
 
 					string? disabledValue = null;
 					if (!string.IsNullOrWhiteSpace(disablePropertyName))
@@ -170,11 +181,17 @@ public static class IncrementalPipeline
 							&& validateScopes,
 						IsSourceGeneratorDisabled: bool.TryParse(disabledValue, out var isDisabled) && isDisabled,
 						IsLoggingEnabled: bool.TryParse(loggingEnabledValue, out var loggingEnabled) && loggingEnabled,
-						LoggingSessionId: loggingSessionId
+						LoggingSessionId: loggingSessionId,
+						LanguageVersion: TryParseLanguageVersion(languageVersionValue)
 					);
 				}
 			)
 			.WithTrackingName("GetGenerationConfiguration");
+
+	static LanguageVersion? TryParseLanguageVersion(string? value) =>
+		string.IsNullOrWhiteSpace(value) || !Enum.TryParse(value, ignoreCase: true, out LanguageVersion parsed)
+			? null
+			: parsed;
 
 	/// <summary>
 	/// Creates a values provider for syntax nodes annotated with a specific attribute.
@@ -202,6 +219,7 @@ public static class IncrementalPipeline
 		bool ValidateCodeWriterScopes,
 		bool IsSourceGeneratorDisabled,
 		bool IsLoggingEnabled,
-		string? LoggingSessionId
+		string? LoggingSessionId,
+		LanguageVersion? LanguageVersion
 	);
 }

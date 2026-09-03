@@ -57,22 +57,32 @@ public static class XmlCommentWriter
 		/// <returns>The current writer.</returns>
 		public CodeWriter XmlReturn(params string[] content) => XmlCore(writer, "returns", content);
 
-		/// <summary>Writes an XML <c>&lt;value&gt;</c> documentation block.</summary>
+		/// <summary>
+		/// Writes an XML <c>&lt;value&gt;</c> documentation block.
+		/// </summary>
 		public CodeWriter XmlValue(params string[] content) => XmlCore(writer, "value", content);
 
-		/// <summary>Writes an XML <c>&lt;remarks&gt;</c> documentation block.</summary>
+		/// <summary>
+		/// Writes an XML <c>&lt;remarks&gt;</c> documentation block.
+		/// </summary>
 		public CodeWriter XmlRemarks(params string[] content) => XmlCore(writer, "remarks", content);
 
-		/// <summary>Writes an XML <c>&lt;permission&gt;</c> documentation block.</summary>
+		/// <summary>
+		/// Writes an XML <c>&lt;permission&gt;</c> documentation block.
+		/// </summary>
 		public CodeWriter XmlPermission(string cref, params string[] content) =>
 			string.IsNullOrWhiteSpace(cref)
 				? throw new ArgumentException("The XML cref cannot be null or empty.", nameof(cref))
 				: XmlCore(writer, BuildXmlTag("permission", ("cref", cref)), "permission", content);
 
-		/// <summary>Writes a self-closing XML <c>&lt;inheritdoc /&gt;</c> element.</summary>
+		/// <summary>
+		/// Writes a self-closing XML <c>&lt;inheritdoc /&gt;</c> element.
+		/// </summary>
 		public CodeWriter XmlInheritDoc() => writer.Write("/// ").WriteLine(BuildSelfClosingXmlTag("inheritdoc"));
 
-		/// <summary>Writes a self-closing XML <c>&lt;inheritdoc /&gt;</c> element for a member.</summary>
+		/// <summary>
+		/// Writes a self-closing XML <c>&lt;inheritdoc /&gt;</c> element for a member.
+		/// </summary>
 		public CodeWriter XmlInheritDoc(string cref) =>
 			string.IsNullOrWhiteSpace(cref)
 				? throw new ArgumentException("The XML cref cannot be null or empty.", nameof(cref))
@@ -145,7 +155,9 @@ public static class XmlCommentWriter
 			return XmlCore(writer, "c", "c", [content], supportsMultiLine: false, compactSingleLine: true);
 		}
 
-		/// <summary>Writes an XML <c>&lt;code&gt;</c> documentation block.</summary>
+		/// <summary>
+		/// Writes an XML <c>&lt;code&gt;</c> documentation block.
+		/// </summary>
 		public CodeWriter XmlCodeBlock(params string[] content) =>
 			XmlCore(writer, "code", "code", content, supportsMultiLine: true, compactSingleLine: false);
 
@@ -156,7 +168,9 @@ public static class XmlCommentWriter
 		/// <returns>The current writer.</returns>
 		public CodeWriter XmlExample(params string[] content) => XmlCore(writer, "example", content);
 
-		/// <summary>Writes an XML <c>&lt;seealso&gt;</c> documentation element.</summary>
+		/// <summary>
+		/// Writes an XML <c>&lt;seealso&gt;</c> documentation element.
+		/// </summary>
 		public CodeWriter XmlSeeAlso(string cref, params string[] content)
 		{
 			if (string.IsNullOrWhiteSpace(cref))
@@ -168,7 +182,9 @@ public static class XmlCommentWriter
 				: XmlCore(writer, BuildXmlTag("seealso", ("cref", cref)), "seealso", content);
 		}
 
-		/// <summary>Writes an XML <c>&lt;seealso&gt;</c> documentation element for a type.</summary>
+		/// <summary>
+		/// Writes an XML <c>&lt;seealso&gt;</c> documentation element for a type.
+		/// </summary>
 		public CodeWriter XmlSeeAlso(TypeIdentity type, params string[] content)
 		{
 			var cref = ToXmlCref(type);
@@ -178,7 +194,9 @@ public static class XmlCommentWriter
 				: XmlCore(writer, BuildXmlTag("seealso", ("cref", cref)), "seealso", content);
 		}
 
-		/// <summary>Writes an XML <c>&lt;seealso&gt;</c> documentation element for a type reference.</summary>
+		/// <summary>
+		/// Writes an XML <c>&lt;seealso&gt;</c> documentation element for a type reference.
+		/// </summary>
 		/// <exception cref="ArgumentNullException">If <paramref name="type"/> is <see langword="null"/>.</exception>
 		public CodeWriter XmlSeeAlso(TypeReference type, params string[] content)
 		{
@@ -192,7 +210,9 @@ public static class XmlCommentWriter
 				: XmlCore(writer, BuildXmlTag("seealso", ("cref", cref)), "seealso", content);
 		}
 
-		/// <summary>Writes a self-closing XML <c>&lt;include /&gt;</c> documentation element.</summary>
+		/// <summary>
+		/// Writes a self-closing XML <c>&lt;include /&gt;</c> documentation element.
+		/// </summary>
 		public CodeWriter XmlInclude(string file, string path)
 		{
 			if (string.IsNullOrWhiteSpace(file))
@@ -284,7 +304,9 @@ public static class XmlCommentWriter
 			return XmlCore(writer, startTag, tag, content, compactSingleLine: true);
 		}
 
-		/// <summary>Writes an XML <c>&lt;typeparam&gt;</c> documentation element.</summary>
+		/// <summary>
+		/// Writes an XML <c>&lt;typeparam&gt;</c> documentation element.
+		/// </summary>
 		public CodeWriter XmlTypeParam(string typeParameterName, params string[] content)
 		{
 			if (string.IsNullOrWhiteSpace(typeParameterName))
@@ -427,7 +449,9 @@ public static class XmlCommentWriter
 			return builder.ToString();
 		}
 
-		/// <summary>Returns an inline XML reference to a type or member.</summary>
+		/// <summary>
+		/// Returns an inline XML reference to a type or member.
+		/// </summary>
 		public static string XmlSee(string cref, string? description = null)
 		{
 			if (string.IsNullOrWhiteSpace(cref))
@@ -439,11 +463,15 @@ public static class XmlCommentWriter
 				: BuildXmlTag("see", ("cref", cref)) + description + "</see>";
 		}
 
-		/// <summary>Returns an inline XML reference to a type.</summary>
+		/// <summary>
+		/// Returns an inline XML reference to a type.
+		/// </summary>
 		public static string XmlSee(TypeIdentity type, string? description = null) =>
 			XmlSee(ToXmlCref(type), description);
 
-		/// <summary>Returns an inline XML reference to a type reference.</summary>
+		/// <summary>
+		/// Returns an inline XML reference to a type reference.
+		/// </summary>
 		/// <exception cref="ArgumentNullException">If <paramref name="type"/> is <see langword="null"/>.</exception>
 		public static string XmlSee(TypeReference type, string? description = null) =>
 			type == null ? throw new ArgumentNullException(nameof(type)) : XmlSee(ToXmlCref(type), description);
@@ -580,54 +608,84 @@ public static class XmlCommentWriter
 			builder.Append("global::System.Nullable{").Append(inner).Append('}');
 		}
 
-		/// <summary>Returns an inline XML &lt;para&gt; element containing the provided content.</summary>
+		/// <summary>
+		/// Returns an inline XML &lt;para&gt; element containing the provided content.
+		/// </summary>
 		public static string XmlInlinePara(params string[] content) => XmlCore("para", content, false);
 
-		/// <summary>Returns an inline XML reference to a parameter.</summary>
+		/// <summary>
+		/// Returns an inline XML reference to a parameter.
+		/// </summary>
 		public static string XmlParamRef(string parameterName) =>
 			BuildSelfClosingXmlTag("paramref", ("name", parameterName));
 
-		/// <summary>Returns an inline XML reference to a type parameter.</summary>
+		/// <summary>
+		/// Returns an inline XML reference to a type parameter.
+		/// </summary>
 		public static string XmlTypeParamRef(string typeParameterName) =>
 			BuildSelfClosingXmlTag("typeparamref", ("name", typeParameterName));
 
-		/// <summary>Returns inline code suitable for use in the middle of documentation text.</summary>
+		/// <summary>
+		/// Returns inline code suitable for use in the middle of documentation text.
+		/// </summary>
 		public static string XmlInlineCode(string content) => $"<c>{content}</c>";
 
-		/// <summary>Returns inline code suitable for use in the middle of documentation text.</summary>
+		/// <summary>
+		/// Returns inline code suitable for use in the middle of documentation text.
+		/// </summary>
 		public static string XmlInlineCodeBlock(params string[] content) => XmlCore("code", content, false);
 
-		/// <summary>Escapes plain text for safe composition with XML documentation elements.</summary>
+		/// <summary>
+		/// Escapes plain text for safe composition with XML documentation elements.
+		/// </summary>
 		public static string XmlText(string content) =>
 			EscapeXml(content ?? throw new ArgumentNullException(nameof(content)));
 
-		/// <summary>Returns an XML line break for use inside documentation text.</summary>
+		/// <summary>
+		/// Returns an XML line break for use inside documentation text.
+		/// </summary>
 		public static string XmlLineBreak() => "<br />";
 
-		/// <summary>Returns an XML list item containing a description.</summary>
+		/// <summary>
+		/// Returns an XML list item containing a description.
+		/// </summary>
 		public static string XmlListItem(string description) => $"<item>{description}</item>";
 
-		/// <summary>Returns an XML list item containing a term and its description.</summary>
+		/// <summary>
+		/// Returns an XML list item containing a term and its description.
+		/// </summary>
 		public static string XmlListItem(string term, string description) =>
 			$"<item><term>{term}</term><description>{description}</description></item>";
 
-		/// <summary>Returns an XML list header containing a term and its description.</summary>
+		/// <summary>
+		/// Returns an XML list header containing a term and its description.
+		/// </summary>
 		public static string XmlListHeader(string term, string description) =>
 			$"<listheader><term>{term}</term><description>{description}</description></listheader>";
 
-		/// <summary>Returns an XML list header containing a term and its description.</summary>
+		/// <summary>
+		/// Returns an XML list header containing a term and its description.
+		/// </summary>
 		public static string XmlListHeader(string description) => $"<listheader>{description}</listheader>";
 
-		/// <summary>Returns an XML list term.</summary>
+		/// <summary>
+		/// Returns an XML list term.
+		/// </summary>
 		public static string XmlTerm(string content) => $"<term>{content}</term>";
 
-		/// <summary>Returns an XML list description.</summary>
+		/// <summary>
+		/// Returns an XML list description.
+		/// </summary>
 		public static string XmlDescription(string content) => $"<description>{content}</description>";
 
-		/// <summary>Returns an arbitrary inline XML element.</summary>
+		/// <summary>
+		/// Returns an arbitrary inline XML element.
+		/// </summary>
 		public static string XmlInlineElement(string tag, string content) => BuildXmlTag(tag) + content + $"</{tag}>";
 
-		/// <summary>Returns a self-closing XML element with optional attributes.</summary>
+		/// <summary>
+		/// Returns a self-closing XML element with optional attributes.
+		/// </summary>
 		public static string BuildSelfClosingXmlTag(string tag, params (string Name, object Value)[]? attributes)
 		{
 			var openTag = BuildXmlTag(tag, attributes);

@@ -85,7 +85,9 @@ public sealed record class DriverRunResult(
 	/// <param name="matchMode">The mode to use when matching the hint name.</param>
 	/// <returns>The source text of the generated tree, or <see langword="null"/> if not found.</returns>
 	/// <exception cref="ArgumentException">Thrown if <paramref name="hintName"/> is <see langword="null"/> or whitespace.</exception>
-	/// <remarks>The <paramref name="hintName"/> is matched using <see cref="StringComparison.Ordinal"/>.</remarks>
+	/// <remarks>
+	/// The <paramref name="hintName"/> is matched using <see cref="StringComparison.Ordinal"/>.
+	/// </remarks>
 	public string? GetSource(string hintName, HintNameMatchMode matchMode = HintNameMatchMode.Suffix)
 	{
 		if (string.IsNullOrWhiteSpace(hintName))
@@ -185,7 +187,9 @@ public enum HintNameMatchMode
 	/// <summary>
 	/// Match the hint name by suffix.
 	/// </summary>
-	/// <remarks>Note this will automatically check for <c>.cs</c> if it's excluded.</remarks>
+	/// <remarks>
+	/// Note this will automatically check for <c>.cs</c> if it's excluded.
+	/// </remarks>
 	Suffix,
 
 	/// <summary>

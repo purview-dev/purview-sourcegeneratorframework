@@ -2,10 +2,14 @@ using System.Collections.Immutable;
 
 namespace Purview.SourceGeneratorFramework;
 
-/// <summary>Describes a field in a generated enum declaration.</summary>
+/// <summary>
+/// Describes a field in a generated enum declaration.
+/// </summary>
 public readonly record struct EnumFieldDeclarationOptions
 {
-	/// <summary>Initializes an enum field declaration.</summary>
+	/// <summary>
+	/// Initializes an enum field declaration.
+	/// </summary>
 	/// <param name="fieldName">The enum field name.</param>
 	/// <param name="fieldValue">
 	/// The enum field value. Strings are emitted as C# expressions; other values are
@@ -21,7 +25,9 @@ public readonly record struct EnumFieldDeclarationOptions
 		FieldValue = fieldValue;
 	}
 
-	/// <summary>Initializes an enum field declaration.</summary>
+	/// <summary>
+	/// Initializes an enum field declaration.
+	/// </summary>
 	/// <param name="fieldName">The enum field name.</param>
 	/// <param name="xmlSummary">The lines written in the field's XML <c>summary</c> block.</param>
 	public EnumFieldDeclarationOptions(string fieldName, params string[] xmlSummary)
@@ -33,7 +39,9 @@ public readonly record struct EnumFieldDeclarationOptions
 		XmlSummary = [.. xmlSummary ?? []];
 	}
 
-	/// <summary>Gets the enum field name.</summary>
+	/// <summary>
+	/// Gets the enum field name.
+	/// </summary>
 	public string FieldName { get; }
 
 	/// <summary>
@@ -42,9 +50,13 @@ public readonly record struct EnumFieldDeclarationOptions
 	/// </summary>
 	public object? FieldValue { get; }
 
-	/// <summary>Gets the lines written in the field's XML <c>summary</c> block.</summary>
+	/// <summary>
+	/// Gets the lines written in the field's XML <c>summary</c> block.
+	/// </summary>
 	public ImmutableArray<string> XmlSummary { get; init; } = [];
 
-	/// <summary>Gets the attributes applied to the enum field.</summary>
+	/// <summary>
+	/// Gets the attributes applied to the enum field.
+	/// </summary>
 	public ImmutableArray<AttributeDeclarationOptions> Attributes { get; init; } = [];
 }

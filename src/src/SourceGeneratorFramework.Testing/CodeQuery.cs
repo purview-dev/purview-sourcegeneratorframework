@@ -12,33 +12,70 @@ namespace Purview.SourceGeneratorFramework.Testing;
 /// Every operation is synchronous: <c>SyntaxTree.GetRoot()</c> and
 /// <c>Compilation.GetSemanticModel</c> are lazy, so repeated queries over test-sized payloads are cheap.
 /// </remarks>
-/// <remarks>Initializes a new query over the given trees.</remarks>
+/// <remarks>
+/// Initializes a new query over the given trees.
+/// </remarks>
 /// <param name="trees">The trees to search.</param>
 /// <param name="compilation">
 /// The compilation backing <paramref name="trees"/>, used to resolve symbols for type matching. May be
 /// <see langword="null"/> when only syntactic matching is required.
 /// </param>
 /// <param name="isGenerated">Whether the trees represent generated code, used in error messages.</param>
+/// <param name="root">
+/// An optional node that scopes every node search to its subtree, enabling nested queries such as
+/// <c>query.In(query.GetClass("C")).GetMethod("M")</c>.
+/// </param>
 public sealed partial class CodeQuery(
 	ImmutableArray<SyntaxTree> trees,
 	Compilation? compilation = null,
-	bool isGenerated = false
+	bool isGenerated = false,
+	SyntaxNode? root = null
 )
 {
-	/// <summary>Gets the trees being searched.</summary>
+	/// <summary>
+	/// Gets the trees being searched.
+	/// </summary>
 	public ImmutableArray<SyntaxTree> Trees { get; } = trees.IsDefault ? [] : trees;
 
-	/// <summary>Gets the compilation backing the trees, when one is available.</summary>
+	/// <summary>
+	/// Gets the compilation backing the trees, when one is available.
+	/// </summary>
 	public Compilation? Compilation { get; } = compilation;
 
-	/// <summary>Gets whether the trees represent generated code, used in error messages.</summary>
+	/// <summary>
+	/// Gets whether the trees represent generated code, used in error messages.
+	/// </summary>
 	public bool IsGenerated { get; } = isGenerated;
+
+	/// <summary>
+	/// Gets the node that scopes node searches, when this is a nested query.
+	/// </summary>
+	public SyntaxNode? Root { get; } = root;
+
+	/// <summary>
+	/// Creates a nested query scoped to <paramref name="root"/>, sharing this query's trees and compilation.
+	/// </summary>
+	/// <param name="root">The node whose subtree is searched.</param>
+	/// <returns>A child query scoped to the node.</returns>
+	/// <example><code>query.In(query.GetClass("OrderAggregate")).HasMethod("Handle", orderCreated);</code></example>
+	public CodeQuery In(SyntaxNode root)
+	{
+		if (root is null)
+			throw new ArgumentNullException(nameof(root));
+
+		// Delegate to the constructor, which validates that the root is in one of the query's trees.
+		return new(Trees, Compilation, IsGenerated, root);
+	}
+
+	SyntaxNode RootOf(SyntaxTree tree) => Root ?? tree.GetRoot();
 
 	// ---------------------------------------------------------------------------------------------
 	// Syntax trees
 	// ---------------------------------------------------------------------------------------------
 
-	/// <summary>Gets the tree whose file path ends with or equals the given name.</summary>
+	/// <summary>
+	/// Gets the tree whose file path ends with or equals the given name.
+	/// </summary>
 	/// <exception cref="SyntaxNotFoundException">No tree matched.</exception>
 	public SyntaxTree GetSyntaxTree(string name) =>
 		TryGetSyntaxTree(name, out var tree)
@@ -47,10 +84,14 @@ public sealed partial class CodeQuery(
 				$"No syntax tree named '{name}' was found in the {ScopeDescription()}."
 			);
 
-	/// <summary>Determines whether a tree whose file path ends with or equals the given name exists.</summary>
+	/// <summary>
+	/// Determines whether a tree whose file path ends with or equals the given name exists.
+	/// </summary>
 	public bool HasSyntaxTree(string name) => TryGetSyntaxTree(name, out _);
 
-	/// <summary>Attempts to get the tree whose file path ends with or equals the given name.</summary>
+	/// <summary>
+	/// Attempts to get the tree whose file path ends with or equals the given name.
+	/// </summary>
 	public bool TryGetSyntaxTree(string name, out SyntaxTree? tree)
 	{
 		if (string.IsNullOrWhiteSpace(name))
@@ -76,23 +117,71 @@ public sealed partial class CodeQuery(
 	// Generic
 	// ---------------------------------------------------------------------------------------------
 
-	/// <summary>Gets the first syntax node of the specified type, optionally matching a predicate.</summary>
+	/// <summary>
+	/// Gets the first syntax node of the specified type, optionally matching a predicate.
+	/// </summary>
 	/// <exception cref="SyntaxNotFoundException">No node matched.</exception>
 	public T Get<T>(Func<T, bool>? predicate = null)
 		where T : SyntaxNode => TryGet(out var node, predicate) ? node! : throw NotFound<T>();
 
-	/// <summary>Determines whether a syntax node of the specified type exists, optionally matching a predicate.</summary>
+	/// <summary>
+	/// Determines whether a syntax node of the specified type exists, optionally matching a predicate.
+	/// </summary>
 	public bool Has<T>(Func<T, bool>? predicate = null)
 		where T : SyntaxNode => TryGet(out _, predicate);
 
-	/// <summary>Attempts to get the first syntax node of the specified type, optionally matching a predicate.</summary>
+	/// <summary>
+	/// Gets all syntax nodes of the specified type, optionally matching a predicate.
+	/// </summary>
+	public ImmutableArray<T> GetAll<T>(Func<T, bool>? predicate = null)
+		where T : SyntaxNode
+	{
+		var builder = ImmutableArray.CreateBuilder<T>();
+		foreach (var tree in Trees)
+		{
+			var root = RootOf(tree);
+			if (root is T rootNode && (predicate is null || predicate(rootNode)))
+				builder.Add(rootNode);
+
+			foreach (var candidate in root.DescendantNodes().OfType<T>())
+			{
+				if (predicate is null || predicate(candidate))
+					builder.Add(candidate);
+			}
+		}
+
+		return builder.ToImmutable();
+	}
+
+	/// <summary>
+	/// Counts the syntax nodes of the specified type, optionally matching a predicate.
+	/// </summary>
+	public int Count<T>(Func<T, bool>? predicate = null)
+		where T : SyntaxNode
+	{
+		var count = 0;
+		foreach (var tree in Trees)
+		{
+			var root = RootOf(tree);
+			if (root is T rootNode && (predicate is null || predicate(rootNode)))
+				count++;
+
+			count += root.DescendantNodes().OfType<T>().Count(candidate => predicate is null || predicate(candidate));
+		}
+
+		return count;
+	}
+
+	/// <summary>
+	/// Attempts to get the first syntax node of the specified type, optionally matching a predicate.
+	/// </summary>
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1021:Avoid out parameters")]
 	public bool TryGet<T>(out T? node, Func<T, bool>? predicate = null)
 		where T : SyntaxNode
 	{
 		foreach (var tree in Trees)
 		{
-			var root = tree.GetRoot();
+			var root = RootOf(tree);
 			if (root is T rootNode && (predicate is null || predicate(rootNode)))
 			{
 				node = rootNode;

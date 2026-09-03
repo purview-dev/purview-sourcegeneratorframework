@@ -13,9 +13,13 @@ public enum NullableDirectiveMode
 	/// </summary>
 	Auto = 0,
 
-	/// <summary>Always emits the <c>#nullable enable</c> directive.</summary>
+	/// <summary>
+	/// Always emits the <c>#nullable enable</c> directive.
+	/// </summary>
 	Always = 1,
 
-	/// <summary>Never emits the <c>#nullable enable</c> directive.</summary>
+	/// <summary>
+	/// Never emits the <c>#nullable enable</c> directive.
+	/// </summary>
 	Disable = 2,
 }

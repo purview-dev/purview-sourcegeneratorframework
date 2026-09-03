@@ -2,10 +2,14 @@ using System.Collections.Immutable;
 
 namespace Purview.SourceGeneratorFramework;
 
-/// <summary>Describes a generated method declaration.</summary>
+/// <summary>
+/// Describes a generated method declaration.
+/// </summary>
 public readonly record struct MethodDeclarationOptions
 {
-	/// <summary>Creates a method declaration.</summary>
+	/// <summary>
+	/// Creates a method declaration.
+	/// </summary>
 	/// <param name="name">The method name.</param>
 	/// <param name="returnType">The return type. The default is <c>void</c>.</param>
 	/// <param name="accessibility">The optional accessibility.</param>
@@ -23,43 +27,67 @@ public readonly record struct MethodDeclarationOptions
 		Accessibility = accessibility;
 	}
 
-	/// <summary>Creates a method declaration with the <see cref="ReturnType"/> set to <c>void</c>.</summary>
+	/// <summary>
+	/// Creates a method declaration with the <see cref="ReturnType"/> set to <c>void</c>.
+	/// </summary>
 	/// <param name="name">The method name.</param>
 	/// <param name="accessibility">The optional accessibility.</param>
 	public MethodDeclarationOptions(string name, TypeDeclarationAccessibility? accessibility = null)
 		: this(name, PurviewTypeLibrary.System.Void, accessibility) { }
 
-	/// <summary>Gets the method name.</summary>
+	/// <summary>
+	/// Gets the method name.
+	/// </summary>
 	public string Name { get; }
 
-	/// <summary>Gets the return type.</summary>
+	/// <summary>
+	/// Gets the return type.
+	/// </summary>
 	public TypeReference ReturnType { get; }
 
-	/// <summary>Gets the optional accessibility.</summary>
+	/// <summary>
+	/// Gets the optional accessibility.
+	/// </summary>
 	public TypeDeclarationAccessibility? Accessibility { get; init; }
 
-	/// <summary>Gets whether the method is static.</summary>
+	/// <summary>
+	/// Gets whether the method is static.
+	/// </summary>
 	public bool IsStatic { get; init; }
 
-	/// <summary>Gets whether the method is partial.</summary>
+	/// <summary>
+	/// Gets whether the method is partial.
+	/// </summary>
 	public bool IsPartial { get; init; }
 
-	/// <summary>Gets whether the method is abstract.</summary>
+	/// <summary>
+	/// Gets whether the method is abstract.
+	/// </summary>
 	public bool IsAbstract { get; init; }
 
-	/// <summary>Gets whether the method is virtual.</summary>
+	/// <summary>
+	/// Gets whether the method is virtual.
+	/// </summary>
 	public bool IsVirtual { get; init; }
 
-	/// <summary>Gets whether the method is an override.</summary>
+	/// <summary>
+	/// Gets whether the method is an override.
+	/// </summary>
 	public bool IsOverride { get; init; }
 
-	/// <summary>Gets whether the method is sealed.</summary>
+	/// <summary>
+	/// Gets whether the method is sealed.
+	/// </summary>
 	public bool IsSealed { get; init; }
 
-	/// <summary>Gets whether the method is asynchronous.</summary>
+	/// <summary>
+	/// Gets whether the method is asynchronous.
+	/// </summary>
 	public bool IsAsync { get; init; }
 
-	/// <summary>Gets whether the method is unsafe.</summary>
+	/// <summary>
+	/// Gets whether the method is unsafe.
+	/// </summary>
 	public bool IsUnsafe { get; init; }
 
 	/// <summary>
@@ -68,19 +96,29 @@ public readonly record struct MethodDeclarationOptions
 	/// </summary>
 	public bool IsReadOnly { get; init; }
 
-	/// <summary>Gets the complete parameter declarations.</summary>
+	/// <summary>
+	/// Gets the complete parameter declarations.
+	/// </summary>
 	public ImmutableArray<ParameterDeclarationOptions> Parameters { get; init; }
 
-	/// <summary>Gets attributes applied to the method.</summary>
+	/// <summary>
+	/// Gets attributes applied to the method.
+	/// </summary>
 	public ImmutableArray<AttributeDeclarationOptions> Attributes { get; init; }
 
-	/// <summary>Gets attributes applied to the return value.</summary>
+	/// <summary>
+	/// Gets attributes applied to the return value.
+	/// </summary>
 	public ImmutableArray<AttributeDeclarationOptions> ReturnAttributes { get; init; }
 
-	/// <summary>Gets generic parameters and constraints.</summary>
+	/// <summary>
+	/// Gets generic parameters and constraints.
+	/// </summary>
 	public ImmutableArray<GenericTypeParameterOptions> GenericTypes { get; init; }
 
-	/// <summary>Gets an optional expression body without the leading <c>=&gt;</c>.</summary>
+	/// <summary>
+	/// Gets an optional expression body without the leading <c>=&gt;</c>.
+	/// </summary>
 	public string? ExpressionBody { get; init; }
 
 	/// <summary>
@@ -91,10 +129,14 @@ public readonly record struct MethodDeclarationOptions
 	public bool? IncludeGeneratedAttributes { get; init; }
 }
 
-/// <summary>Describes a generated property declaration.</summary>
+/// <summary>
+/// Describes a generated property declaration.
+/// </summary>
 public readonly record struct PropertyDeclarationOptions
 {
-	/// <summary>Creates a property declaration.</summary>
+	/// <summary>
+	/// Creates a property declaration.
+	/// </summary>
 	public PropertyDeclarationOptions(
 		string name,
 		TypeReference type,
@@ -106,34 +148,60 @@ public readonly record struct PropertyDeclarationOptions
 		Accessibility = accessibility;
 	}
 
-	/// <summary>Gets the property name.</summary>
+	/// <summary>
+	/// Gets the property name.
+	/// </summary>
 	public string Name { get; }
 
-	/// <summary>Gets the property type.</summary>
+	/// <summary>
+	/// Gets the property type.
+	/// </summary>
 	public TypeReference Type { get; }
 
-	/// <summary>Gets the optional accessibility.</summary>
+	/// <summary>
+	/// Gets the optional accessibility.
+	/// </summary>
 	public TypeDeclarationAccessibility? Accessibility { get; init; }
 
-	/// <summary>Gets whether the property is static.</summary>
+	/// <summary>
+	/// Gets whether the property is static.
+	/// </summary>
 	public bool IsStatic { get; init; }
 
-	/// <summary>Gets whether the property is abstract.</summary>
+	/// <summary>
+	/// Gets whether the <c>required</c> modifier is emitted, marking the property as required at
+	/// object-initializer time (C# 11+).
+	/// </summary>
+	public bool IsRequired { get; init; }
+
+	/// <summary>
+	/// Gets whether the property is abstract.
+	/// </summary>
 	public bool IsAbstract { get; init; }
 
-	/// <summary>Gets whether the property is virtual.</summary>
+	/// <summary>
+	/// Gets whether the property is virtual.
+	/// </summary>
 	public bool IsVirtual { get; init; }
 
-	/// <summary>Gets whether the property is an override.</summary>
+	/// <summary>
+	/// Gets whether the property is an override.
+	/// </summary>
 	public bool IsOverride { get; init; }
 
-	/// <summary>Gets whether the property is sealed.</summary>
+	/// <summary>
+	/// Gets whether the property is sealed.
+	/// </summary>
 	public bool IsSealed { get; init; }
 
-	/// <summary>Gets whether a getter is emitted. The default is <see langword="true"/>.</summary>
+	/// <summary>
+	/// Gets whether a getter is emitted. The default is <see langword="true"/>.
+	/// </summary>
 	public bool HasGetter { get; init; } = true;
 
-	/// <summary>Gets whether a setter or init accessor is emitted.</summary>
+	/// <summary>
+	/// Gets whether a setter or init accessor is emitted.
+	/// </summary>
 	public bool HasSetter { get; init; }
 
 	/// <summary>
@@ -142,19 +210,38 @@ public readonly record struct PropertyDeclarationOptions
 	/// </summary>
 	public bool IsInitOnly { get; init; }
 
-	/// <summary>Gets optional getter accessibility.</summary>
+	/// <summary>
+	/// Gets whether the property is emitted as a C# 14 field-keyword semi-auto property whose accessors
+	/// reference the implicit backing field, such as <c>get =&gt; field; set =&gt; field = value;</c>.
+	/// </summary>
+	/// <remarks>
+	/// Incompatible with <see cref="ExpressionBody"/>, <see cref="Initializer"/>, and accessor bodies.
+	/// </remarks>
+	public bool IsFieldBacked { get; init; }
+
+	/// <summary>
+	/// Gets optional getter accessibility.
+	/// </summary>
 	public TypeDeclarationAccessibility? GetterAccessibility { get; init; }
 
-	/// <summary>Gets optional setter accessibility.</summary>
+	/// <summary>
+	/// Gets optional setter accessibility.
+	/// </summary>
 	public TypeDeclarationAccessibility? SetterAccessibility { get; init; }
 
-	/// <summary>Gets an optional expression body without the leading <c>=&gt;</c>.</summary>
+	/// <summary>
+	/// Gets an optional expression body without the leading <c>=&gt;</c>.
+	/// </summary>
 	public string? ExpressionBody { get; init; }
 
-	/// <summary>Gets an optional initializer without the leading equals sign.</summary>
+	/// <summary>
+	/// Gets an optional initializer without the leading equals sign.
+	/// </summary>
 	public string? Initializer { get; init; }
 
-	/// <summary>Gets attributes applied to the property.</summary>
+	/// <summary>
+	/// Gets attributes applied to the property.
+	/// </summary>
 	public ImmutableArray<AttributeDeclarationOptions> Attributes { get; init; }
 
 	/// <summary>
@@ -165,10 +252,14 @@ public readonly record struct PropertyDeclarationOptions
 	public bool? IncludeGeneratedAttributes { get; init; }
 }
 
-/// <summary>Describes a generated field declaration.</summary>
+/// <summary>
+/// Describes a generated field declaration.
+/// </summary>
 public readonly record struct FieldDeclarationOptions
 {
-	/// <summary>Creates a field declaration.</summary>
+	/// <summary>
+	/// Creates a field declaration.
+	/// </summary>
 	public FieldDeclarationOptions(string name, TypeReference type, TypeDeclarationAccessibility? accessibility = null)
 	{
 		Name = name;
@@ -176,31 +267,61 @@ public readonly record struct FieldDeclarationOptions
 		Accessibility = accessibility;
 	}
 
-	/// <summary>Gets the field name.</summary>
+	/// <summary>
+	/// Gets the field name.
+	/// </summary>
 	public string Name { get; }
 
-	/// <summary>Gets the field type.</summary>
+	/// <summary>
+	/// Gets the field type.
+	/// </summary>
 	public TypeReference Type { get; }
 
-	/// <summary>Gets the optional accessibility.</summary>
+	/// <summary>
+	/// Gets the optional accessibility.
+	/// </summary>
 	public TypeDeclarationAccessibility? Accessibility { get; init; }
 
-	/// <summary>Gets whether the field is static.</summary>
+	/// <summary>
+	/// Gets whether the field is static.
+	/// </summary>
 	public bool IsStatic { get; init; }
 
-	/// <summary>Gets whether the field is readonly.</summary>
+	/// <summary>
+	/// Gets whether the <c>required</c> modifier is emitted, marking the field as required at
+	/// object-initializer time (C# 11+).
+	/// </summary>
+	public bool IsRequired { get; init; }
+
+	/// <summary>
+	/// Gets whether the field is readonly.
+	/// </summary>
 	public bool IsReadOnly { get; init; }
 
-	/// <summary>Gets whether the field is constant.</summary>
+	/// <summary>
+	/// Gets whether the <c>ref</c> modifier is emitted before the field type, producing a <c>ref</c> field.
+	/// Only valid in <c>ref struct</c> declarations and incompatible with constants.
+	/// </summary>
+	public bool IsRefField { get; init; }
+
+	/// <summary>
+	/// Gets whether the field is constant.
+	/// </summary>
 	public bool IsConst { get; init; }
 
-	/// <summary>Gets whether the field is volatile.</summary>
+	/// <summary>
+	/// Gets whether the field is volatile.
+	/// </summary>
 	public bool IsVolatile { get; init; }
 
-	/// <summary>Gets an optional initializer without the leading equals sign.</summary>
+	/// <summary>
+	/// Gets an optional initializer without the leading equals sign.
+	/// </summary>
 	public string? Initializer { get; init; }
 
-	/// <summary>Gets attributes applied to the field.</summary>
+	/// <summary>
+	/// Gets attributes applied to the field.
+	/// </summary>
 	public ImmutableArray<AttributeDeclarationOptions> Attributes { get; init; }
 
 	/// <summary>

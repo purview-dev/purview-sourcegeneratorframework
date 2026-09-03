@@ -12,6 +12,8 @@ public readonly record struct ResolvedTypeInformation(TypeReference Reference, A
 	/// <summary>
 	/// Gets the type value object associated with the resolved type reference.
 	/// </summary>
-	/// <remarks>Retrieved from <see cref="TypeReference.Identity" /></remarks>
+	/// <remarks>
+	/// Retrieved from <see cref="TypeReference.Identity" />
+	/// </remarks>
 	public TypeIdentity Type => Reference.Identity;
 }

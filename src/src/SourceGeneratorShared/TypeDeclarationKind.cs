@@ -5,24 +5,38 @@ namespace Purview.SourceGeneratorFramework;
 /// </summary>
 public enum TypeDeclarationKind
 {
-	/// <summary>A class declaration.</summary>
+	/// <summary>
+	/// A class declaration.
+	/// </summary>
 	Class,
 
-	/// <summary>A struct declaration.</summary>
+	/// <summary>
+	/// A struct declaration.
+	/// </summary>
 	Struct,
 
-	/// <summary>A record class declaration.</summary>
+	/// <summary>
+	/// A record class declaration.
+	/// </summary>
 	RecordClass,
 
-	/// <summary>A record struct declaration.</summary>
+	/// <summary>
+	/// A record struct declaration.
+	/// </summary>
 	RecordStruct,
 
-	/// <summary>An interface declaration.</summary>
+	/// <summary>
+	/// An interface declaration.
+	/// </summary>
 	Interface,
 
-	/// <summary>An enum declaration.</summary>
+	/// <summary>
+	/// An enum declaration.
+	/// </summary>
 	Enum,
 
-	/// <summary>A delegate declaration.</summary>
+	/// <summary>
+	/// A delegate declaration.
+	/// </summary>
 	Delegate,
 }

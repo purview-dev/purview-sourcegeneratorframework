@@ -1,9 +1,13 @@
 namespace Purview.SourceGeneratorFramework;
 
-/// <summary>Describes one argument supplied to a generated method call.</summary>
+/// <summary>
+/// Describes one argument supplied to a generated method call.
+/// </summary>
 public readonly record struct MethodCallArgumentOptions
 {
-	/// <summary>Creates a method-call argument from its value expression.</summary>
+	/// <summary>
+	/// Creates a method-call argument from its value expression.
+	/// </summary>
 	/// <param name="value">The argument expression or variable name.</param>
 	/// <param name="name">An optional named-argument label.</param>
 	/// <param name="modifier">The argument passing modifier.</param>
@@ -28,13 +32,19 @@ public readonly record struct MethodCallArgumentOptions
 	public MethodCallArgumentOptions(string value, ParameterModifier modifier)
 		: this(value, null, modifier) { }
 
-	/// <summary>Gets the argument expression or variable name.</summary>
+	/// <summary>
+	/// Gets the argument expression or variable name.
+	/// </summary>
 	public string Value { get; }
 
-	/// <summary>Gets an optional named-argument label.</summary>
+	/// <summary>
+	/// Gets an optional named-argument label.
+	/// </summary>
 	public string? Name { get; init; }
 
-	/// <summary>Gets the argument passing modifier.</summary>
+	/// <summary>
+	/// Gets the argument passing modifier.
+	/// </summary>
 	public ParameterModifier Modifier { get; init; }
 
 	public static implicit operator MethodCallArgumentOptions(string value) => new(value);

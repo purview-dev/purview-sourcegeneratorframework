@@ -61,19 +61,29 @@ public sealed class DriverRunValidationException : Exception
 		LogErrors = logErrors;
 	}
 
-	/// <summary> Gets the result of the source generator test run that failed validation. </summary>
+	/// <summary>
+	///  Gets the result of the source generator test run that failed validation.
+	/// </summary>
 	public DriverRunResult RunResult { get; }
 
-	/// <summary>Gets exceptions thrown by generators.</summary>
+	/// <summary>
+	/// Gets exceptions thrown by generators.
+	/// </summary>
 	public IReadOnlyList<GeneratorFailure> GeneratorFailures { get; }
 
-	/// <summary>Gets errors reported by the output compilation.</summary>
+	/// <summary>
+	/// Gets errors reported by the output compilation.
+	/// </summary>
 	public IReadOnlyList<Diagnostic> CompilationErrors { get; }
 
-	/// <summary>Gets additional errors reported while emitting the output assembly.</summary>
+	/// <summary>
+	/// Gets additional errors reported while emitting the output assembly.
+	/// </summary>
 	public IReadOnlyList<Diagnostic> EmitErrors { get; }
 
-	/// <summary>Gets error-level entries written through generator logging.</summary>
+	/// <summary>
+	/// Gets error-level entries written through generator logging.
+	/// </summary>
 	public IReadOnlyList<LogEntry> LogErrors { get; }
 
 	static string BuildMessage(

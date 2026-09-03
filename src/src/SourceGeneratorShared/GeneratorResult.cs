@@ -12,7 +12,9 @@ public readonly record struct GeneratorResult<T>
 	/// <summary>
 	/// Gets the value of the generator result. If the result is a failure, this will be null or default(T).
 	/// </summary>
-	/// <remarks>This value can be null or default(T) if the result is a failure.</remarks>
+	/// <remarks>
+	/// This value can be null or default(T) if the result is a failure.
+	/// </remarks>
 	public T Value { get; private init; }
 
 	/// <summary>

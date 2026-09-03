@@ -57,13 +57,19 @@ public sealed record TypeReference
 		Modifiers = [];
 	}
 
-	/// <summary>Gets a value indicating whether this reference is empty.</summary>
+	/// <summary>
+	/// Gets a value indicating whether this reference is empty.
+	/// </summary>
 	public bool IsEmpty => Kind == TypeReferenceKind.None;
 
-	/// <summary>Gets what this reference refers to beneath its modifiers.</summary>
+	/// <summary>
+	/// Gets what this reference refers to beneath its modifiers.
+	/// </summary>
 	public TypeReferenceKind Kind { get; init; }
 
-	/// <summary>Gets the named type, when <see cref="Kind"/> is <see cref="TypeReferenceKind.Named"/>.</summary>
+	/// <summary>
+	/// Gets the named type, when <see cref="Kind"/> is <see cref="TypeReferenceKind.Named"/>.
+	/// </summary>
 	public TypeIdentity Identity { get; init; }
 
 	/// <summary>
@@ -82,13 +88,19 @@ public sealed record TypeReference
 	/// </summary>
 	public bool IsPlainNamedType => Kind == TypeReferenceKind.Named && Modifiers.IsDefaultOrEmpty;
 
-	/// <summary>Gets a value indicating whether the outermost modifier is an array.</summary>
+	/// <summary>
+	/// Gets a value indicating whether the outermost modifier is an array.
+	/// </summary>
 	public bool IsArray => LastModifier?.Kind == TypeModifierKind.Array;
 
-	/// <summary>Gets a value indicating whether the outermost modifier is a pointer.</summary>
+	/// <summary>
+	/// Gets a value indicating whether the outermost modifier is a pointer.
+	/// </summary>
 	public bool IsPointer => LastModifier?.Kind == TypeModifierKind.PointerModifier;
 
-	/// <summary>Gets a value indicating whether the outermost modifier is a nullable annotation.</summary>
+	/// <summary>
+	/// Gets a value indicating whether the outermost modifier is a nullable annotation.
+	/// </summary>
 	public bool IsNullable => LastModifier?.Kind == TypeModifierKind.Nullable;
 
 	TypeModifier? LastModifier => Modifiers.IsDefaultOrEmpty ? null : Modifiers[Modifiers.Length - 1];
@@ -136,7 +148,7 @@ public sealed record TypeReference
 			if (Modifiers[index].Kind != TypeModifierKind.Array)
 			{
 				var modifier = Modifiers[index];
-				if (ShouldRender(modifier, nullableSupported))
+				if (ShouldRender(modifier, nullableSupported, Kind))
 					builder.Append(modifier.Suffix);
 				index++;
 
@@ -154,13 +166,23 @@ public sealed record TypeReference
 		return builder.ToString();
 	}
 
-	static bool ShouldRender(TypeModifier modifier, bool nullableSupported)
+	static bool ShouldRender(TypeModifier modifier, bool nullableSupported, TypeReferenceKind referenceKind)
 	{
 		if (modifier.Kind != TypeModifierKind.Nullable)
 			return true;
 
-		// Nullable value types and unclassified annotations are always rendered, because they are part of the type identity.
-		return nullableSupported || modifier.NullableKind != NullableModifierKind.Reference;
+		if (modifier.NullableKind == NullableModifierKind.Reference)
+			return nullableSupported;
+
+		if (modifier.NullableKind == NullableModifierKind.Unknown && !nullableSupported)
+		{
+			// Type parameters and dynamic are reference-like, so their unclassified annotations are invalid
+			// outside a nullable context and are elided. An unclassifiable named type is rendered
+			// conservatively so a genuine value type cannot be silently changed.
+			return referenceKind is not (TypeReferenceKind.TypeParameter or TypeReferenceKind.Dynamic);
+		}
+
+		return true;
 	}
 
 	/// <summary>
@@ -211,7 +233,9 @@ public sealed record TypeReference
 	// Composition
 	// ---------------------------------------------------------------------------------------------
 
-	/// <summary>Appends a nullable annotation.</summary>
+	/// <summary>
+	/// Appends a nullable annotation.
+	/// </summary>
 	/// <remarks>
 	/// The annotation is classified from the annotated type where possible, so a nullable value type such as
 	/// <c>int?</c> is never elided when the target compilation does not support nullable annotations, while a
@@ -255,10 +279,14 @@ public sealed record TypeReference
 			? AppendNullable(TypeModifier.Nullable)
 		: this;
 
-	/// <summary>Appends an array of the given rank.</summary>
+	/// <summary>
+	/// Appends an array of the given rank.
+	/// </summary>
 	public TypeReference MakeArray(int rank = 1) => Append(TypeModifier.Array(rank));
 
-	/// <summary>Appends a pointer indirection.</summary>
+	/// <summary>
+	/// Appends a pointer indirection.
+	/// </summary>
 	public TypeReference MakePointer() => Append(TypeModifier.PointerModifier);
 
 	static bool ShouldComposeNullable(NullableDirectiveMode mode, bool? isNullableContextEnabled) =>
@@ -438,7 +466,9 @@ public sealed record TypeReference
 	public static bool operator ==(TypeReference? left, TypeIdentity right) =>
 		left is not null && left.IsPlainNamedType && left.Identity.Equals(right);
 
-	/// <summary>Negates <see cref="operator ==(TypeReference?, TypeIdentity)"/>.</summary>
+	/// <summary>
+	/// Negates <see cref="operator ==(TypeReference?, TypeIdentity)"/>.
+	/// </summary>
 	public static bool operator !=(TypeReference? left, TypeIdentity right) => !(left == right);
 
 	/// <summary>
@@ -594,13 +624,19 @@ public sealed record TypeReference
 	// Factories
 	// ---------------------------------------------------------------------------------------------
 
-	/// <summary>Gets the empty reference.</summary>
+	/// <summary>
+	/// Gets the empty reference.
+	/// </summary>
 	public static readonly TypeReference Empty = new();
 
-	/// <summary>Gets a reference to <see langword="dynamic"/>.</summary>
+	/// <summary>
+	/// Gets a reference to <see langword="dynamic"/>.
+	/// </summary>
 	public static TypeReference Dynamic { get; } = new() { Kind = TypeReferenceKind.Dynamic, Modifiers = [] };
 
-	/// <summary>Creates a reference to an open generic parameter.</summary>
+	/// <summary>
+	/// Creates a reference to an open generic parameter.
+	/// </summary>
 	public static TypeReference ForTypeParameter(string name)
 	{
 		if (name == null)
@@ -615,10 +651,14 @@ public sealed record TypeReference
 		};
 	}
 
-	/// <summary>Creates a reference from a runtime type.</summary>
+	/// <summary>
+	/// Creates a reference from a runtime type.
+	/// </summary>
 	public static TypeReference Create<T>() => Create(typeof(T));
 
-	/// <summary>Creates a reference from a runtime type.</summary>
+	/// <summary>
+	/// Creates a reference from a runtime type.
+	/// </summary>
 	/// <exception cref="ArgumentException">Thrown when the type cannot be represented.</exception>
 	public static TypeReference Create(Type type)
 	{
@@ -632,7 +672,9 @@ public sealed record TypeReference
 		return value;
 	}
 
-	/// <summary>Creates a reference from a type symbol.</summary>
+	/// <summary>
+	/// Creates a reference from a type symbol.
+	/// </summary>
 	/// <exception cref="ArgumentException">Thrown when the symbol cannot be represented.</exception>
 	public static TypeReference Create(ITypeSymbol typeSymbol)
 	{

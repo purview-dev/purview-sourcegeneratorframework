@@ -15,7 +15,9 @@ public static class TypeDeclarationAccessibilityExtensions
 	/// The corresponding declaration accessibility, or <see langword="null"/> when Roslyn reports
 	/// <see cref="Accessibility.NotApplicable"/> or an unknown future value.
 	/// </returns>
-	/// <remarks>This method never throws for an accessibility value.</remarks>
+	/// <remarks>
+	/// This method never throws for an accessibility value.
+	/// </remarks>
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0072:Add missing cases")]
 	public static TypeDeclarationAccessibility? ToTypeDeclarationAccessibility(this Accessibility accessibility) =>
 		accessibility switch

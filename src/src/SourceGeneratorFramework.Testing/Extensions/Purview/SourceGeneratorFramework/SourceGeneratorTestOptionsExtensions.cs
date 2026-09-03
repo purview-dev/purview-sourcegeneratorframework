@@ -106,7 +106,9 @@ public static class SourceGeneratorTestOptionsExtensions
 					}
 				);
 
-		/// <summary>Creates a new options snapshot with additional namespaces appended.</summary>
+		/// <summary>
+		/// Creates a new options snapshot with additional namespaces appended.
+		/// </summary>
 		public TOptions WithExcludeGeneratedSourceHintNames(IEnumerable<string> sourceHintNames) =>
 			sourceHintNames is null
 				? options
@@ -119,19 +121,25 @@ public static class SourceGeneratorTestOptionsExtensions
 					}
 				);
 
-		/// <summary>Creates a new options snapshot with additional namespaces appended.</summary>
+		/// <summary>
+		/// Creates a new options snapshot with additional namespaces appended.
+		/// </summary>
 		public TOptions WithAdditionalNamespaces(params string[] additionalNamespaces) =>
 			additionalNamespaces is null || additionalNamespaces.Length == 0
 				? options
 				: (options with { AdditionalNamespaces = options.AdditionalNamespaces.AddRange(additionalNamespaces) });
 
-		/// <summary>Creates a new options snapshot with additional namespaces appended.</summary>
+		/// <summary>
+		/// Creates a new options snapshot with additional namespaces appended.
+		/// </summary>
 		public TOptions WithAdditionalNamespaces(IEnumerable<string> additionalNamespaces) =>
 			additionalNamespaces is null
 				? options
 				: (options with { AdditionalNamespaces = options.AdditionalNamespaces.AddRange(additionalNamespaces) });
 
-		/// <summary>Creates a new options snapshot with additional namespaces appended.</summary>
+		/// <summary>
+		/// Creates a new options snapshot with additional namespaces appended.
+		/// </summary>
 		public TOptions WithAdditionalNamespaces(params TypeIdentity[] identities) =>
 			identities is null || identities.Length == 0
 				? options
@@ -144,7 +152,9 @@ public static class SourceGeneratorTestOptionsExtensions
 					}
 				);
 
-		/// <summary>Creates a new options snapshot with additional namespaces appended.</summary>
+		/// <summary>
+		/// Creates a new options snapshot with additional namespaces appended.
+		/// </summary>
 		public TOptions WithAdditionalNamespaces(IEnumerable<TypeIdentity> identities) =>
 			identities is null
 				? options
@@ -157,31 +167,41 @@ public static class SourceGeneratorTestOptionsExtensions
 					}
 				);
 
-		/// <summary>Creates a new options snapshot with additional metadata references appended.</summary>
+		/// <summary>
+		/// Creates a new options snapshot with additional metadata references appended.
+		/// </summary>
 		public TOptions WithAdditionalReferences(params MetadataReference[] additionalReferences) =>
 			additionalReferences is null || additionalReferences.Length == 0
 				? options
 				: (options with { AdditionalReferences = options.AdditionalReferences.AddRange(additionalReferences) });
 
-		/// <summary>Creates a new options snapshot with additional metadata references appended.</summary>
+		/// <summary>
+		/// Creates a new options snapshot with additional metadata references appended.
+		/// </summary>
 		public TOptions WithAdditionalReferences(IEnumerable<MetadataReference> additionalReferences) =>
 			additionalReferences is null || !additionalReferences.Any()
 				? options
 				: (options with { AdditionalReferences = options.AdditionalReferences.AddRange(additionalReferences) });
 
-		/// <summary>Creates a new options snapshot with additional source files appended.</summary>
+		/// <summary>
+		/// Creates a new options snapshot with additional source files appended.
+		/// </summary>
 		public TOptions WithAdditionalSources(params string[] additionalSources) =>
 			additionalSources is null || additionalSources.Length == 0
 				? options
 				: (options with { AdditionalSources = options.AdditionalSources.AddRange(additionalSources) });
 
-		/// <summary>Creates a new options snapshot with additional source files appended.</summary>
+		/// <summary>
+		/// Creates a new options snapshot with additional source files appended.
+		/// </summary>
 		public TOptions WithAdditionalSources(IEnumerable<string> additionalSources) =>
 			additionalSources is null || !additionalSources.Any()
 				? options
 				: (options with { AdditionalSources = options.AdditionalSources.AddRange(additionalSources) });
 
-		/// <summary>Creates a new options snapshot with additional source files appended.</summary>
+		/// <summary>
+		/// Creates a new options snapshot with additional source files appended.
+		/// </summary>
 		public TOptions WithAdditionalSources(params SourceText[] additionalSources) =>
 			additionalSources is null || additionalSources.Length == 0
 				? options
@@ -194,7 +214,9 @@ public static class SourceGeneratorTestOptionsExtensions
 					}
 				);
 
-		/// <summary>Creates a new options snapshot with additional source files appended.</summary>
+		/// <summary>
+		/// Creates a new options snapshot with additional source files appended.
+		/// </summary>
 		public TOptions WithAdditionalSources(IEnumerable<SourceText> additionalSources) =>
 			additionalSources is null
 				? options
@@ -207,19 +229,25 @@ public static class SourceGeneratorTestOptionsExtensions
 					}
 				);
 
-		/// <summary>Creates a new options snapshot with additional text files appended.</summary>
+		/// <summary>
+		/// Creates a new options snapshot with additional text files appended.
+		/// </summary>
 		public TOptions WithAdditionalText(params AdditionalText[] additionalText) =>
 			additionalText is null || additionalText.Length == 0
 				? options
 				: (options with { AdditionalText = options.AdditionalText.AddRange(additionalText) });
 
-		/// <summary>Creates a new options snapshot with additional text files appended.</summary>
+		/// <summary>
+		/// Creates a new options snapshot with additional text files appended.
+		/// </summary>
 		public TOptions WithAdditionalText(IEnumerable<AdditionalText> additionalText) =>
 			additionalText is null
 				? options
 				: (options with { AdditionalText = options.AdditionalText.AddRange(additionalText) });
 
-		/// <summary>Creates a new options snapshot with analyzer types appended.</summary>
+		/// <summary>
+		/// Creates a new options snapshot with analyzer types appended.
+		/// </summary>
 		public TOptions WithAnalyzers(params Type[] analyzerTypes)
 		{
 			if (analyzerTypes is null || analyzerTypes.Length == 0)
@@ -242,7 +270,9 @@ public static class SourceGeneratorTestOptionsExtensions
 			};
 		}
 
-		/// <summary>Creates a new options snapshot with analyzer types appended.</summary>
+		/// <summary>
+		/// Creates a new options snapshot with analyzer types appended.
+		/// </summary>
 		public TOptions WithAnalyzers(IEnumerable<Type> analyzerTypes)
 		{
 			if (analyzerTypes is null)
@@ -265,8 +295,12 @@ public static class SourceGeneratorTestOptionsExtensions
 			};
 		}
 
-		/// <summary>Creates a new options snapshot using the specified analyzer options.</summary>
-		/// <remarks>This clears <see cref="SourceGeneratorTestOptions.CompilationWithAnalyzersOptions"/>.</remarks>
+		/// <summary>
+		/// Creates a new options snapshot using the specified analyzer options.
+		/// </summary>
+		/// <remarks>
+		/// This clears <see cref="SourceGeneratorTestOptions.CompilationWithAnalyzersOptions"/>.
+		/// </remarks>
 		public TOptions WithAnalyzerOptions(AnalyzerOptions? analyzerOptions) =>
 			options with
 			{
@@ -274,8 +308,12 @@ public static class SourceGeneratorTestOptionsExtensions
 				CompilationWithAnalyzersOptions = null,
 			};
 
-		/// <summary>Creates a new options snapshot using the specified compilation-with-analyzers options.</summary>
-		/// <remarks>This clears <see cref="SourceGeneratorTestOptions.AnalyzerOptions"/>.</remarks>
+		/// <summary>
+		/// Creates a new options snapshot using the specified compilation-with-analyzers options.
+		/// </summary>
+		/// <remarks>
+		/// This clears <see cref="SourceGeneratorTestOptions.AnalyzerOptions"/>.
+		/// </remarks>
 		public TOptions WithCompilationWithAnalyzersOptions(
 			CompilationWithAnalyzersOptions? compilationWithAnalyzersOptions
 		) => options with { AnalyzerOptions = null, CompilationWithAnalyzersOptions = compilationWithAnalyzersOptions };
@@ -284,8 +322,12 @@ public static class SourceGeneratorTestOptionsExtensions
 	extension<TOptions>(TOptions options)
 		where TOptions : CodeFixTestOptions
 	{
-		/// <summary>Creates a new code-fix options snapshot selecting a code action by index.</summary>
-		/// <remarks>This clears <see cref="CodeFixTestOptions.EquivalenceKey"/>.</remarks>
+		/// <summary>
+		/// Creates a new code-fix options snapshot selecting a code action by index.
+		/// </summary>
+		/// <remarks>
+		/// This clears <see cref="CodeFixTestOptions.EquivalenceKey"/>.
+		/// </remarks>
 		[System.Diagnostics.CodeAnalysis.SuppressMessage(
 			"Usage",
 			"CA1512:Use ArgumentOutOfRangeException throw helper",
@@ -296,7 +338,9 @@ public static class SourceGeneratorTestOptionsExtensions
 				? throw new ArgumentOutOfRangeException(nameof(codeActionIndex))
 				: (options with { CodeActionIndex = codeActionIndex, EquivalenceKey = null });
 
-		/// <summary>Creates a new code-fix options snapshot selecting a code action by equivalence key.</summary>
+		/// <summary>
+		/// Creates a new code-fix options snapshot selecting a code action by equivalence key.
+		/// </summary>
 		public TOptions WithCodeActionEquivalenceKey(string equivalenceKey) =>
 			string.IsNullOrWhiteSpace(equivalenceKey)
 				? throw new ArgumentException("Value cannot be null or whitespace.", nameof(equivalenceKey))

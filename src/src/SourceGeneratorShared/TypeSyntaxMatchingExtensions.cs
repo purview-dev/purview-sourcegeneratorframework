@@ -218,7 +218,9 @@ public static class TypeSyntaxMatchingExtensions
 	/// <summary>
 	/// Determines, without a semantic model, whether the attribute could be an application of this type.
 	/// </summary>
-	/// <remarks>The <c>Attribute</c> suffix is optional at the application site, so both spellings are accepted.</remarks>
+	/// <remarks>
+	/// The <c>Attribute</c> suffix is optional at the application site, so both spellings are accepted.
+	/// </remarks>
 	public static bool CouldMatchAttribute(this in TypeIdentity type, SyntaxNode? node)
 	{
 		var name = node switch

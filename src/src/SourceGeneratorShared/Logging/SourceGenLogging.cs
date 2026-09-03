@@ -3,12 +3,16 @@ using System.Globalization;
 
 namespace Purview.SourceGeneratorFramework.Logging;
 
-/// <summary>Registers output sinks for isolated source-generator logging sessions.</summary>
+/// <summary>
+/// Registers output sinks for isolated source-generator logging sessions.
+/// </summary>
 public static class SourceGenLogging
 {
 	static readonly ConcurrentDictionary<string, Action<string, int>> Sinks = new();
 
-	/// <summary>Registers a sink for a source-generator logging session.</summary>
+	/// <summary>
+	/// Registers a sink for a source-generator logging session.
+	/// </summary>
 	public static IDisposable RegisterSink(string sessionId, Action<string, SourceGenLogLevel> sink)
 	{
 		if (string.IsNullOrWhiteSpace(sessionId))

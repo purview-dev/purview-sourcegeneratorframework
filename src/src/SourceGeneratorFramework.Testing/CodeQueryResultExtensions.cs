@@ -11,7 +11,9 @@ namespace Purview.SourceGeneratorFramework.Testing;
 /// </summary>
 public static class CodeQueryResultExtensions
 {
-	/// <summary>Gets a query over the generated trees of a source-generator run, with the output compilation.</summary>
+	/// <summary>
+	/// Gets a query over the generated trees of a source-generator run, with the output compilation.
+	/// </summary>
 	public static CodeQuery Generated(this DriverRunResult result)
 	{
 		if (result is null)
@@ -21,7 +23,9 @@ public static class CodeQueryResultExtensions
 		return new(result.AllSyntaxTrees, compilation, isGenerated: true);
 	}
 
-	/// <summary>Gets a query over the entire output compilation (user and generated trees) of a source-generator run.</summary>
+	/// <summary>
+	/// Gets a query over the entire output compilation (user and generated trees) of a source-generator run.
+	/// </summary>
 	public static CodeQuery Output(this DriverRunResult result)
 	{
 		if (result is null)
@@ -31,7 +35,9 @@ public static class CodeQueryResultExtensions
 		return new([.. compilation.SyntaxTrees], compilation);
 	}
 
-	/// <summary>Gets a query over the trees of an analyzer test compilation.</summary>
+	/// <summary>
+	/// Gets a query over the trees of an analyzer test compilation.
+	/// </summary>
 	public static CodeQuery Code(this AnalyzerTestResult result)
 	{
 		if (result is null)
@@ -41,7 +47,9 @@ public static class CodeQueryResultExtensions
 		return new([.. result.Compilation.SyntaxTrees], result.Compilation);
 	}
 
-	/// <summary>Gets a query over the input compilation of a code-fix test.</summary>
+	/// <summary>
+	/// Gets a query over the input compilation of a code-fix test.
+	/// </summary>
 	public static CodeQuery Code(this CodeFixTestResult result)
 	{
 		if (result is null)
@@ -51,7 +59,9 @@ public static class CodeQueryResultExtensions
 		return new([.. result.Compilation.SyntaxTrees], result.Compilation);
 	}
 
-	/// <summary>Gets a query over the fixed source produced by a code-fix test.</summary>
+	/// <summary>
+	/// Gets a query over the fixed source produced by a code-fix test.
+	/// </summary>
 	public static CodeQuery FixedCode(this CodeFixTestResult result)
 	{
 		if (result is null)
@@ -67,7 +77,9 @@ public static class CodeQueryResultExtensions
 		return new(ParseSource(result.FixedSource), null);
 	}
 
-	/// <summary>Gets a query over the fixed sources produced by a fix-all code-fix test.</summary>
+	/// <summary>
+	/// Gets a query over the fixed sources produced by a fix-all code-fix test.
+	/// </summary>
 	public static CodeQuery FixedCode(this CodeFixFixAllResult result)
 	{
 		if (result is null)
@@ -78,7 +90,9 @@ public static class CodeQueryResultExtensions
 		return compilation is null ? new([], null) : new([.. compilation.SyntaxTrees], compilation);
 	}
 
-	/// <summary>Gets a query over the refactored sources produced by a refactoring test.</summary>
+	/// <summary>
+	/// Gets a query over the refactored sources produced by a refactoring test.
+	/// </summary>
 	public static CodeQuery FixedCode(this RefactorTestResult result)
 	{
 		if (result is null)

@@ -15,7 +15,9 @@ public static partial class CodeQueryAssertions
 	// Generated code (source generators)
 	// ---------------------------------------------------------------------------------------------
 
-	/// <summary>Asserts that the generated code contains a method with the given name, returning it.</summary>
+	/// <summary>
+	/// Asserts that the generated code contains a method with the given name, returning it.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult<MethodDeclarationSyntax> HasGeneratedMethod(
@@ -23,7 +25,9 @@ public static partial class CodeQueryAssertions
 		string methodName
 	) => GetMethod(result?.Generated(), methodName, null, "generated code");
 
-	/// <summary>Asserts that the generated code contains a method with the given name and parameter types, returning it.</summary>
+	/// <summary>
+	/// Asserts that the generated code contains a method with the given name and parameter types, returning it.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult<MethodDeclarationSyntax> HasGeneratedMethod(
@@ -32,7 +36,9 @@ public static partial class CodeQueryAssertions
 		TypeReference[] parameters
 	) => GetMethod(result?.Generated(), methodName, parameters, "generated code");
 
-	/// <summary>Asserts that the generated code contains a method with the given name and return type, returning it.</summary>
+	/// <summary>
+	/// Asserts that the generated code contains a method with the given name and return type, returning it.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult<MethodDeclarationSyntax> HasGeneratedMethodReturnType(
@@ -58,7 +64,9 @@ public static partial class CodeQueryAssertions
 			);
 	}
 
-	/// <summary>Asserts that the generated code contains a class with the given name, returning it.</summary>
+	/// <summary>
+	/// Asserts that the generated code contains a class with the given name, returning it.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult<ClassDeclarationSyntax> HasGeneratedClass(
@@ -81,7 +89,9 @@ public static partial class CodeQueryAssertions
 			AssertionResult.Failed($"generated code did not contain a class named '{className}'");
 	}
 
-	/// <summary>Asserts that the generated code contains a property with the given name, returning it.</summary>
+	/// <summary>
+	/// Asserts that the generated code contains a property with the given name, returning it.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult<PropertyDeclarationSyntax> HasGeneratedProperty(
@@ -105,7 +115,9 @@ public static partial class CodeQueryAssertions
 			AssertionResult.Failed($"generated code did not contain a property named '{propertyName}'");
 	}
 
-	/// <summary>Asserts that the generated code contains a field with the given name, returning it.</summary>
+	/// <summary>
+	/// Asserts that the generated code contains a field with the given name, returning it.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult<FieldDeclarationSyntax> HasGeneratedField(
@@ -128,7 +140,9 @@ public static partial class CodeQueryAssertions
 			AssertionResult.Failed($"generated code did not contain a field named '{fieldName}'");
 	}
 
-	/// <summary>Asserts that the generated code contains a syntax tree with the given name, returning it.</summary>
+	/// <summary>
+	/// Asserts that the generated code contains a syntax tree with the given name, returning it.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult<SyntaxTree> HasGeneratedSyntaxTree(this DriverRunResult result, string treeName)
@@ -151,7 +165,9 @@ public static partial class CodeQueryAssertions
 	// Fixed code (code fixes and refactorings)
 	// ---------------------------------------------------------------------------------------------
 
-	/// <summary>Asserts that the fixed code contains a method with the given name, returning it.</summary>
+	/// <summary>
+	/// Asserts that the fixed code contains a method with the given name, returning it.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult<MethodDeclarationSyntax> HasFixedMethod(
@@ -159,7 +175,9 @@ public static partial class CodeQueryAssertions
 		string methodName
 	) => GetMethod(result?.FixedCode(), methodName, null, "fixed code");
 
-	/// <summary>Asserts that the fixed code contains a method with the given name and parameter types, returning it.</summary>
+	/// <summary>
+	/// Asserts that the fixed code contains a method with the given name and parameter types, returning it.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult<MethodDeclarationSyntax> HasFixedMethod(
@@ -168,7 +186,9 @@ public static partial class CodeQueryAssertions
 		TypeReference[] parameters
 	) => GetMethod(result?.FixedCode(), methodName, parameters, "fixed code");
 
-	/// <summary>Asserts that the fixed code contains a method with the given name, returning it.</summary>
+	/// <summary>
+	/// Asserts that the fixed code contains a method with the given name, returning it.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult<MethodDeclarationSyntax> HasFixedMethod(
@@ -176,7 +196,9 @@ public static partial class CodeQueryAssertions
 		string methodName
 	) => GetMethod(result?.FixedCode(), methodName, null, "fixed code");
 
-	/// <summary>Asserts that the fixed code contains a method with the given name, returning it.</summary>
+	/// <summary>
+	/// Asserts that the fixed code contains a method with the given name, returning it.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult<MethodDeclarationSyntax> HasFixedMethod(

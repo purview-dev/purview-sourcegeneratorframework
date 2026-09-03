@@ -83,18 +83,32 @@ public sealed record TypeDeclarationOptions
 	public bool IsReadOnly { get; init; }
 
 	/// <summary>
+	/// Gets whether the <c>ref</c> modifier is emitted, producing a <c>ref struct</c> declaration.
+	/// Only valid for <see cref="TypeDeclarationKind.Struct"/>.
+	/// </summary>
+	public bool IsRefStruct { get; init; }
+
+	/// <summary>
 	/// Gets the optional base class or base record type.
 	/// </summary>
-	/// <remarks>Struct and record struct declarations cannot specify a base type.</remarks>
+	/// <remarks>
+	/// Struct and record struct declarations cannot specify a base type.
+	/// </remarks>
 	public TypeReference? BaseType { get; init; }
 
-	/// <summary>Gets the optional enum underlying integral type.</summary>
+	/// <summary>
+	/// Gets the optional enum underlying integral type.
+	/// </summary>
 	public TypeReference? EnumUnderlyingType { get; init; }
 
-	/// <summary>Gets the delegate return type.</summary>
+	/// <summary>
+	/// Gets the delegate return type.
+	/// </summary>
 	public TypeReference? DelegateReturnType { get; init; }
 
-	/// <summary>Gets the complete delegate parameter declarations.</summary>
+	/// <summary>
+	/// Gets the complete delegate parameter declarations.
+	/// </summary>
 	public ImmutableArray<ParameterDeclarationOptions> DelegateParameters { get; init; } = [];
 
 	/// <summary>
@@ -110,7 +124,9 @@ public sealed record TypeDeclarationOptions
 	/// <summary>
 	/// Gets the primary-constructor parameters written after the type name and generic parameters.
 	/// </summary>
-	/// <remarks>Each entry is emitted verbatim as a complete parameter declaration.</remarks>
+	/// <remarks>
+	/// Each entry is emitted verbatim as a complete parameter declaration.
+	/// </remarks>
 	public ImmutableArray<ParameterDeclarationOptions> PrimaryConstructorParameters { get; init; } = [];
 
 	/// <summary>

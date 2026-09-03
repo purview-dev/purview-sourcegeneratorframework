@@ -5,16 +5,22 @@ namespace Purview.SourceGeneratorFramework;
 /// </summary>
 public enum TypeModifierKind
 {
-	/// <summary>A nullable annotation, or a <see cref="Nullable{T}"/> wrapper for a value type.</summary>
+	/// <summary>
+	/// A nullable annotation, or a <see cref="Nullable{T}"/> wrapper for a value type.
+	/// </summary>
 	Nullable = 0,
 
-	/// <summary>A pointer indirection.</summary>
+	/// <summary>
+	/// A pointer indirection.
+	/// </summary>
 	/// <remarks>
 	/// Calling this field `Pointer` results in a CA1720 warning because it is a reserved keyword in C#. The name `PointerModifier` is used instead to avoid the warning.
 	/// </remarks>
 	PointerModifier = 1,
 
-	/// <summary>An array of the given rank.</summary>
+	/// <summary>
+	/// An array of the given rank.
+	/// </summary>
 	Array = 2,
 }
 
@@ -31,13 +37,19 @@ public enum TypeModifierKind
 /// </remarks>
 public enum NullableModifierKind
 {
-	/// <summary>The value-versus-reference question is unknown.</summary>
+	/// <summary>
+	/// The value-versus-reference question is unknown.
+	/// </summary>
 	Unknown = 0,
 
-	/// <summary>The modifier represents a nullable value type, such as <c>int?</c> or <c>Nullable&lt;T&gt;</c>.</summary>
+	/// <summary>
+	/// The modifier represents a nullable value type, such as <c>int?</c> or <c>Nullable&lt;T&gt;</c>.
+	/// </summary>
 	ValueType = 1,
 
-	/// <summary>The modifier represents a nullable reference type annotation, such as <c>string?</c>.</summary>
+	/// <summary>
+	/// The modifier represents a nullable reference type annotation, such as <c>string?</c>.
+	/// </summary>
 	Reference = 2,
 }
 
@@ -50,10 +62,14 @@ public enum NullableModifierKind
 /// </remarks>
 public readonly struct TypeModifier : IEquatable<TypeModifier>
 {
-	/// <summary>Gets the kind of composition step.</summary>
+	/// <summary>
+	/// Gets the kind of composition step.
+	/// </summary>
 	public TypeModifierKind Kind { get; init; }
 
-	/// <summary>Gets the array rank. Only meaningful when <see cref="Kind"/> is <see cref="TypeModifierKind.Array"/>.</summary>
+	/// <summary>
+	/// Gets the array rank. Only meaningful when <see cref="Kind"/> is <see cref="TypeModifierKind.Array"/>.
+	/// </summary>
 	public int Rank { get; init; }
 
 	/// <summary>
@@ -63,10 +79,14 @@ public readonly struct TypeModifier : IEquatable<TypeModifier>
 	/// </summary>
 	public NullableModifierKind NullableKind { get; init; }
 
-	/// <summary>Gets a nullable modifier whose value-versus-reference classification is unknown.</summary>
+	/// <summary>
+	/// Gets a nullable modifier whose value-versus-reference classification is unknown.
+	/// </summary>
 	public static TypeModifier Nullable => new() { Kind = TypeModifierKind.Nullable, Rank = 0 };
 
-	/// <summary>Gets a nullable modifier representing a nullable value type.</summary>
+	/// <summary>
+	/// Gets a nullable modifier representing a nullable value type.
+	/// </summary>
 	public static TypeModifier NullableValueType =>
 		new()
 		{
@@ -75,7 +95,9 @@ public readonly struct TypeModifier : IEquatable<TypeModifier>
 			NullableKind = NullableModifierKind.ValueType,
 		};
 
-	/// <summary>Gets a nullable modifier representing a nullable reference type annotation.</summary>
+	/// <summary>
+	/// Gets a nullable modifier representing a nullable reference type annotation.
+	/// </summary>
 	public static TypeModifier NullableReference =>
 		new()
 		{
@@ -84,10 +106,14 @@ public readonly struct TypeModifier : IEquatable<TypeModifier>
 			NullableKind = NullableModifierKind.Reference,
 		};
 
-	/// <summary>Gets a pointer modifier.</summary>
+	/// <summary>
+	/// Gets a pointer modifier.
+	/// </summary>
 	public static TypeModifier PointerModifier => new() { Kind = TypeModifierKind.PointerModifier, Rank = 0 };
 
-	/// <summary>Creates an array modifier of the given rank.</summary>
+	/// <summary>
+	/// Creates an array modifier of the given rank.
+	/// </summary>
 	/// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="rank"/> is less than one.</exception>
 	public static TypeModifier Array(int rank = 1)
 	{
@@ -131,9 +157,13 @@ public readonly struct TypeModifier : IEquatable<TypeModifier>
 		}
 	}
 
-	/// <summary>Compares modifiers by their structural shape, ignoring the render-only nullable classification.</summary>
+	/// <summary>
+	/// Compares modifiers by their structural shape, ignoring the render-only nullable classification.
+	/// </summary>
 	public static bool operator ==(TypeModifier left, TypeModifier right) => left.Equals(right);
 
-	/// <summary>Compares modifiers by their structural shape, ignoring the render-only nullable classification.</summary>
+	/// <summary>
+	/// Compares modifiers by their structural shape, ignoring the render-only nullable classification.
+	/// </summary>
 	public static bool operator !=(TypeModifier left, TypeModifier right) => !left.Equals(right);
 }

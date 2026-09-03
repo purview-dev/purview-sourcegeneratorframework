@@ -279,10 +279,14 @@ public readonly record struct TypeIdentity
 	/// </summary>
 	public bool IsGenericTypeDefinition => GenericArity > 0 && TypeArguments.IsDefaultOrEmpty;
 
-	/// <summary>Gets a value indicating whether the type is nested inside another type.</summary>
+	/// <summary>
+	/// Gets a value indicating whether the type is nested inside another type.
+	/// </summary>
 	public bool IsNested => !ContainingTypes.IsDefaultOrEmpty;
 
-	/// <summary>Gets a value indicating whether the type is in the global namespace.</summary>
+	/// <summary>
+	/// Gets a value indicating whether the type is in the global namespace.
+	/// </summary>
 	public bool IsGlobalNamespace => Namespace is null;
 
 	/// <summary>
@@ -461,10 +465,14 @@ public readonly record struct TypeIdentity
 	/// </remarks>
 	public bool Equals(ITypeSymbol? other) => Matches(other);
 
-	/// <summary>Determines whether the specified runtime type represents the same semantic type.</summary>
+	/// <summary>
+	/// Determines whether the specified runtime type represents the same semantic type.
+	/// </summary>
 	public bool Equals(Type? other) => other is not null && TryCreate(other, out var value) && Equals(value);
 
-	/// <summary>Determines whether the specified structured reference is an unmodified reference to this type.</summary>
+	/// <summary>
+	/// Determines whether the specified structured reference is an unmodified reference to this type.
+	/// </summary>
 	public bool Equals(TypeReference? other) => other is not null && other.Equals(this);
 
 	/// <summary>
@@ -524,7 +532,9 @@ public readonly record struct TypeIdentity
 	public static bool operator ==(TypeIdentity left, TypeReference? right) =>
 		right is not null && right.IsPlainNamedType && right.Identity.Equals(left);
 
-	/// <summary>Negates <see cref="operator ==(TypeIdentity, TypeReference?)"/>.</summary>
+	/// <summary>
+	/// Negates <see cref="operator ==(TypeIdentity, TypeReference?)"/>.
+	/// </summary>
 	public static bool operator !=(TypeIdentity left, TypeReference? right) => !(left == right);
 
 	/// <summary>
@@ -565,10 +575,14 @@ public readonly record struct TypeIdentity
 	// Composition
 	// ---------------------------------------------------------------------------------------------
 
-	/// <summary>Creates the canonical source-generation type reference for this type.</summary>
+	/// <summary>
+	/// Creates the canonical source-generation type reference for this type.
+	/// </summary>
 	public TypeReference AsTypeReference() => new(this);
 
-	/// <summary>Creates a nullable structured type reference.</summary>
+	/// <summary>
+	/// Creates a nullable structured type reference.
+	/// </summary>
 	public TypeReference MakeNullable() => AsTypeReference().Nullable();
 
 	/// <summary>
@@ -595,10 +609,14 @@ public readonly record struct TypeIdentity
 	/// <returns>The modified type reference.</returns>
 	public TypeReference MakeNullable(Compilation compilation) => AsTypeReference().Nullable(compilation);
 
-	/// <summary>Creates an array structured type reference with the specified rank.</summary>
+	/// <summary>
+	/// Creates an array structured type reference with the specified rank.
+	/// </summary>
 	public TypeReference MakeArray(int rank = 1) => AsTypeReference().MakeArray(rank);
 
-	/// <summary>Creates a pointer structured type reference.</summary>
+	/// <summary>
+	/// Creates a pointer structured type reference.
+	/// </summary>
 	public TypeReference MakePointer() => AsTypeReference().MakePointer();
 
 	/// <summary>
@@ -711,7 +729,9 @@ public readonly record struct TypeIdentity
 	// Factories
 	// ---------------------------------------------------------------------------------------------
 
-	/// <summary>Gets an empty <see cref="TypeIdentity"/>.</summary>
+	/// <summary>
+	/// Gets an empty <see cref="TypeIdentity"/>.
+	/// </summary>
 	public static readonly TypeIdentity Empty;
 
 	/// <summary>

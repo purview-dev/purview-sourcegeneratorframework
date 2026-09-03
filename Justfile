@@ -5,8 +5,8 @@ solution := root_folder / "SourceGeneratorFramework.slnx"
 build_configuration := "Release"
 artifacts_folder := "./artifacts"
 default_test_filter := "/*/*/*/*/"
-pipeline_version := "0.2.0"
-pipeline_feed := "https://nuget.pkg.github.com/purview-dev/index.json"
+pipeline_version := "0.2.1"
+pipeline_feed := "https://api.nuget.org/v3/index.json"
 pipeline_tool := ".tools/purview-build/purview-build"
 
 current_version := `node -p "require('./package.json').version"`
