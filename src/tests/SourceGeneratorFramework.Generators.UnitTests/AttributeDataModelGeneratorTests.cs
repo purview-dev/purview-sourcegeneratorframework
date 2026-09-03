@@ -59,7 +59,7 @@ public class AttributeDataModelGeneratorTests
 				"global::System.Collections.Generic.IEnumerable<(RequiredAttributeData Instance, global::Microsoft.CodeAnalysis.AttributeData Attribute)> AllAttributeData("
 			);
 		await Assert.That(generated).Contains("yield return (instance, attributes[i]);");
-		await Assert.That(generated).Contains("global::Microsoft.CodeAnalysis.ISymbol symbol)");
+		await Assert.That(generated).Contains("global::Microsoft.CodeAnalysis.ISymbol symbol\n\t\t)");
 		await Assert.That(generated).Contains("return AllAttributeData(symbol.GetAttributes());");
 		await Assert.That(generated).Contains("return FromAttributeData(symbol.GetAttributes());");
 		await Assert.That(generated).Contains("return FromAttributeData(symbol.GetAttributes(), out attribute);");

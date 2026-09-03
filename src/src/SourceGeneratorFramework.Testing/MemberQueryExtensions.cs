@@ -13,7 +13,9 @@ public static class MemberQueryExtensions
 	// Properties
 	// ---------------------------------------------------------------------------------------------
 
-	/// <summary>Gets a property declared on the type, optionally matching its type.</summary>
+	/// <summary>
+	/// Gets a property declared on the type, optionally matching its type.
+	/// </summary>
 	public static PropertyDeclarationSyntax GetProperty(
 		this TypeDeclarationSyntax type,
 		CodeQuery query,
@@ -26,7 +28,9 @@ public static class MemberQueryExtensions
 				$"No property named '{name}' was found on '{type.Identifier.ValueText}'."
 			);
 
-	/// <summary>Determines whether the type declares a property with the given name, optionally matching its type.</summary>
+	/// <summary>
+	/// Determines whether the type declares a property with the given name, optionally matching its type.
+	/// </summary>
 	public static bool HasProperty(
 		this TypeDeclarationSyntax type,
 		CodeQuery query,
@@ -34,7 +38,9 @@ public static class MemberQueryExtensions
 		TypeReference? propertyType = null
 	) => type.TryGetProperty(query, name, out _, propertyType);
 
-	/// <summary>Attempts to get a property declared on the type, optionally matching its type.</summary>
+	/// <summary>
+	/// Attempts to get a property declared on the type, optionally matching its type.
+	/// </summary>
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1021:Avoid out parameters")]
 	public static bool TryGetProperty(
 		this TypeDeclarationSyntax type,
@@ -71,7 +77,9 @@ public static class MemberQueryExtensions
 	// Indexers
 	// ---------------------------------------------------------------------------------------------
 
-	/// <summary>Gets an indexer declared on the type, optionally matching its type and index parameters.</summary>
+	/// <summary>
+	/// Gets an indexer declared on the type, optionally matching its type and index parameters.
+	/// </summary>
 	public static IndexerDeclarationSyntax GetIndexer(
 		this TypeDeclarationSyntax type,
 		CodeQuery query,
@@ -82,7 +90,9 @@ public static class MemberQueryExtensions
 			? indexer!
 			: throw new SyntaxNotFoundException($"No matching indexer was found on '{type.Identifier.ValueText}'.");
 
-	/// <summary>Determines whether the type declares an indexer, optionally matching its type and index parameters.</summary>
+	/// <summary>
+	/// Determines whether the type declares an indexer, optionally matching its type and index parameters.
+	/// </summary>
 	public static bool HasIndexer(
 		this TypeDeclarationSyntax type,
 		CodeQuery query,
@@ -90,7 +100,9 @@ public static class MemberQueryExtensions
 		params TypeReference[]? indexParameters
 	) => type.TryGetIndexer(query, out _, indexerType, indexParameters);
 
-	/// <summary>Attempts to get an indexer declared on the type, optionally matching its type and index parameters.</summary>
+	/// <summary>
+	/// Attempts to get an indexer declared on the type, optionally matching its type and index parameters.
+	/// </summary>
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1021:Avoid out parameters")]
 	public static bool TryGetIndexer(
 		this TypeDeclarationSyntax type,
@@ -126,7 +138,9 @@ public static class MemberQueryExtensions
 	// Methods
 	// ---------------------------------------------------------------------------------------------
 
-	/// <summary>Gets a method declared on the type, optionally matching its parameter types.</summary>
+	/// <summary>
+	/// Gets a method declared on the type, optionally matching its parameter types.
+	/// </summary>
 	public static MethodDeclarationSyntax GetMethod(
 		this TypeDeclarationSyntax type,
 		CodeQuery query,
@@ -139,7 +153,9 @@ public static class MemberQueryExtensions
 				$"No method named '{name}' was found on '{type.Identifier.ValueText}'."
 			);
 
-	/// <summary>Determines whether the type declares a method with the given name, optionally matching its parameter types.</summary>
+	/// <summary>
+	/// Determines whether the type declares a method with the given name, optionally matching its parameter types.
+	/// </summary>
 	public static bool HasMethod(
 		this TypeDeclarationSyntax type,
 		CodeQuery query,
@@ -147,7 +163,9 @@ public static class MemberQueryExtensions
 		params TypeReference[]? parameters
 	) => type.TryGetMethod(query, name, out _, parameters);
 
-	/// <summary>Attempts to get a method declared on the type, optionally matching its parameter types.</summary>
+	/// <summary>
+	/// Attempts to get a method declared on the type, optionally matching its parameter types.
+	/// </summary>
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1021:Avoid out parameters")]
 	public static bool TryGetMethod(
 		this TypeDeclarationSyntax type,
@@ -216,7 +234,9 @@ public static class MemberQueryExtensions
 	// Constructors
 	// ---------------------------------------------------------------------------------------------
 
-	/// <summary>Gets a constructor declared on the type, optionally matching its parameter types.</summary>
+	/// <summary>
+	/// Gets a constructor declared on the type, optionally matching its parameter types.
+	/// </summary>
 	public static ConstructorDeclarationSyntax GetConstructor(
 		this TypeDeclarationSyntax type,
 		CodeQuery query,
@@ -226,14 +246,18 @@ public static class MemberQueryExtensions
 			? constructor!
 			: throw new SyntaxNotFoundException($"No constructor was found on '{type.Identifier.ValueText}'.");
 
-	/// <summary>Determines whether the type declares a constructor, optionally matching its parameter types.</summary>
+	/// <summary>
+	/// Determines whether the type declares a constructor, optionally matching its parameter types.
+	/// </summary>
 	public static bool HasConstructor(
 		this TypeDeclarationSyntax type,
 		CodeQuery query,
 		params TypeReference[]? parameters
 	) => type.TryGetConstructor(query, out _, parameters);
 
-	/// <summary>Attempts to get a constructor declared on the type, optionally matching its parameter types.</summary>
+	/// <summary>
+	/// Attempts to get a constructor declared on the type, optionally matching its parameter types.
+	/// </summary>
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1021:Avoid out parameters")]
 	public static bool TryGetConstructor(
 		this TypeDeclarationSyntax type,

@@ -7,10 +7,14 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace Purview.SourceGeneratorFramework.Testing;
 
-/// <summary>Provides shared Roslyn project creation for analyzer and code fix test runners.</summary>
+/// <summary>
+/// Provides shared Roslyn project creation for analyzer and code fix test runners.
+/// </summary>
 public abstract class RoslynTestRunner
 {
-	/// <summary>Creates a compilation-with-analyzers using the configured analyzer options.</summary>
+	/// <summary>
+	/// Creates a compilation-with-analyzers using the configured analyzer options.
+	/// </summary>
 	protected static CompilationWithAnalyzers WithAnalyzers(
 		Compilation compilation,
 		ImmutableArray<DiagnosticAnalyzer> analyzers,
@@ -36,7 +40,9 @@ public abstract class RoslynTestRunner
 			: compilation.WithAnalyzers(analyzers, options.AnalyzerOptions);
 	}
 
-	/// <summary>Creates a project containing the supplied sources.</summary>
+	/// <summary>
+	/// Creates a project containing the supplied sources.
+	/// </summary>
 	[System.Diagnostics.CodeAnalysis.SuppressMessage(
 		"Maintainability",
 		"CA1506:Avoid excessive class coupling",
@@ -99,17 +105,23 @@ public abstract class RoslynTestRunner
 	static string PrepareSource(string source, SourceGeneratorTestOptions options) =>
 		SourceGeneratorHelpers.PrepareSource(source, options);
 
-	/// <summary>Owns the workspace and project created for a test run.</summary>
+	/// <summary>
+	/// Owns the workspace and project created for a test run.
+	/// </summary>
 	protected sealed class TestProject(
 		AdhocWorkspace workspace,
 		Project project,
 		ImmutableArray<DocumentId> documentIds
 	) : IDisposable
 	{
-		/// <summary>Gets the test project.</summary>
+		/// <summary>
+		/// Gets the test project.
+		/// </summary>
 		public Project Project { get; } = project;
 
-		/// <summary>Gets the source document identifiers in input order.</summary>
+		/// <summary>
+		/// Gets the source document identifiers in input order.
+		/// </summary>
 		public ImmutableArray<DocumentId> DocumentIds { get; } = documentIds;
 
 		/// <inheritdoc />

@@ -22,4 +22,10 @@ public static class SourceGeneratorBuildProperties
 	/// The MSBuild property that identifies the registered logging sink for a generator run.
 	/// </summary>
 	public const string LoggingSessionId = BuildProperty + "PurviewSourceGeneratorFrameworkLoggingSessionId";
+
+	/// <summary>
+	/// The MSBuild property that carries the consuming project's <c>LangVersion</c> so generators can gate
+	/// emitted features. Falls back to the standard <c>build_property.LangVersion</c> when not configured.
+	/// </summary>
+	public const string LanguageVersion = BuildProperty + "PurviewSourceGeneratorFrameworkLanguageVersion";
 }

@@ -266,7 +266,9 @@ public static partial class DiagnosticAssertions
 		);
 	}
 
-	/// <summary>Asserts that an analyzer result contains the expected diagnostic.</summary>
+	/// <summary>
+	/// Asserts that an analyzer result contains the expected diagnostic.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult<Diagnostic> HasDiagnostic(
@@ -274,7 +276,9 @@ public static partial class DiagnosticAssertions
 		DiagnosticDescriptor expected
 	) => HasDiagnostic(diagnostic?.Diagnostics, expected);
 
-	/// <summary>Asserts that an analyzer result contains the expected total number of diagnostics.</summary>
+	/// <summary>
+	/// Asserts that an analyzer result contains the expected total number of diagnostics.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult<IEnumerable<Diagnostic>> HasDiagnostics(
@@ -282,7 +286,9 @@ public static partial class DiagnosticAssertions
 		int count
 	) => HasDiagnostics(diagnostic?.Diagnostics, count);
 
-	/// <summary>Asserts that an analyzer result contains the expected number of diagnostics.</summary>
+	/// <summary>
+	/// Asserts that an analyzer result contains the expected number of diagnostics.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult<IEnumerable<Diagnostic>> HasDiagnostics(
@@ -291,13 +297,17 @@ public static partial class DiagnosticAssertions
 		int count
 	) => HasDiagnostics(diagnostic?.Diagnostics, expected, count);
 
-	/// <summary>Asserts that an analyzer result contains the expected diagnostic.</summary>
+	/// <summary>
+	/// Asserts that an analyzer result contains the expected diagnostic.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult<Diagnostic> HasDiagnostic(this AnalyzerTestResult diagnostic, string expected) =>
 		HasDiagnostic(diagnostic?.Diagnostics, expected);
 
-	/// <summary>Asserts that an analyzer result contains the expected number of diagnostics.</summary>
+	/// <summary>
+	/// Asserts that an analyzer result contains the expected number of diagnostics.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult<IEnumerable<Diagnostic>> HasDiagnostics(
@@ -306,7 +316,9 @@ public static partial class DiagnosticAssertions
 		int count
 	) => HasDiagnostics(diagnostic?.Diagnostics, expected, count);
 
-	/// <summary>Asserts that an analyzer result does not contain the expected diagnostic.</summary>
+	/// <summary>
+	/// Asserts that an analyzer result does not contain the expected diagnostic.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult DoesNotHaveDiagnostic(
@@ -314,13 +326,17 @@ public static partial class DiagnosticAssertions
 		DiagnosticDescriptor expected
 	) => DoesNotHaveDiagnostic(result?.Diagnostics, expected);
 
-	/// <summary>Asserts that an analyzer result does not contain the expected diagnostic.</summary>
+	/// <summary>
+	/// Asserts that an analyzer result does not contain the expected diagnostic.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult DoesNotHaveDiagnostic(this AnalyzerTestResult result, string expected) =>
 		DoesNotHaveDiagnostic(result?.Diagnostics, expected);
 
-	/// <summary>Asserts that an analyzer result does not contain a diagnostic with the specified prefix.</summary>
+	/// <summary>
+	/// Asserts that an analyzer result does not contain a diagnostic with the specified prefix.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult DoesNotHaveDiagnosticThatStartsWith(
@@ -328,19 +344,25 @@ public static partial class DiagnosticAssertions
 		string startsWithValue
 	) => DoesNotHaveDiagnosticThatStartsWith(result?.Diagnostics, startsWithValue);
 
-	/// <summary>Asserts that an analyzer result does not contain error diagnostics.</summary>
+	/// <summary>
+	/// Asserts that an analyzer result does not contain error diagnostics.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult HasNoErrorDiagnostics(this AnalyzerTestResult result) =>
 		HasNoErrorDiagnostics(result?.Diagnostics, "analyzer");
 
-	/// <summary>Asserts that an analyzer result does not contain diagnostics.</summary>
+	/// <summary>
+	/// Asserts that an analyzer result does not contain diagnostics.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult HasNoDiagnostics(this AnalyzerTestResult result) =>
 		HasNoDiagnostics(result?.Diagnostics, "analyzer");
 
-	/// <summary>Asserts that a code-fix result contains the expected diagnostic.</summary>
+	/// <summary>
+	/// Asserts that a code-fix result contains the expected diagnostic.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult<Diagnostic> HasDiagnostic(
@@ -348,7 +370,9 @@ public static partial class DiagnosticAssertions
 		DiagnosticDescriptor expected
 	) => HasDiagnostic(diagnostic?.Diagnostics, expected);
 
-	/// <summary>Asserts that a code-fix result contains the expected total number of diagnostics.</summary>
+	/// <summary>
+	/// Asserts that a code-fix result contains the expected total number of diagnostics.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult<IEnumerable<Diagnostic>> HasDiagnostics(
@@ -356,7 +380,9 @@ public static partial class DiagnosticAssertions
 		int count
 	) => HasDiagnostics(diagnostic?.Diagnostics, count);
 
-	/// <summary>Asserts that a code-fix result contains the expected number of diagnostics.</summary>
+	/// <summary>
+	/// Asserts that a code-fix result contains the expected number of diagnostics.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult<IEnumerable<Diagnostic>> HasDiagnostics(
@@ -365,13 +391,17 @@ public static partial class DiagnosticAssertions
 		int count
 	) => HasDiagnostics(diagnostic?.Diagnostics, expected, count);
 
-	/// <summary>Asserts that a code-fix result contains the expected diagnostic.</summary>
+	/// <summary>
+	/// Asserts that a code-fix result contains the expected diagnostic.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult<Diagnostic> HasDiagnostic(this CodeFixTestResult diagnostic, string expected) =>
 		HasDiagnostic(diagnostic?.Diagnostics, expected);
 
-	/// <summary>Asserts that a code-fix result contains the expected number of diagnostics.</summary>
+	/// <summary>
+	/// Asserts that a code-fix result contains the expected number of diagnostics.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult<IEnumerable<Diagnostic>> HasDiagnostics(
@@ -380,19 +410,25 @@ public static partial class DiagnosticAssertions
 		int count
 	) => HasDiagnostics(diagnostic?.Diagnostics, expected, count);
 
-	/// <summary>Asserts that a code-fix result does not contain the expected diagnostic.</summary>
+	/// <summary>
+	/// Asserts that a code-fix result does not contain the expected diagnostic.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult DoesNotHaveDiagnostic(this CodeFixTestResult result, DiagnosticDescriptor expected) =>
 		DoesNotHaveDiagnostic(result?.Diagnostics, expected);
 
-	/// <summary>Asserts that a code-fix result does not contain the expected diagnostic.</summary>
+	/// <summary>
+	/// Asserts that a code-fix result does not contain the expected diagnostic.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult DoesNotHaveDiagnostic(this CodeFixTestResult result, string expected) =>
 		DoesNotHaveDiagnostic(result?.Diagnostics, expected);
 
-	/// <summary>Asserts that a code-fix result does not contain a diagnostic with the specified prefix.</summary>
+	/// <summary>
+	/// Asserts that a code-fix result does not contain a diagnostic with the specified prefix.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult DoesNotHaveDiagnosticThatStartsWith(
@@ -400,13 +436,17 @@ public static partial class DiagnosticAssertions
 		string startsWithValue
 	) => DoesNotHaveDiagnosticThatStartsWith(result?.Diagnostics, startsWithValue);
 
-	/// <summary>Asserts that a code-fix result does not contain error diagnostics.</summary>
+	/// <summary>
+	/// Asserts that a code-fix result does not contain error diagnostics.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult HasNoErrorDiagnostics(this CodeFixTestResult result) =>
 		HasNoErrorDiagnostics(result?.Diagnostics, "code fix");
 
-	/// <summary>Asserts that a code-fix result does not contain diagnostics.</summary>
+	/// <summary>
+	/// Asserts that a code-fix result does not contain diagnostics.
+	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public static AssertionResult HasNoDiagnostics(this CodeFixTestResult result) =>

@@ -40,7 +40,9 @@ public record SourceGeneratorTestOptions
 	/// <summary>
 	/// Initializes a new instance by copying the current <see cref="Default"/> options.
 	/// </summary>
-	/// <remarks>Derived records implicitly call this constructor unless they select another base constructor.</remarks>
+	/// <remarks>
+	/// Derived records implicitly call this constructor unless they select another base constructor.
+	/// </remarks>
 	public SourceGeneratorTestOptions()
 		: this(Default) { }
 
@@ -143,7 +145,9 @@ public record SourceGeneratorTestOptions
 	/// </remarks>
 	public bool ValidateCodeWriterScopes { get; init; } = true;
 
-	/// <summary>Gets whether framework source-generator logging is captured for this test run.</summary>
+	/// <summary>
+	/// Gets whether framework source-generator logging is captured for this test run.
+	/// </summary>
 	public bool EnableLogging { get; init; } = true;
 
 	/// <summary>
@@ -210,7 +214,9 @@ public record SourceGeneratorTestOptions
 	/// <summary>
 	/// Gets additional source text to include in the test compilation, such as generated code or other content that can be read by the generator.
 	/// </summary>
-	/// <remarks>This will be added to the compilation as additional source files, along with the source provided.</remarks>
+	/// <remarks>
+	/// This will be added to the compilation as additional source files, along with the source provided.
+	/// </remarks>
 	public ImmutableArray<string> AdditionalSources { get; init; } = [];
 
 	/// <summary>
@@ -224,12 +230,16 @@ public record SourceGeneratorTestOptions
 	/// <summary>
 	/// Gets the options to use when running the compilation with analyzers.
 	/// </summary>
-	/// <remarks>This is mutually exclusive with <see cref="CompilationWithAnalyzersOptions"/>.</remarks>
+	/// <remarks>
+	/// This is mutually exclusive with <see cref="CompilationWithAnalyzersOptions"/>.
+	/// </remarks>
 	public AnalyzerOptions? AnalyzerOptions { get; init; }
 
 	/// <summary>
 	/// Gets the options to use when running the compilation with analyzers.
 	/// </summary>
-	/// <remarks>This is mutually exclusive with <see cref="AnalyzerOptions"/>.</remarks>
+	/// <remarks>
+	/// This is mutually exclusive with <see cref="AnalyzerOptions"/>.
+	/// </remarks>
 	public CompilationWithAnalyzersOptions? CompilationWithAnalyzersOptions { get; init; }
 }

@@ -660,3 +660,5 @@ sketch
 BenchmarkDotNet.Artifacts/
 !**/Sdk/build
 !build/
+
+.tools/

@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Purview.SourceGeneratorFramework.Testing;
@@ -34,7 +35,9 @@ public sealed partial class CodeQuery
 		return true;
 	}
 
-	/// <summary>Determines whether a method declaration's return type matches the given reference.</summary>
+	/// <summary>
+	/// Determines whether a method declaration's return type matches the given reference.
+	/// </summary>
 	public bool HasReturnType(string methodName, TypeReference returnType)
 	{
 		if (string.IsNullOrWhiteSpace(methodName))
@@ -79,6 +82,21 @@ public sealed partial class CodeQuery
 [EditorBrowsable(EditorBrowsableState.Never)]
 public static class CodeQuerySignatureExtensions
 {
+	/// <summary>
+	/// Creates a nested query scoped to this node, enabling chained searches such as
+	/// <c>query.GetClass("C").Query(query).GetMethod("M")</c>.
+	/// </summary>
+	public static CodeQuery Query(this SyntaxNode node, CodeQuery parent)
+	{
+		if (node is null)
+			throw new ArgumentNullException(nameof(node));
+		if (parent is null)
+			throw new ArgumentNullException(nameof(parent));
+
+		// Delegate to the parent query's In method, which creates a new query scoped to the given node.
+		return parent.In(node);
+	}
+
 	/// <summary>
 	/// Determines whether the method's or constructor's parameters match the given types, resolved through the
 	/// query's compilation.

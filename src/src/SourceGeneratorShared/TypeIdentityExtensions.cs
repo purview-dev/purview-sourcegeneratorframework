@@ -5,7 +5,9 @@ namespace Purview.SourceGeneratorFramework;
 [EditorBrowsable(EditorBrowsableState.Never)]
 public static class TypeIdentityExtensions
 {
-	/// <summary>Returns a fully qualified reference to a static member on the specified type.</summary>
+	/// <summary>
+	/// Returns a fully qualified reference to a static member on the specified type.
+	/// </summary>
 	/// <param name="typeIdentity">The type that declares the static member.</param>
 	/// <param name="memberName">The static field, property, method, or nested-type name.</param>
 	/// <returns>A C# expression in the form <c>global::Namespace.Type.Member</c>.</returns>

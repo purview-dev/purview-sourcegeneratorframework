@@ -18,6 +18,9 @@
 		<CompilerVisibleProperty Include="PurviewSourceGeneratorFrameworkLoggingSessionId">
 			<Description>Identifies the registered sink for an isolated source-generator logging session.</Description>
 		</CompilerVisibleProperty>
+		<CompilerVisibleProperty Include="PurviewSourceGeneratorFrameworkLanguageVersion">
+			<Description>Carries the consuming project's LangVersion so generators can gate emitted features.</Description>
+		</CompilerVisibleProperty>
 	</ItemGroup>
 
 	<ItemGroup>

@@ -22,13 +22,17 @@ public readonly record struct ConstructorDeclarationOptions
 		Accessibility = accessibility;
 	}
 
-	/// <summary>Initializes a constructor declaration from its containing type.</summary>
+	/// <summary>
+	/// Initializes a constructor declaration from its containing type.
+	/// </summary>
 	/// <param name="type">The containing type. Only its unqualified declaration name is used.</param>
 	/// <param name="accessibility">The optional accessibility modifier, or <see langword="null"/> to omit accessibility.</param>
 	public ConstructorDeclarationOptions(TypeIdentity type, TypeDeclarationAccessibility? accessibility = null)
 		: this(type.AsTypeReference(), accessibility) { }
 
-	/// <summary>Initializes a constructor declaration from its containing type reference.</summary>
+	/// <summary>
+	/// Initializes a constructor declaration from its containing type reference.
+	/// </summary>
 	/// <param name="reference">The containing type reference.</param>
 	/// <param name="accessibility">The optional accessibility modifier, or <see langword="null"/> to omit accessibility.</param>
 	public ConstructorDeclarationOptions(TypeReference reference, TypeDeclarationAccessibility? accessibility = null)
@@ -37,7 +41,9 @@ public readonly record struct ConstructorDeclarationOptions
 		Accessibility = accessibility;
 	}
 
-	/// <summary>Gets the structured containing type reference.</summary>
+	/// <summary>
+	/// Gets the structured containing type reference.
+	/// </summary>
 	public TypeReference Reference { get; }
 
 	/// <summary>
@@ -45,15 +51,25 @@ public readonly record struct ConstructorDeclarationOptions
 	/// </summary>
 	public TypeDeclarationAccessibility? Accessibility { get; init; }
 
-	/// <summary>Gets whether a static constructor is emitted.</summary>
-	/// <remarks>Static constructors cannot declare parameters or an initializer.</remarks>
+	/// <summary>
+	/// Gets whether a static constructor is emitted.
+	/// </summary>
+	/// <remarks>
+	/// Static constructors cannot declare parameters or an initializer.
+	/// </remarks>
 	public bool IsStatic { get; init; }
 
-	/// <summary>Gets the constructor parameters.</summary>
-	/// <remarks>Each entry is emitted verbatim as a complete parameter declaration.</remarks>
+	/// <summary>
+	/// Gets the constructor parameters.
+	/// </summary>
+	/// <remarks>
+	/// Each entry is emitted verbatim as a complete parameter declaration.
+	/// </remarks>
 	public ImmutableArray<ParameterDeclarationOptions> Parameters { get; init; }
 
-	/// <summary>Gets attributes applied to the constructor.</summary>
+	/// <summary>
+	/// Gets attributes applied to the constructor.
+	/// </summary>
 	public ImmutableArray<AttributeDeclarationOptions> Attributes { get; init; }
 
 	/// <summary>
@@ -61,7 +77,9 @@ public readonly record struct ConstructorDeclarationOptions
 	/// </summary>
 	public bool WriteParametersOnSeparateLines { get; init; }
 
-	/// <summary>Gets the optional constructor initializer without the leading colon.</summary>
+	/// <summary>
+	/// Gets the optional constructor initializer without the leading colon.
+	/// </summary>
 	/// <example><c>base(connectionString)</c> or <c>this("Default")</c>.</example>
 	public string? Initializer { get; init; }
 

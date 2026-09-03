@@ -6,18 +6,24 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace Purview.SourceGeneratorFramework.Testing;
 
-/// <summary>Executes a code refactoring against a test document and returns the refactored source.</summary>
+/// <summary>
+/// Executes a code refactoring against a test document and returns the refactored source.
+/// </summary>
 public sealed class RefactoringTestRunner<TRefactoring> : RoslynTestRunner
 	where TRefactoring : CodeRefactoringProvider, new()
 {
-	/// <summary>Runs the refactoring against one source file.</summary>
+	/// <summary>
+	/// Runs the refactoring against one source file.
+	/// </summary>
 	public Task<RefactorTestResult> RunAsync(
 		string source,
 		RefactorTestOptions? options = null,
 		CancellationToken cancellationToken = default
 	) => RunAsync([source], options, cancellationToken);
 
-	/// <summary>Runs the refactoring against the supplied source files.</summary>
+	/// <summary>
+	/// Runs the refactoring against the supplied source files.
+	/// </summary>
 	public async Task<RefactorTestResult> RunAsync(
 		IEnumerable<string> sources,
 		RefactorTestOptions? options = null,

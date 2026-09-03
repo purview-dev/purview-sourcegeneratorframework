@@ -13,7 +13,9 @@ namespace Purview.SourceGeneratorFramework.ExampleGenerator.CodeFixers;
 [ExportCodeRefactoringProvider(LanguageNames.CSharp, Name = nameof(LoggingRefactoringProvider))]
 public sealed class LoggingRefactoringProvider : CodeRefactoringProvider
 {
-	/// <summary>The equivalence key of the registered code action.</summary>
+	/// <summary>
+	/// The equivalence key of the registered code action.
+	/// </summary>
 	public const string EquivalenceKey = "AddDebug";
 
 	public override async Task ComputeRefactoringsAsync(CodeRefactoringContext context)

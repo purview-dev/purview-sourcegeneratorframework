@@ -6,7 +6,9 @@ namespace Purview.SourceGeneratorFramework;
 /// Provides execution services for source generation, including the compilation, immutable
 /// settings, optional logging, and symbol-resolution helpers.
 /// </summary>
-/// <remarks>Initializes a generation context.</remarks>
+/// <remarks>
+/// Initializes a generation context.
+/// </remarks>
 public sealed class GenerationContext<TCapabilities>(
 	TCapabilities Capabilities,
 	GenerationSettings Settings,
@@ -19,7 +21,9 @@ public sealed class GenerationContext<TCapabilities>(
 	/// </summary>
 	public TCapabilities Capabilities { get; } = Capabilities ?? throw new ArgumentNullException(nameof(Capabilities));
 
-	/// <summary>Gets the immutable generation settings.</summary>
+	/// <summary>
+	/// Gets the immutable generation settings.
+	/// </summary>
 	public GenerationSettings Settings { get; } = Settings ?? throw new ArgumentNullException(nameof(Settings));
 
 	/// <summary>
@@ -28,7 +32,9 @@ public sealed class GenerationContext<TCapabilities>(
 	/// </summary>
 	public ISourceGenLogger? Logger { get; } = Logger;
 
-	/// <summary>Creates a new independently owned code writer.</summary>
+	/// <summary>
+	/// Creates a new independently owned code writer.
+	/// </summary>
 	public CodeWriter CreateCodeWriter() => new(Settings, throwOnUnclosedScopes: Settings.ValidateCodeWriterScopes);
 
 	/// <inheritdoc />

@@ -8,6 +8,8 @@ PSGFR12 | Purview.SourceGeneratorFramework | Warning | Use IIncrementalGenerator
 PSGFR14 | Purview.SourceGeneratorFramework | Warning | Avoid RegisterImplementationSourceOutput
 PSGFR15 | Purview.SourceGeneratorFramework | Warning | Pipeline model collection lacks sequence equality
 PSGFR16 | Purview.SourceGeneratorFramework | Info | Prefer the nullable-context overload
+PSGFR17 | Purview.SourceGeneratorFramework | Warning | Consume CodeWriter scopes with a using statement
+PSGFR18 | Purview.SourceGeneratorFramework | Info | Prefer a structured CodeWriter declaration API
 ADM0001 | Target | Error | Target attribute type cannot be resolved
 ADM0002 | Property | Error | Property type is not supported for attribute extraction
 ADM0003 | Source | Error | Specified constructor index/name does not exist on the target attribute

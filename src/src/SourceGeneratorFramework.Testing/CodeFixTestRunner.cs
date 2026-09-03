@@ -6,12 +6,16 @@ using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace Purview.SourceGeneratorFramework.Testing;
 
-/// <summary>Executes an analyzer and applies one code fix to a test document.</summary>
+/// <summary>
+/// Executes an analyzer and applies one code fix to a test document.
+/// </summary>
 public sealed class CodeFixTestRunner<TAnalyzer, TCodeFix> : RoslynTestRunner
 	where TAnalyzer : DiagnosticAnalyzer, new()
 	where TCodeFix : CodeFixProvider, new()
 {
-	/// <summary>Runs the analyzer and applies a registered code action.</summary>
+	/// <summary>
+	/// Runs the analyzer and applies a registered code action.
+	/// </summary>
 	public async Task<CodeFixTestResult> RunAsync(
 		string source,
 		CodeFixTestOptions? options = null,
