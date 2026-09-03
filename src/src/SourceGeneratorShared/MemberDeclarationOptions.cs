@@ -62,6 +62,12 @@ public readonly record struct MethodDeclarationOptions
 	/// <summary>Gets whether the method is unsafe.</summary>
 	public bool IsUnsafe { get; init; }
 
+	/// <summary>
+	/// Gets whether the method is emitted as a <c>readonly</c> instance method, which is only valid
+	/// on members of struct or record struct declarations.
+	/// </summary>
+	public bool IsReadOnly { get; init; }
+
 	/// <summary>Gets the complete parameter declarations.</summary>
 	public ImmutableArray<ParameterDeclarationOptions> Parameters { get; init; }
 

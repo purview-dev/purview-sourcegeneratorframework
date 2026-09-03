@@ -2468,4 +2468,386 @@ partial void Apply()
 """
 			);
 	}
+
+	[Test]
+	public async Task ModernizationOptions_AreValueTypes()
+	{
+		// Arrange / Act / Assert
+		await Assert.That(typeof(OperatorDeclarationOptions).IsValueType).IsTrue();
+		await Assert.That(typeof(ObjectInitializerMemberOptions).IsValueType).IsTrue();
+	}
+
+	[Test]
+	public async Task WriteOperator_GivenBlockBody_WritesAccessibilityStaticTokenAndParameters()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new OperatorDeclarationOptions(
+			"==",
+			Type("bool"),
+			new("left", Type("global::Testing.Name")),
+			new("right", Type("global::Testing.Name"))
+		)
+		{
+			Accessibility = TypeDeclarationAccessibility.Public,
+		};
+
+		// Act
+		writer.WriteOperator(declaration, body => body.WriteLine("return left.Equals(right);"));
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				GeneratedAttributes()
+					+ "public static bool operator ==(global::Testing.Name left, global::Testing.Name right)\n"
+					+ "{\n"
+					+ "\treturn left.Equals(right);\n"
+					+ "}\n"
+			);
+	}
+
+	[Test]
+	public async Task WriteOperator_GivenExpressionBody_WritesExpressionAndBalancesScope()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new OperatorDeclarationOptions(
+			"<",
+			Type("bool"),
+			new("left", Type("global::Testing.Money")),
+			new("right", Type("global::Testing.Money"))
+		)
+		{
+			Accessibility = TypeDeclarationAccessibility.Public,
+			ExpressionBody = "left.CompareTo(right) < 0",
+		};
+
+		// Act
+		using (writer.WriteOperatorScope(declaration))
+		{
+			// Intentionally empty: an expression-bodied operator returns an empty scope.
+		}
+
+		// Assert
+		await Assert.That(writer.OpenScopeCount).IsEqualTo(0);
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				GeneratedAttributes()
+					+ "public static bool operator <(global::Testing.Money left, global::Testing.Money right) => left.CompareTo(right) < 0;\n"
+			);
+	}
+
+	[Test]
+	public async Task WriteOperatorScope_GivenBlockBody_TracksOpenScopeCount()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new OperatorDeclarationOptions(
+			"==",
+			Type("bool"),
+			new("left", Type("Name")),
+			new("right", Type("Name"))
+		);
+
+		// Act
+		using (writer.WriteOperatorScope(declaration))
+		{
+			writer.WriteLine("return left.Equals(right);");
+			await Assert.That(writer.OpenScopeCount).IsEqualTo(1);
+		}
+
+		// Assert
+		await Assert.That(writer.OpenScopeCount).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task WriteOperator_GivenNullBody_Throws()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new OperatorDeclarationOptions(
+			"==",
+			Type("bool"),
+			new("left", Type("Name")),
+			new("right", Type("Name"))
+		);
+
+		// Act / Assert
+		await Assert.That(() => writer.WriteOperator(declaration, null!)).Throws<ArgumentNullException>();
+	}
+
+	[Test]
+	public async Task WriteOperator_GivenExpressionBodyAndCallback_ThrowsWithoutWriting()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new OperatorDeclarationOptions(
+			"==",
+			Type("bool"),
+			new("left", Type("Name")),
+			new("right", Type("Name"))
+		)
+		{
+			ExpressionBody = "left.Equals(right)",
+		};
+
+		// Act / Assert
+		await Assert.That(() => writer.WriteOperator(declaration, _ => { })).Throws<ArgumentException>();
+		await Assert.That(writer.ToString()).IsEmpty();
+	}
+
+	[Test]
+	public async Task WritePartialMethod_GivenIsReadOnly_WritesReadonlyModifier()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new MethodDeclarationOptions("OnValidate", Type("void"))
+		{
+			IsPartial = true,
+			IsReadOnly = true,
+			Parameters =
+			[
+				new("id", Type("global::System.Guid")),
+				new("displayName", Type("string").Nullable()),
+				new("isActive", Type("bool")),
+			],
+		};
+
+		// Act
+		writer.WritePartialMethod(declaration);
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				GeneratedAttributes()
+					+ "readonly partial void OnValidate(global::System.Guid id, string? displayName, bool isActive);\n"
+			);
+	}
+
+	[Test]
+	public async Task WritePartialMethod_GivenIsReadOnlyFalse_OmitsReadonlyModifier()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new MethodDeclarationOptions("Apply", Type("void")) { IsPartial = true };
+
+		// Act
+		writer.WritePartialMethod(declaration);
+
+		// Assert
+		await Assert.That(writer.ToString()).IsEqualTo(GeneratedAttributes() + "partial void Apply();\n");
+	}
+
+	[Test]
+	public async Task WriteMethod_GivenIsReadOnlyAndIsStatic_ThrowsWithoutWriting()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new MethodDeclarationOptions("Invalid", Type("void")) { IsReadOnly = true, IsStatic = true };
+
+		// Act / Assert
+		await Assert.That(() => writer.WriteMethodScope(declaration)).Throws<ArgumentException>();
+		await Assert.That(writer.ToString()).IsEmpty();
+	}
+
+	[Test]
+	public async Task WriteAssignment_WithObjectInitializerMembers_WritesBlockInitializer()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var creation = new ObjectCreationOptions(Type("global::Testing.OrderAggregate"))
+		{
+			InitializerMembers =
+			[
+				new("Details", "jsonModel.Details ?? new global::Purview.EventSourcing.Aggregates.AggregateDetails()"),
+				new("CustomerId", "jsonModel.CustomerId"),
+			],
+		};
+
+		// Act
+		writer.WriteAssignment("var", "aggregate", creation);
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"var aggregate = new global::Testing.OrderAggregate\n"
+					+ "{\n"
+					+ "\tDetails = jsonModel.Details ?? new global::Purview.EventSourcing.Aggregates.AggregateDetails(),\n"
+					+ "\tCustomerId = jsonModel.CustomerId,\n"
+					+ "};\n"
+			);
+	}
+
+	[Test]
+	public async Task WriteAssignment_WithObjectInitializerMembersAndConstructorArguments_WritesArgumentsBeforeInitializer()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var creation = new ObjectCreationOptions(
+			Type("global::Testing.OrderEvents.OrderCreatedEvent"),
+			"customerId",
+			"total"
+		)
+		{
+			InitializerMembers = [new("CustomerId", "customerId"), new("Total", "total")],
+		};
+
+		// Act
+		writer.WriteAssignment("var", "@event", creation);
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"var @event = new global::Testing.OrderEvents.OrderCreatedEvent(customerId, total)\n"
+					+ "{\n"
+					+ "\tCustomerId = customerId,\n"
+					+ "\tTotal = total,\n"
+					+ "};\n"
+			);
+	}
+
+	[Test]
+	public async Task WriteAssignment_WithInlineInitializerMembers_WritesSingleLineInitializer()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var creation = new ObjectCreationOptions(Type("Order"))
+		{
+			InitializerMembers = [new("A", "1"), new("B", "2")],
+			WriteInitializerMembersOnSeparateLines = false,
+		};
+
+		// Act
+		writer.WriteAssignment("var order", creation);
+
+		// Assert
+		await Assert.That(writer.ToString()).IsEqualTo("var order = new Order { A = 1, B = 2, };\n");
+	}
+
+	[Test]
+	public async Task WriteAssignment_WithEmptyInitializerMembers_RendersAsToday()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var creation = new ObjectCreationOptions(Type("Order"));
+
+		// Act
+		writer.WriteAssignment("var order", creation);
+
+		// Assert
+		await Assert.That(writer.ToString()).IsEqualTo("var order = new Order();\n");
+	}
+
+	[Test]
+	public async Task WriteAssignment_WithEmptyArgumentsAndForceNotNull_WritesBangAfterParentheses()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var creation = new ObjectCreationOptions(Type("Order"));
+
+		// Act
+		writer.WriteAssignment("var order", creation, forceNotNull: true);
+
+		// Assert
+		await Assert.That(writer.ToString()).IsEqualTo("var order = new Order()!;\n");
+	}
+
+	[Test]
+	public async Task WriteAssignment_WithInitializerMembersAndForceNotNull_WritesBangAfterBrace()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var creation = new ObjectCreationOptions(Type("Order"))
+		{
+			InitializerMembers = [new("A", "1")],
+			WriteInitializerMembersOnSeparateLines = false,
+		};
+
+		// Act
+		writer.WriteAssignment("var order", creation, forceNotNull: true);
+
+		// Assert
+		await Assert.That(writer.ToString()).IsEqualTo("var order = new Order { A = 1, }!;\n");
+	}
+
+	[Test]
+	public async Task WriteAssignment_WithMultilineArgumentsAndInitializerMembers_WritesClosingBraceAndSemicolon()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var creation = new ObjectCreationOptions(Type("Order"), "aParameterNameThatForcesTheArgumentsOntoTheirOwnLine")
+		{
+			WriteArgumentsOnSeparateLines = true,
+			InitializerMembers = [new("A", "1")],
+		};
+
+		// Act
+		writer.WriteAssignment("var order", creation);
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"var order = new Order(\n"
+					+ "\taParameterNameThatForcesTheArgumentsOntoTheirOwnLine)\n"
+					+ "{\n"
+					+ "\tA = 1,\n"
+					+ "};\n"
+			);
+	}
+
+	[Test]
+	public async Task WriteThrow_GivenExceptionTypeAndMessage_WritesThrow()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+
+		// Act
+		writer.WriteThrow(
+			new TypeIdentity("InvalidOperationException", "System"),
+			"Collection property 'Tags' cannot be null."
+		);
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"throw new global::System.InvalidOperationException(\"Collection property 'Tags' cannot be null.\");\n"
+			);
+	}
+
+	[Test]
+	public async Task WriteThrow_GivenMessageWithQuotesAndBackslashes_EscapesMessage()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+
+		// Act
+		writer.WriteThrow(new TypeIdentity("InvalidOperationException", "System"), "He said \"hi\" to C:\\temp\\file.");
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"throw new global::System.InvalidOperationException(\"He said \\\"hi\\\" to C:\\\\temp\\\\file.\");\n"
+			);
+	}
+
+	[Test]
+	public async Task WriteThrow_GivenNullMessage_WritesEmptyConstructor()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+
+		// Act
+		writer.WriteThrow(new TypeIdentity("InvalidOperationException", "System"));
+
+		// Assert
+		await Assert.That(writer.ToString()).IsEqualTo("throw new global::System.InvalidOperationException();\n");
+	}
 }

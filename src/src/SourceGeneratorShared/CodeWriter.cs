@@ -552,7 +552,8 @@ public sealed partial class CodeWriter
 			declaration.IsAbstract,
 			declaration.IsVirtual,
 			declaration.IsOverride,
-			declaration.IsSealed
+			declaration.IsSealed,
+			isReadOnly: declaration.IsReadOnly
 		);
 
 		WriteIf(declaration.IsAsync, "async ").WriteIf(declaration.IsUnsafe, "unsafe ");
@@ -642,6 +643,69 @@ public sealed partial class CodeWriter
 		}
 
 		using (WriteMethodScope(declaration))
+			writeBody(this);
+
+		return this;
+	}
+
+	/// <summary>
+	/// Writes a structured operator declaration and returns its body scope.
+	/// </summary>
+	/// <param name="declaration">The operator declaration.</param>
+	/// <returns>
+	/// The operator body scope, or an empty scope when an expression-bodied operator was emitted.
+	/// </returns>
+	/// <example><code>using (writer.WriteOperatorScope(new OperatorDeclarationOptions("==", TypeLibrary.System.Boolean, left, right))) writer.WriteLine("return left.Equals(right);");</code></example>
+	public BlockScope WriteOperatorScope(OperatorDeclarationOptions declaration)
+	{
+		if (declaration.ReturnType.IsEmpty)
+			return default;
+
+		ValidateOperatorDeclaration(declaration);
+		BeginWrittenItem(WrittenItemKind.Method);
+
+		if (declaration.IncludeGeneratedAttributes ?? DefaultIncludeGeneratedAttributes)
+			WriteGeneratedAttributes(includeCoverageExclusion: true, includeEmbeddedAttribute: false);
+
+		WriteAttributes(declaration.Attributes);
+
+		if (declaration.Accessibility is { } accessibility)
+			WriteAccessibility(accessibility).Write(' ');
+
+		WriteIf(declaration.IsStatic, "static ");
+		WriteTypeReference(declaration.ReturnType).Write(" operator ").Write(declaration.OperatorToken);
+		WriteParametersWithHeuristic([declaration.Left, declaration.Right]);
+
+		if (declaration.ExpressionBody is not null)
+		{
+			Write(" => ");
+			WriteExpression(declaration.ExpressionBody, expressionWriter: null);
+			WriteLine(";");
+			CompleteWrittenItem(WrittenItemKind.Method, _indentLevel);
+			return default;
+		}
+
+		NewLine();
+		return OpenBlockScope(WrittenItemKind.Method);
+	}
+
+	/// <summary>Writes a structured operator declaration and invokes a callback for its body.</summary>
+	/// <param name="declaration">The operator declaration.</param>
+	/// <param name="writeBody">The action that writes the operator body.</param>
+	/// <returns>The current writer.</returns>
+	/// <exception cref="ArgumentException">The operator has an expression body.</exception>
+	/// <example><code>writer.WriteOperator(new OperatorDeclarationOptions("==", TypeLibrary.System.Boolean, left, right), body =&gt; body.WriteLine("return left.Equals(right);"));</code></example>
+	public CodeWriter WriteOperator(OperatorDeclarationOptions declaration, Action<CodeWriter> writeBody)
+	{
+		if (writeBody is null)
+			throw new ArgumentNullException(nameof(writeBody));
+		if (declaration.ExpressionBody is not null)
+			throw new ArgumentException(
+				"A callback body cannot be supplied for an expression-bodied operator.",
+				nameof(declaration)
+			);
+
+		using (WriteOperatorScope(declaration))
 			writeBody(this);
 
 		return this;
@@ -1768,14 +1832,99 @@ public sealed partial class CodeWriter
 
 	bool WriteObjectCreationExpression(ObjectCreationOptions value, bool forceNotNull)
 	{
-		Write("new ").WriteTypeReference(value.Reference).Write('(');
+		ValidateInitializerMembers(value);
+		Write("new ").WriteTypeReference(value.Reference);
+
+		var hasInitializer = !value.InitializerMembers.IsDefaultOrEmpty;
 		string[] arguments = value.Arguments.IsDefault ? [] : [.. value.Arguments.Select(RenderCallArgument)];
-		if (WriteMethodCallArguments(arguments, value.WriteArgumentsOnSeparateLines, forceNotNull ? ")!;" : ");"))
-			return true;
-		Write(')');
+		if (arguments.Length > 0 || !hasInitializer)
+		{
+			// WriteMethodCallArguments writes the closing parenthesis itself: inline or for empty
+			// arguments it emits ')' and returns false, while a multiline layout emits the closing
+			// token and returns true.
+			Write('(');
+			if (
+				WriteMethodCallArguments(
+					arguments,
+					value.WriteArgumentsOnSeparateLines,
+					hasInitializer ? ")"
+						: forceNotNull ? ")!;"
+						: ");"
+				)
+			)
+			{
+				// Multiline arguments: the closing token was already written. When an initializer
+				// follows, the initializer supplies the terminating semicolon via the caller.
+				if (hasInitializer)
+				{
+					WriteObjectInitializer(value, forceNotNull);
+					return false;
+				}
+
+				return true;
+			}
+		}
+
+		if (hasInitializer)
+		{
+			WriteObjectInitializer(value, forceNotNull);
+			return false;
+		}
+
 		if (forceNotNull)
 			Write('!');
+
 		return false;
+	}
+
+	bool WriteObjectInitializer(ObjectCreationOptions value, bool forceNotNull)
+	{
+		if (value.WriteInitializerMembersOnSeparateLines)
+		{
+			EnsureNewLine();
+			WriteLine("{");
+			Indent();
+			for (var index = 0; index < value.InitializerMembers.Length; index++)
+			{
+				var member = value.InitializerMembers[index];
+				Write(member.Name).Write(" = ").Write(member.Value).WriteLine(",");
+			}
+
+			Unindent();
+			Write("}");
+		}
+		else
+		{
+			Write(" { ");
+			for (var index = 0; index < value.InitializerMembers.Length; index++)
+			{
+				if (index != 0)
+					Write(" ");
+
+				var member = value.InitializerMembers[index];
+				Write(member.Name).Write(" = ").Write(member.Value).Write(",");
+			}
+
+			Write(" }");
+		}
+
+		if (forceNotNull)
+			Write('!');
+
+		return false;
+	}
+
+	static void ValidateInitializerMembers(ObjectCreationOptions value)
+	{
+		for (
+			var index = 0;
+			!value.InitializerMembers.IsDefaultOrEmpty && index < value.InitializerMembers.Length;
+			index++
+		)
+		{
+			ValidateRequired(value.InitializerMembers[index].Name, "Initializer member name", nameof(value));
+			ValidateRequired(value.InitializerMembers[index].Value, "Initializer member value", nameof(value));
+		}
 	}
 
 	/// <summary>Writes a return statement.</summary>
@@ -1810,18 +1959,29 @@ public sealed partial class CodeWriter
 		return WriteLine(";");
 	}
 
-	/// <summary>Writes a throw statement.</summary>
-	/// <example><code>writer.WriteThrow("new InvalidOperationException()");</code></example>
+	/// <summary>Writes a throw statement using a structured exception type and an optional message.</summary>
+	/// <param name="exceptionType">The exception type to throw.</param>
+	/// <param name="message">
+	/// The exception message written as a string literal, or <see langword="null"/> to throw the
+	/// exception without a message. Backslashes and double quotes are escaped so raw literal text
+	/// can be supplied.
+	/// </param>
+	/// <example><code>writer.WriteThrow(TypeLibrary.System.InvalidOperationException, "Cannot be null.");</code></example>
 	public CodeWriter WriteThrow(TypeReference exceptionType, string? message = null)
 	{
 		if (exceptionType.IsNullOrEmpty())
 			throw new ArgumentException("Exception type cannot be null or empty.", nameof(exceptionType));
 
 		Write("throw new ");
-		WriteExpression(
-			$"{exceptionType}{(message is null ? string.Empty : $"(\"{message}\")")}",
-			expressionWriter: null
-		);
+		if (message is null)
+			WriteExpression($"{exceptionType}()", expressionWriter: null);
+		else
+		{
+			WriteExpression(
+				$"{exceptionType}(\"{message.Replace("\\", "\\\\").Replace("\"", "\\\"")}\")",
+				expressionWriter: null
+			);
+		}
 
 		return WriteLine(";");
 	}
@@ -2226,12 +2386,14 @@ public sealed partial class CodeWriter
 		bool isAbstract,
 		bool isVirtual,
 		bool isOverride,
-		bool isSealed
+		bool isSealed,
+		bool isReadOnly = false
 	)
 	{
 		if (accessibility is { } value)
 			WriteAccessibility(value).Write(' ');
-		WriteIf(isStatic, "static ")
+		WriteIf(isReadOnly, "readonly ")
+			.WriteIf(isStatic, "static ")
 			.WriteIf(isSealed, "sealed ")
 			.WriteIf(isAbstract, "abstract ")
 			.WriteIf(isVirtual, "virtual ")
@@ -2710,8 +2872,30 @@ public sealed partial class CodeWriter
 			"Method parameters cannot contain null or whitespace values.",
 			nameof(declaration)
 		);
+		if (declaration.IsReadOnly && declaration.IsStatic)
+			throw new ArgumentException("A readonly method cannot also be static.", nameof(declaration));
 		if (declaration.IsAbstract && declaration.ExpressionBody is not null)
 			throw new ArgumentException("An abstract method cannot have an expression body.", nameof(declaration));
+	}
+
+	static void ValidateOperatorDeclaration(OperatorDeclarationOptions declaration)
+	{
+		ValidateRequired(declaration.OperatorToken, "Operator token", nameof(declaration));
+		ValidateTypeReference(declaration.ReturnType, nameof(declaration));
+		ValidateMemberModifiers(
+			declaration.Accessibility,
+			isAbstract: false,
+			isVirtual: false,
+			isOverride: false,
+			isSealed: false,
+			nameof(declaration)
+		);
+		ValidateParameters(
+			[declaration.Left, declaration.Right],
+			"Operator parameters cannot contain null or whitespace values.",
+			nameof(declaration)
+		);
+		ValidateAttributes(declaration.Attributes, nameof(declaration));
 	}
 
 	static void ValidatePropertyDeclaration(PropertyDeclarationOptions declaration)

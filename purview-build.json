@@ -1,14 +1,9 @@
 {
 	"Build": {
 		"Solution": "src/SourceGeneratorFramework.slnx",
-		"Configuration": "Release",
-		"ArtifactsFolder": "artifacts",
-		"RunTests": true,
-		"TestFilter": "/*/*/*/*/",
-		"TestProjects": "*",
-		"RunLint": true,
-		"RunPack": true,
-		"ValidatePack": true
+		"TestRoot": "src/tests",
+		"TestPatterns": "*Tests.csproj",
+		"TestFilter": "/*/*/*/*/"
 	},
 	"PackValidation": {
 		"RequireSymbolPackage": true,
@@ -36,19 +31,6 @@
 			]
 		},
 		"ForbiddenContent": {}
-	},
-	"NuGet": {
-		"FeedUrl": "https://api.nuget.org/v3/index.json"
-	},
-	"PublishLocalNuGet": {
-		"LocalFeedPath": "",
-		"OverwriteExistingPackages": true,
-		"ShutdownDotnetBuilderServer": true,
-		"ClearPackageCache": true
-	},
-	"GitHub": {
-		"AccessToken": null,
-		"ProductHeader": "Purview.SourceGeneratorFramework.Pipeline"
 	},
 	"Release": {
 		"Mode": "None"
