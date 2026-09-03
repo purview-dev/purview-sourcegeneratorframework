@@ -98,17 +98,20 @@ public static class IncrementalPipeline
 						$"Creating generation context ({typeof(TCapabilities)}) for compilation '{input.Left.AssemblyName}'."
 					);
 
-					settings = settings with
+					// Honour an explicitly configured nullable-context value first, falling back to the
+					// compilation's nullable annotations state only when one was not specified.
+					var resolvedSettings = settings with
 					{
 						ValidateCodeWriterScopes = configuration.ValidateCodeWriterScopes,
 						IsSourceGeneratorDisabled = configuration.IsSourceGeneratorDisabled,
 						IsLoggingEnabled = logger is not null,
-						IsNullableContextEnabled = IsNullableContextEnabled(compilation),
+						IsNullableContextEnabled =
+							settings.IsNullableContextEnabled ?? IsNullableContextEnabled(compilation),
 					};
 
-					var capabilities = factory(compilation, settings, logger, cancellationToken);
+					var capabilities = factory(compilation, resolvedSettings, logger, cancellationToken);
 
-					return new GenerationContext<TCapabilities>(capabilities, settings, logger);
+					return new GenerationContext<TCapabilities>(capabilities, resolvedSettings, logger);
 				}
 			)
 			.WithTrackingName($"GetGenerationContext_{typeof(TCapabilities).Name}");
@@ -117,16 +120,17 @@ public static class IncrementalPipeline
 	/// <summary>
 	/// Determines whether the compilation has nullable annotations enabled, which is the case when
 	/// the compilation options allow nullable annotations. Returns <see langword="null"/> when the
-	/// compilation is not a C# compilation.
+	/// compilation is not a C# compilation or the state cannot be determined.
 	/// </summary>
-#pragma warning disable format
-	static bool? IsNullableContextEnabled(Compilation compilation) =>
-		compilation
-			is CSharpCompilation
-			{
-				Options.NullableContextOptions: NullableContextOptions.Annotations or NullableContextOptions.Enable
-			};
-#pragma warning restore format
+	public static bool? IsNullableContextEnabled(Compilation compilation)
+	{
+		if (compilation is not CSharpCompilation csharpCompilation)
+			return null;
+
+		return csharpCompilation.Options.NullableContextOptions
+			is NullableContextOptions.Annotations
+				or NullableContextOptions.Enable;
+	}
 
 	static IncrementalValueProvider<GenerationConfiguration> GenerationConfigurationValueProvider(
 		IncrementalGeneratorInitializationContext context,

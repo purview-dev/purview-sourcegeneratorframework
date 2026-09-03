@@ -185,10 +185,10 @@ public record SourceGeneratorTestOptions
 
 	/// <summary>
 	/// Gets the nullable context of the test compilation. The default is
-	/// <see cref="NullableContextOptions.Disable"/>, mirroring the framework's auto-detection of the
-	/// <c>#nullable enable</c> directive in generated headers.
+	/// <see cref="NullableContextOptions.Enable"/>, so test compilations accept nullable annotations
+	/// and the framework's auto-detection emits the <c>#nullable enable</c> directive in generated headers.
 	/// </summary>
-	public NullableContextOptions NullableContextOptions { get; init; } = NullableContextOptions.Disable;
+	public NullableContextOptions NullableContextOptions { get; init; } = NullableContextOptions.Enable;
 
 	/// <summary>
 	/// Gets the language version of the test compilation.

@@ -12,7 +12,10 @@
 		<IncludeBuildOutput>true</IncludeBuildOutput>
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
-		<TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeSourceGeneratorShared;IncludeAnalyzerAssembly</TargetsForTfmSpecificContentInPackage>
+		<!-- The repo's pack validation requires PDBs to be delivered only through the .snupkg, so the
+		     analyzer PDB must not ship inside the .nupkg under analyzers/dotnet/cs. -->
+		<PurviewPackAnalyzerPdb>false</PurviewPackAnalyzerPdb>
+		<TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeSourceGeneratorShared</TargetsForTfmSpecificContentInPackage>
 		<TargetsForTfmSpecificDebugSymbolsInPackage>$(TargetsForTfmSpecificDebugSymbolsInPackage);IncludeSourceGeneratorSharedSymbols</TargetsForTfmSpecificDebugSymbolsInPackage>
 	</PropertyGroup>
 
@@ -22,15 +25,12 @@
 			PrivateAssets="all"
 			ReferenceOutputAssembly="false"
 			OutputItemType="Analyzer"
-			Targets="GetSourceGeneratorAnalyzerFiles"
 		/>
 		<ProjectReference
 			Include="..\SourceGeneratorFramework.Analyzers\SourceGeneratorFramework.Analyzers.csproj"
 			PrivateAssets="all"
 			ReferenceOutputAssembly="false"
 			OutputItemType="Analyzer"
-			Targets="GetSourceGeneratorAnalyzerFiles"
-			Pack="false"
 		/>
 		<ProjectReference
 			Include="..\SourceGeneratorShared\SourceGeneratorShared.csproj"
@@ -40,44 +40,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
-		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" />
 	</ItemGroup>
 
 	<Import Project="..\SourceGeneratorShared\SourceGeneratorShared.Pack.targets" />
-
-	<!-- The SDK auto-packs the built analyzer assembly's PDB into analyzers/dotnet/cs as package
-	     content, which would put a PDB in the .nupkg. The PDB is already collected for the .snupkg
-	     via DebugSymbolsProjectOutputGroup, so remove the content item before the pack file set is built. -->
-	<Target Name="RemoveSdkAnalyzerPdbFromPackage" BeforeTargets="_GetPackageFiles">
-		<ItemGroup>
-			<None Remove="$(TargetDir)$(TargetName).pdb" />
-		</ItemGroup>
-	</Target>
-
-	<!--
-		By setting the Analyzer reference to Pack="false", we prevent it from being included in the NuGet package.
-		This solved the warning about duplicate .Shared.dll files being included in the package, but it also means that the analyzer
-		assembly is not included in the package at all.
-
-		So this target is added to explicitly include the analyzer assembly in the package, so that it can be used by other projects that reference this package.
-	-->
-	<Target Name="IncludeAnalyzerAssembly">
-		<MSBuild
-			Projects="..\SourceGeneratorFramework.Analyzers\SourceGeneratorFramework.Analyzers.csproj"
-			Targets="GetTargetPath"
-			Properties="Configuration=$(Configuration);TargetFramework=netstandard2.0"
-		>
-			<Output TaskParameter="TargetOutputs" ItemName="_SourceGeneratorFrameworkAnalyzerAssembly" />
-		</MSBuild>
-
-		<ItemGroup>
-			<TfmSpecificPackageFile
-				Include="@(_SourceGeneratorFrameworkAnalyzerAssembly)"
-				Condition="Exists('%(_SourceGeneratorFrameworkAnalyzerAssembly.Identity)')"
-			>
-				<PackagePath>analyzers/dotnet/cs/</PackagePath>
-			</TfmSpecificPackageFile>
-		</ItemGroup>
-	</Target>
 </Project>
