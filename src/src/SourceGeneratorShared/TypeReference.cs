@@ -227,18 +227,20 @@ public sealed record TypeReference
 	/// <exception cref="ArgumentNullException">If <paramref name="settings"/> is <see langword="null"/>.</exception>
 	public TypeReference Nullable(GenerationSettings settings) =>
 		settings == null ? throw new ArgumentNullException(nameof(settings))
-		: settings.IsNullableContextEnabled is null or true ? AppendNullable(TypeModifier.Nullable)
+		: ShouldComposeNullable(settings.NullableDirectiveMode, settings.IsNullableContextEnabled)
+			? AppendNullable(TypeModifier.Nullable)
 		: this;
 
 	/// <summary>
-	/// Appends a nullable annotation if the given settings indicate that nullable context is enabled or unknown.
+	/// Appends a nullable annotation if the given code writer indicates that nullable context is enabled or unknown.
 	/// </summary>
 	/// <param name="writer">The code writer to use.</param>
 	/// <returns>The modified type reference.</returns>
 	/// <exception cref="ArgumentNullException">If <paramref name="writer"/> is <see langword="null"/>.</exception>
 	public TypeReference Nullable(CodeWriter writer) =>
 		writer == null ? throw new ArgumentNullException(nameof(writer))
-		: writer.IsNullableContextEnabled is null or true ? AppendNullable(TypeModifier.Nullable)
+		: ShouldComposeNullable(writer.NullableDirectiveMode, writer.IsNullableContextEnabled)
+			? AppendNullable(TypeModifier.Nullable)
 		: this;
 
 	/// <summary>
@@ -258,6 +260,15 @@ public sealed record TypeReference
 
 	/// <summary>Appends a pointer indirection.</summary>
 	public TypeReference MakePointer() => Append(TypeModifier.PointerModifier);
+
+	static bool ShouldComposeNullable(NullableDirectiveMode mode, bool? isNullableContextEnabled) =>
+		mode switch
+		{
+			NullableDirectiveMode.Always => true,
+			NullableDirectiveMode.Disable => false,
+			NullableDirectiveMode.Auto => isNullableContextEnabled is null or true,
+			_ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unknown nullable directive mode."),
+		};
 
 	TypeReference AppendNullable(TypeModifier nullable)
 	{

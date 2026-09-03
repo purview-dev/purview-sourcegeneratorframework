@@ -131,6 +131,36 @@ public sealed class TypeReferenceTests
 	}
 
 	[Test]
+	public async Task Nullable_GivenAlwaysModeAndDisabledContext_AppendsAnnotation()
+	{
+		var settings = new GenerationSettings("TestGenerator", "1.0.0")
+		{
+			NullableDirectiveMode = NullableDirectiveMode.Always,
+			IsNullableContextEnabled = false,
+		};
+		var writer = new CodeWriter(settings);
+		var @string = TypeIdentity.Create<string>();
+
+		await Assert.That(@string.MakeNullable(settings).RenderFullName).IsEqualTo("string?");
+		await Assert.That(@string.MakeNullable(writer).RenderFullName).IsEqualTo("string?");
+	}
+
+	[Test]
+	public async Task Nullable_GivenDisableModeAndEnabledContext_DoesNotAppendAnnotation()
+	{
+		var settings = new GenerationSettings("TestGenerator", "1.0.0")
+		{
+			NullableDirectiveMode = NullableDirectiveMode.Disable,
+			IsNullableContextEnabled = true,
+		};
+		var writer = new CodeWriter(settings);
+		var @string = TypeIdentity.Create<string>();
+
+		await Assert.That(@string.MakeNullable(settings).RenderFullName).IsEqualTo("string");
+		await Assert.That(@string.MakeNullable(writer).RenderFullName).IsEqualTo("string");
+	}
+
+	[Test]
 	public async Task Nullable_GivenNullSettingsOrWriter_Throws()
 	{
 		var @string = TypeIdentity.Create<string>();
