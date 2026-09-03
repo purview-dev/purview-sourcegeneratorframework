@@ -241,6 +241,17 @@ public sealed record TypeReference
 		: writer.IsNullableContextEnabled is null or true ? AppendNullable(TypeModifier.Nullable)
 		: this;
 
+	/// <summary>
+	/// Appends a nullable annotation if the given settings indicate that nullable context is enabled or unknown.
+	/// </summary>
+	/// <param name="compilation">The compilation to use.</param>
+	/// <returns>The modified type reference.</returns>
+	/// <exception cref="ArgumentNullException">If <paramref name="compilation"/> is <see langword="null"/>.</exception>
+	public TypeReference Nullable(Compilation compilation) =>
+		compilation == null ? throw new ArgumentNullException(nameof(compilation))
+		: IncrementalPipeline.IsNullableContextEnabled(compilation) is null or true ? AppendNullable(TypeModifier.Nullable)
+		: this;
+
 	/// <summary>Appends an array of the given rank.</summary>
 	public TypeReference MakeArray(int rank = 1) => Append(TypeModifier.Array(rank));
 

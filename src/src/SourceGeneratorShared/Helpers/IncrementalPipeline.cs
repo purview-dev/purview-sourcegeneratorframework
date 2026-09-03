@@ -120,7 +120,7 @@ public static class IncrementalPipeline
 	/// compilation is not a C# compilation.
 	/// </summary>
 #pragma warning disable format
-	static bool? IsNullableContextEnabled(Compilation compilation) =>
+	public static bool? IsNullableContextEnabled(Compilation compilation) =>
 		compilation
 			is CSharpCompilation
 			{

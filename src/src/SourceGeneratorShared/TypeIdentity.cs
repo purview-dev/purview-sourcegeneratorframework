@@ -571,9 +571,29 @@ public readonly record struct TypeIdentity
 	/// <summary>Creates a nullable structured type reference.</summary>
 	public TypeReference MakeNullable() => AsTypeReference().Nullable();
 
+	/// <summary>
+	/// Creates a nullable structured type reference, using the specified generation settings to determine whether
+	/// nullable context is enabled or unknown.
+	/// </summary>
+	/// <param name="settings">The generation settings to use.</param>
+	/// <returns>The modified type reference.</returns>
 	public TypeReference MakeNullable(GenerationSettings settings) => AsTypeReference().Nullable(settings);
 
+	/// <summary>
+	/// Creates a nullable structured type reference, using the specified code writer to determine whether
+	/// nullable context is enabled or unknown.
+	/// </summary>
+	/// <param name="writer">The code writer to use.</param>
+	/// <returns>The modified type reference.</returns>
 	public TypeReference MakeNullable(CodeWriter writer) => AsTypeReference().Nullable(writer);
+
+	/// <summary>
+	/// Creates a nullable structured type reference, using the specified compilation to determine whether
+	/// nullable context is enabled or unknown.
+	/// </summary>
+	/// <param name="compilation">The compilation to use.</param>
+	/// <returns>The modified type reference.</returns>
+	public TypeReference MakeNullable(Compilation compilation) => AsTypeReference().Nullable(compilation);
 
 	/// <summary>Creates an array structured type reference with the specified rank.</summary>
 	public TypeReference MakeArray(int rank = 1) => AsTypeReference().MakeArray(rank);
