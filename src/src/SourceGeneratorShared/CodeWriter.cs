@@ -632,7 +632,7 @@ public sealed partial class CodeWriter
 	}
 
 	/// <summary>
-	/// Writes a structured partial method declaration.
+	/// Writes an expression-bodied method.
 	/// </summary>
 	/// <example><code>writer.WriteMethodExpression(new MethodDeclarationOptions("Count", "int") { ExpressionBody = "items.Count" });</code></example>
 	public CodeWriter WriteMethodExpression(MethodDeclarationOptions declaration)
@@ -645,8 +645,12 @@ public sealed partial class CodeWriter
 			);
 		}
 
-		// The method is not abstract, so we can use the WriteMethod overload that takes a body callback.
-		return WriteMethod(declaration, _ => { });
+		using (WriteMethodScope(declaration))
+		{
+			//
+		}
+
+		return this;
 	}
 
 	/// <summary>
@@ -3606,6 +3610,8 @@ public sealed partial class CodeWriter
 			throw new ArgumentException("A readonly method cannot also be static.", nameof(declaration));
 		if (declaration.IsAbstract && declaration.ExpressionBody is not null)
 			throw new ArgumentException("An abstract method cannot have an expression body.", nameof(declaration));
+		if (declaration.IsPartial && declaration.ExpressionBody is not null)
+			throw new ArgumentException("A partial method cannot have an expression body.", nameof(declaration));
 	}
 
 	static void ValidateOperatorDeclaration(OperatorDeclarationOptions declaration)
