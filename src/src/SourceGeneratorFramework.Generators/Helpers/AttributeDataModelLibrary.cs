@@ -746,12 +746,9 @@ static class AttributeDataModelLibrary
 		return typeSymbol.TypeKind is not TypeKind.Array and not TypeKind.Pointer and not TypeKind.FunctionPointer;
 	}
 
-	static bool IsGeneratedAttributeModel(ITypeSymbol typeSymbol)
-	{
-		return typeSymbol is not INamedTypeSymbol namedType || namedType.TypeKind != TypeKind.Struct
+	static bool IsGeneratedAttributeModel(ITypeSymbol typeSymbol) => typeSymbol is not INamedTypeSymbol namedType || namedType.TypeKind != TypeKind.Struct
 			? false
 			: GetAttribute(namedType, GeneratorTypeLibrary.Attirbutes.GenerateAttribute) is not null;
-	}
 
 	static AttributeData? GetAttribute(ISymbol symbol, TypeIdentity attributeType)
 	{

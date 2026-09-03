@@ -3,8 +3,8 @@
 		<TestingTargetFrameworks>net8.0;net9.0;net10.0;</TestingTargetFrameworks>
 		<TargetFrameworks>netstandard2.1;$(TestingTargetFrameworks)</TargetFrameworks>
 		<NamespacePrefix>Purview.SourceGeneratorFramework</NamespacePrefix>
-		<!-- Set project-by-project -->
-		<IsPackable>false</IsPackable>
+		<!-- Set project-by-project --><!--
+		<IsPackable>false</IsPackable>-->
 		<ExcludePurviewTelemetry>true</ExcludePurviewTelemetry>
 		<RepositoryUrl>https://github.com/purview-dev/purview-sourcegeneratorframework</RepositoryUrl>
 	</PropertyGroup>

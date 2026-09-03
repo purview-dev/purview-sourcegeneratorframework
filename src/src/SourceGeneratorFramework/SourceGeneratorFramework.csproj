@@ -1,30 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
+		<IsPackable>true</IsPackable>
 		<IsRoslynComponent>true</IsRoslynComponent>
 		<TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeSourceGeneratorShared;IncludeAnalyzerAssembly</TargetsForTfmSpecificContentInPackage>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference
-			Include="..\SourceGeneratorFramework.Generators\SourceGeneratorFramework.Generators.csproj"
-			PrivateAssets="all"
-			ReferenceOutputAssembly="false"
-			OutputItemType="Analyzer"
-			Targets="GetSourceGeneratorAnalyzerFiles"
-		/>
-		<ProjectReference
-			Include="..\SourceGeneratorFramework.Analyzers\SourceGeneratorFramework.Analyzers.csproj"
-			PrivateAssets="all"
-			ReferenceOutputAssembly="false"
-			OutputItemType="Analyzer"
-			Targets="GetSourceGeneratorAnalyzerFiles"
-			Pack="false"
-		/>
-		<ProjectReference
-			Include="..\SourceGeneratorShared\SourceGeneratorShared.csproj"
-			PrivateAssets="all"
-			Pack="false"
-		/>
+		<ProjectReference Include="..\SourceGeneratorFramework.Generators\SourceGeneratorFramework.Generators.csproj" PrivateAssets="all" ReferenceOutputAssembly="false" OutputItemType="Analyzer" Targets="GetSourceGeneratorAnalyzerFiles" />
+		<ProjectReference Include="..\SourceGeneratorFramework.Analyzers\SourceGeneratorFramework.Analyzers.csproj" PrivateAssets="all" ReferenceOutputAssembly="false" OutputItemType="Analyzer" Targets="GetSourceGeneratorAnalyzerFiles" Pack="false" />
+		<ProjectReference Include="..\SourceGeneratorShared\SourceGeneratorShared.csproj" PrivateAssets="all" Pack="false" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -33,11 +17,7 @@
 	</ItemGroup>
 
 	<Target Name="IncludeSourceGeneratorShared">
-		<MSBuild
-			Projects="..\SourceGeneratorShared\SourceGeneratorShared.csproj"
-			Targets="GetTargetPath"
-			Properties="Configuration=$(Configuration);TargetFramework=netstandard2.0"
-		>
+		<MSBuild Projects="..\SourceGeneratorShared\SourceGeneratorShared.csproj" Targets="GetTargetPath" Properties="Configuration=$(Configuration);TargetFramework=netstandard2.0">
 			<Output TaskParameter="TargetOutputs" ItemName="_SourceGeneratorSharedAssembly" />
 		</MSBuild>
 
@@ -46,10 +26,7 @@
 			<_SourceGeneratorSharedPackageFile Include="@(_SourceGeneratorSharedAssembly->'%(RootDir)%(Directory)%(Filename).pdb')" />
 			<_SourceGeneratorSharedPackageFile Include="@(_SourceGeneratorSharedAssembly->'%(RootDir)%(Directory)%(Filename).xml')" />
 
-			<TfmSpecificPackageFile
-				Include="@(_SourceGeneratorSharedPackageFile)"
-				Condition="Exists('%(_SourceGeneratorSharedPackageFile.Identity)')"
-			>
+			<TfmSpecificPackageFile Include="@(_SourceGeneratorSharedPackageFile)" Condition="Exists('%(_SourceGeneratorSharedPackageFile.Identity)')">
 				<PackagePath>lib/$(TargetFramework)/</PackagePath>
 			</TfmSpecificPackageFile>
 		</ItemGroup>
@@ -63,19 +40,12 @@
 		So this target is added to explicitly include the analyzer assembly in the package, so that it can be used by other projects that reference this package.
 	-->
 	<Target Name="IncludeAnalyzerAssembly">
-		<MSBuild
-			Projects="..\SourceGeneratorFramework.Analyzers\SourceGeneratorFramework.Analyzers.csproj"
-			Targets="GetTargetPath"
-			Properties="Configuration=$(Configuration);TargetFramework=netstandard2.0"
-		>
+		<MSBuild Projects="..\SourceGeneratorFramework.Analyzers\SourceGeneratorFramework.Analyzers.csproj" Targets="GetTargetPath" Properties="Configuration=$(Configuration);TargetFramework=netstandard2.0">
 			<Output TaskParameter="TargetOutputs" ItemName="_SourceGeneratorFrameworkAnalyzerAssembly" />
 		</MSBuild>
 
 		<ItemGroup>
-			<TfmSpecificPackageFile
-				Include="@(_SourceGeneratorFrameworkAnalyzerAssembly)"
-				Condition="Exists('%(_SourceGeneratorFrameworkAnalyzerAssembly.Identity)')"
-			>
+			<TfmSpecificPackageFile Include="@(_SourceGeneratorFrameworkAnalyzerAssembly)" Condition="Exists('%(_SourceGeneratorFrameworkAnalyzerAssembly.Identity)')">
 				<PackagePath>analyzers/dotnet/cs/</PackagePath>
 			</TfmSpecificPackageFile>
 		</ItemGroup>
