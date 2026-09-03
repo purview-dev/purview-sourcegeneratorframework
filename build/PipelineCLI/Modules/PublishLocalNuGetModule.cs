@@ -10,6 +10,7 @@ namespace Purview.SourceGeneratorFramework.PipelineCLI.Modules;
 
 [ModuleCategory("Build")]
 [DependsOn<PackModule>]
+[DependsOn<ValidatePackModule>]
 public class PublishLocalNuGetModule(
 	IOptions<PublishLocalNuGetSettings> localNuGetFeedSettings,
 	IOptions<ReleaseSettings> releaseSettings,

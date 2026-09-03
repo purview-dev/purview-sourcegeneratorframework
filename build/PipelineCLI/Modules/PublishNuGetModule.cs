@@ -9,6 +9,7 @@ namespace Purview.SourceGeneratorFramework.PipelineCLI.Modules;
 
 [ModuleCategory("Release")]
 [DependsOn<PackModule>]
+[DependsOn<ValidatePackModule>]
 [DependsOn<RunTestsModule>]
 public class PublishNuGetModule(
 	IOptions<BuildSettings> buildSettings,

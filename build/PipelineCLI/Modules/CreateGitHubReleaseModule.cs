@@ -9,6 +9,7 @@ namespace Purview.SourceGeneratorFramework.PipelineCLI.Modules;
 
 [ModuleCategory("Release")]
 [DependsOn<PublishNuGetModule>]
+[DependsOn<ValidatePackModule>]
 [DependsOn<VersionModule>]
 public class CreateGitHubReleaseModule(IOptions<ReleaseSettings> releaseSettings, IOptions<GitHubSettings> gitSettings)
 	: Module<Release?>

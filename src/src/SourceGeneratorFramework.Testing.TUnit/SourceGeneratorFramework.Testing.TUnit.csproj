@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeSourceGeneratorShared</TargetsForTfmSpecificContentInPackage>
+		<TargetsForTfmSpecificDebugSymbolsInPackage>$(TargetsForTfmSpecificDebugSymbolsInPackage);IncludeSourceGeneratorSharedSymbols</TargetsForTfmSpecificDebugSymbolsInPackage>
 		<TargetFrameworks>netstandard2.0;$(TestingTargetFrameworks)</TargetFrameworks>
 		<IsPackable>true</IsPackable>
 		<AssemblyName>$(RootNamespace)</AssemblyName>
@@ -23,26 +24,5 @@
 		<PackageReference Include="TUnit.Assertions" />
 	</ItemGroup>
 
-	<Target Name="IncludeSourceGeneratorShared">
-		<MSBuild
-			Projects="..\SourceGeneratorShared\SourceGeneratorShared.csproj"
-			Targets="GetTargetPath"
-			Properties="Configuration=$(Configuration);TargetFramework=netstandard2.0"
-		>
-			<Output TaskParameter="TargetOutputs" ItemName="_SourceGeneratorSharedAssembly" />
-		</MSBuild>
-
-		<ItemGroup>
-			<_SourceGeneratorSharedPackageFile Include="@(_SourceGeneratorSharedAssembly)" />
-			<_SourceGeneratorSharedPackageFile Include="@(_SourceGeneratorSharedAssembly->'%(RootDir)%(Directory)%(Filename).pdb')" />
-			<_SourceGeneratorSharedPackageFile Include="@(_SourceGeneratorSharedAssembly->'%(RootDir)%(Directory)%(Filename).xml')" />
-
-			<TfmSpecificPackageFile
-				Include="@(_SourceGeneratorSharedPackageFile)"
-				Condition="Exists('%(_SourceGeneratorSharedPackageFile.Identity)')"
-			>
-				<PackagePath>lib/$(TargetFramework)/</PackagePath>
-			</TfmSpecificPackageFile>
-		</ItemGroup>
-	</Target>
+	<Import Project="..\SourceGeneratorShared\SourceGeneratorShared.Pack.targets" />
 </Project>
