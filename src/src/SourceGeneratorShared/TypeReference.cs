@@ -249,7 +249,8 @@ public sealed record TypeReference
 	/// <exception cref="ArgumentNullException">If <paramref name="compilation"/> is <see langword="null"/>.</exception>
 	public TypeReference Nullable(Compilation compilation) =>
 		compilation == null ? throw new ArgumentNullException(nameof(compilation))
-		: IncrementalPipeline.IsNullableContextEnabled(compilation) is null or true ? AppendNullable(TypeModifier.Nullable)
+		: IncrementalPipeline.IsNullableContextEnabled(compilation) is null or true
+			? AppendNullable(TypeModifier.Nullable)
 		: this;
 
 	/// <summary>Appends an array of the given rank.</summary>
