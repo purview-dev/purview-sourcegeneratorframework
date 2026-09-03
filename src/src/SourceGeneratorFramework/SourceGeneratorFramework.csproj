@@ -2,13 +2,41 @@
 	<PropertyGroup>
 		<IsPackable>true</IsPackable>
 		<IsRoslynComponent>true</IsRoslynComponent>
+		<!--
+			The SDK defaults these to false for Roslyn components so that only an analyzer asset is
+			produced. This project is dual-role: the built framework assembly ships in lib/ so
+			consumers can compile generators against it, and the analyzers/ folder carries the
+			generator + analyzer assemblies and their runtime dependencies. PDBs must only be
+			delivered through the .snupkg, so symbols are explicitly enabled.
+		-->
+		<IncludeBuildOutput>true</IncludeBuildOutput>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 		<TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeSourceGeneratorShared;IncludeAnalyzerAssembly</TargetsForTfmSpecificContentInPackage>
+		<TargetsForTfmSpecificDebugSymbolsInPackage>$(TargetsForTfmSpecificDebugSymbolsInPackage);IncludeSourceGeneratorSharedSymbols</TargetsForTfmSpecificDebugSymbolsInPackage>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\SourceGeneratorFramework.Generators\SourceGeneratorFramework.Generators.csproj" PrivateAssets="all" ReferenceOutputAssembly="false" OutputItemType="Analyzer" Targets="GetSourceGeneratorAnalyzerFiles" />
-		<ProjectReference Include="..\SourceGeneratorFramework.Analyzers\SourceGeneratorFramework.Analyzers.csproj" PrivateAssets="all" ReferenceOutputAssembly="false" OutputItemType="Analyzer" Targets="GetSourceGeneratorAnalyzerFiles" Pack="false" />
-		<ProjectReference Include="..\SourceGeneratorShared\SourceGeneratorShared.csproj" PrivateAssets="all" Pack="false" />
+		<ProjectReference
+			Include="..\SourceGeneratorFramework.Generators\SourceGeneratorFramework.Generators.csproj"
+			PrivateAssets="all"
+			ReferenceOutputAssembly="false"
+			OutputItemType="Analyzer"
+			Targets="GetSourceGeneratorAnalyzerFiles"
+		/>
+		<ProjectReference
+			Include="..\SourceGeneratorFramework.Analyzers\SourceGeneratorFramework.Analyzers.csproj"
+			PrivateAssets="all"
+			ReferenceOutputAssembly="false"
+			OutputItemType="Analyzer"
+			Targets="GetSourceGeneratorAnalyzerFiles"
+			Pack="false"
+		/>
+		<ProjectReference
+			Include="..\SourceGeneratorShared\SourceGeneratorShared.csproj"
+			PrivateAssets="all"
+			Pack="false"
+		/>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -16,19 +44,14 @@
 		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
 	</ItemGroup>
 
-	<Target Name="IncludeSourceGeneratorShared">
-		<MSBuild Projects="..\SourceGeneratorShared\SourceGeneratorShared.csproj" Targets="GetTargetPath" Properties="Configuration=$(Configuration);TargetFramework=netstandard2.0">
-			<Output TaskParameter="TargetOutputs" ItemName="_SourceGeneratorSharedAssembly" />
-		</MSBuild>
+	<Import Project="..\SourceGeneratorShared\SourceGeneratorShared.Pack.targets" />
 
+	<!-- The SDK auto-packs the built analyzer assembly's PDB into analyzers/dotnet/cs as package
+	     content, which would put a PDB in the .nupkg. The PDB is already collected for the .snupkg
+	     via DebugSymbolsProjectOutputGroup, so remove the content item before the pack file set is built. -->
+	<Target Name="RemoveSdkAnalyzerPdbFromPackage" BeforeTargets="_GetPackageFiles">
 		<ItemGroup>
-			<_SourceGeneratorSharedPackageFile Include="@(_SourceGeneratorSharedAssembly)" />
-			<_SourceGeneratorSharedPackageFile Include="@(_SourceGeneratorSharedAssembly->'%(RootDir)%(Directory)%(Filename).pdb')" />
-			<_SourceGeneratorSharedPackageFile Include="@(_SourceGeneratorSharedAssembly->'%(RootDir)%(Directory)%(Filename).xml')" />
-
-			<TfmSpecificPackageFile Include="@(_SourceGeneratorSharedPackageFile)" Condition="Exists('%(_SourceGeneratorSharedPackageFile.Identity)')">
-				<PackagePath>lib/$(TargetFramework)/</PackagePath>
-			</TfmSpecificPackageFile>
+			<None Remove="$(TargetDir)$(TargetName).pdb" />
 		</ItemGroup>
 	</Target>
 
@@ -40,12 +63,19 @@
 		So this target is added to explicitly include the analyzer assembly in the package, so that it can be used by other projects that reference this package.
 	-->
 	<Target Name="IncludeAnalyzerAssembly">
-		<MSBuild Projects="..\SourceGeneratorFramework.Analyzers\SourceGeneratorFramework.Analyzers.csproj" Targets="GetTargetPath" Properties="Configuration=$(Configuration);TargetFramework=netstandard2.0">
+		<MSBuild
+			Projects="..\SourceGeneratorFramework.Analyzers\SourceGeneratorFramework.Analyzers.csproj"
+			Targets="GetTargetPath"
+			Properties="Configuration=$(Configuration);TargetFramework=netstandard2.0"
+		>
 			<Output TaskParameter="TargetOutputs" ItemName="_SourceGeneratorFrameworkAnalyzerAssembly" />
 		</MSBuild>
 
 		<ItemGroup>
-			<TfmSpecificPackageFile Include="@(_SourceGeneratorFrameworkAnalyzerAssembly)" Condition="Exists('%(_SourceGeneratorFrameworkAnalyzerAssembly.Identity)')">
+			<TfmSpecificPackageFile
+				Include="@(_SourceGeneratorFrameworkAnalyzerAssembly)"
+				Condition="Exists('%(_SourceGeneratorFrameworkAnalyzerAssembly.Identity)')"
+			>
 				<PackagePath>analyzers/dotnet/cs/</PackagePath>
 			</TfmSpecificPackageFile>
 		</ItemGroup>

@@ -31,4 +31,6 @@ public sealed class BuildSettings
 	public bool RunLint { get; init; } = true;
 
 	public bool RunPack { get; init; } = true;
+
+	public bool ValidatePack { get; init; } = true;
 }

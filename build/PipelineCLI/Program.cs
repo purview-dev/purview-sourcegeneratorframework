@@ -10,6 +10,9 @@ builder
 
 builder.Services.Configure<BuildSettings>(builder.Configuration.GetSection(BuildSettings.SectionName));
 builder.Services.Configure<NuGetSettings>(builder.Configuration.GetSection(NuGetSettings.SectionName));
+builder.Services.Configure<PackValidationSettings>(
+	builder.Configuration.GetSection(PackValidationSettings.SectionName)
+);
 builder.Services.Configure<PublishLocalNuGetSettings>(
 	builder.Configuration.GetSection(PublishLocalNuGetSettings.SectionName)
 );
@@ -33,6 +36,7 @@ builder
 	.AddModule<LintModule>()
 	.AddModule<RunTestsModule>()
 	.AddModule<PackModule>()
+	.AddModule<ValidatePackModule>()
 	.AddModule<PublishNuGetModule>()
 	.AddModule<PublishLocalNuGetModule>()
 	.AddModule<CreateGitHubReleaseModule>();
