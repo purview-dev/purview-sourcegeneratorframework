@@ -981,6 +981,146 @@ public class CodeWriterTests
 	}
 
 	[Test]
+	public async Task WriteMethodExpression_GivenExpressionBody_WritesExpressionBodiedMethod()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new MethodDeclarationOptions("Count", Type("int")) { ExpressionBody = "items.Count" };
+
+		// Act
+		writer.WriteMethodExpression(declaration);
+
+		// Assert
+		await Assert.That(writer).Generates(GeneratedAttributes() + "int Count() => items.Count;\n");
+	}
+
+	[Test]
+	[Arguments(null)]
+	[Arguments("")]
+	[Arguments("   ")]
+	public async Task WriteMethodExpression_GivenWhitespaceExpressionBody_ThrowsWithoutWriting(string? expressionBody)
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new MethodDeclarationOptions("Count", Type("int")) { ExpressionBody = expressionBody };
+
+		// Act / Assert
+		await Assert.That(() => writer.WriteMethodExpression(declaration)).Throws<ArgumentException>();
+		await Assert.That(writer.ToString()).IsEmpty();
+	}
+
+	[Test]
+	public async Task WriteMethodExpression_GivenCallback_WritesExpressionBodiedMethod()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new MethodDeclarationOptions("Count", Type("int"));
+
+		// Act
+		writer.WriteMethodExpression(declaration, expression => expression.Write("items.Count"));
+
+		// Assert
+		await Assert.That(writer).Generates(GeneratedAttributes() + "int Count() => items.Count;\n");
+	}
+
+	[Test]
+	public async Task WriteMethodExpression_GivenNullCallback_Throws()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new MethodDeclarationOptions("Count", Type("int"));
+
+		// Act / Assert
+		await Assert.That(() => writer.WriteMethodExpression(declaration, null!)).Throws<ArgumentNullException>();
+	}
+
+	[Test]
+	public async Task WriteMethodExpression_GivenExpressionBodyAndCallback_ThrowsWithoutWriting()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new MethodDeclarationOptions("Count", Type("int")) { ExpressionBody = "items.Count" };
+
+		// Act / Assert
+		await Assert
+			.That(() => writer.WriteMethodExpression(declaration, expression => expression.Write("items.Count")))
+			.Throws<ArgumentException>();
+		await Assert.That(writer.ToString()).IsEmpty();
+	}
+
+	[Test]
+	public async Task WriteMethodExpression_GivenPartialDeclaration_ThrowsWithoutWriting()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new MethodDeclarationOptions("Count", Type("int"))
+		{
+			IsPartial = true,
+			ExpressionBody = "items.Count",
+		};
+
+		// Act / Assert
+		await Assert.That(() => writer.WriteMethodExpression(declaration)).Throws<ArgumentException>();
+		await Assert.That(writer.ToString()).IsEmpty();
+	}
+
+	[Test]
+	public async Task WriteMethodExpression_GivenPartialDeclarationAndCallback_ThrowsWithoutWriting()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new MethodDeclarationOptions("Count", Type("int")) { IsPartial = true };
+
+		// Act / Assert
+		await Assert
+			.That(() => writer.WriteMethodExpression(declaration, expression => expression.Write("items.Count")))
+			.Throws<ArgumentException>();
+		await Assert.That(writer.ToString()).IsEmpty();
+	}
+
+	[Test]
+	public async Task WritePartialMethod_GivenExpressionBody_ThrowsWithoutWriting()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new MethodDeclarationOptions("Count", Type("int")) { ExpressionBody = "items.Count" };
+
+		// Act / Assert
+		await Assert.That(() => writer.WritePartialMethod(declaration)).Throws<ArgumentException>();
+		await Assert.That(writer.ToString()).IsEmpty();
+	}
+
+	[Test]
+	public async Task WriteMethod_GivenExpressionBody_ThrowsWithoutWriting()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new MethodDeclarationOptions("Count", Type("int")) { ExpressionBody = "items.Count" };
+
+		// Act / Assert
+		await Assert
+			.That(() => writer.WriteMethod(declaration, body => body.WriteLine("return items.Count;")))
+			.Throws<ArgumentException>();
+		await Assert.That(writer.ToString()).IsEmpty();
+	}
+
+	[Test]
+	public async Task WriteMethod_GivenBodyAndNoExpressionBody_WritesBlockBody()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new MethodDeclarationOptions("Count", Type("int"));
+
+		// Act
+		writer.WriteMethod(declaration, body => body.WriteLine("return items.Count;"));
+
+		// Assert
+		await Assert
+			.That(writer)
+			.Generates(GeneratedAttributes() + "int Count()\n" + "{\n" + "\treturn items.Count;\n" + "}\n");
+	}
+
+	[Test]
 	public async Task WritePartialMethod_GivenPartialMethods_WritesDeclaration()
 	{
 		// Arrange
