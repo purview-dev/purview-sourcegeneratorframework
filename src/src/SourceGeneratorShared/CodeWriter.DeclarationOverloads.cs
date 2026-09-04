@@ -782,7 +782,8 @@ partial class CodeWriter
 		if (fields is null)
 			return Enum(declaration, static _ => { });
 
-		return Enum(declaration, fields.ToArray());
+		// The fields are passed as a list to avoid multiple enumerations of the enumerable.
+		return Enum(declaration, [.. fields]);
 	}
 
 	/// <summary>
@@ -919,7 +920,8 @@ partial class CodeWriter
 		if (fieldValue is null)
 			throw new ArgumentNullException(nameof(fieldValue));
 
-		return EnumField(new EnumFieldDeclarationOptions(fieldName, fieldValue, xmlSummary));
+		// The field value is passed as an object to allow the caller to pass a string, int, or other type. The
+		return EnumField(new(fieldName, fieldValue, xmlSummary));
 	}
 
 	// ---------------------------------------------------------------------------------------------

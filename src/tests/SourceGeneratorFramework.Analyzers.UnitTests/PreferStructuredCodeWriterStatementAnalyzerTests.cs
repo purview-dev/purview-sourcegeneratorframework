@@ -114,6 +114,62 @@ public sealed class PreferStructuredCodeWriterStatementAnalyzerTests
 	}
 
 	[Test]
+	public async Task Line_WithReceiverMethodCall_SuggestsMethodCallOn(CancellationToken cancellationToken)
+	{
+		// Arrange
+		const string source = """
+			using Purview.SourceGeneratorFramework;
+
+			class Emitter
+			{
+				public void Emit()
+				{
+					var writer = new CodeWriter(new GenerationSettings("G"));
+					writer.Line("variable.Process(item);");
+				}
+			}
+			""";
+
+		// Act
+		var result = await AnalyzeAsync(source, Options, cancellationToken);
+
+		// Assert
+		var diagnostic = await Assert.That(result).HasDiagnostic(PreferStructuredCodeWriterStatementAnalyzer.Rule.Id);
+		await Assert
+			.That(diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture))
+			.Contains("MethodCallOn");
+	}
+
+	[Test]
+	public async Task Line_WithAwaitedReceiverMethodCall_SuggestsAwaitedMethodCallOn(
+		CancellationToken cancellationToken
+	)
+	{
+		// Arrange
+		const string source = """
+			using Purview.SourceGeneratorFramework;
+
+			class Emitter
+			{
+				public void Emit()
+				{
+					var writer = new CodeWriter(new GenerationSettings("G"));
+					writer.Line("await service.LoadAsync(token);");
+				}
+			}
+			""";
+
+		// Act
+		var result = await AnalyzeAsync(source, Options, cancellationToken);
+
+		// Assert
+		var diagnostic = await Assert.That(result).HasDiagnostic(PreferStructuredCodeWriterStatementAnalyzer.Rule.Id);
+		await Assert
+			.That(diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture))
+			.Contains("AwaitedMethodCallOn");
+	}
+
+	[Test]
 	public async Task Line_WithAssignment_ReportsDiagnostic(CancellationToken cancellationToken)
 	{
 		// Arrange

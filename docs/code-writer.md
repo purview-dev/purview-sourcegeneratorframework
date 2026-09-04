@@ -87,11 +87,22 @@ Emit executable statements through the structured statement methods rather than 
 ```csharp
 writer.MethodCall("Process", "item");                       // Process(item);
 writer.AwaitedMethodCall("SaveAsync", "cancellationToken"); // await SaveAsync(cancellationToken);
+writer.MethodCallOn("variable", "Process", "item");         // variable.Process(item);
+writer.AwaitedMethodCallOn("service", "LoadAsync", "token"); // await service.LoadAsync(token);
 writer.Return("value");                                     // return value;
 writer.Throw(TypeIdentity.Create<InvalidOperationException>(), "Failed.");  // throw new ...;
 writer.Assignment("_total", "value");                       // _total = value;
 writer.IfBlock("value is null", body => body.Return("null"));
-writer.Foreach("var item in items", body => body.MethodCall("Process", "item"));
+writer.Foreach("var item in items", body => body.MethodCallOn("item", "Process"));
+```
+
+`MethodCall`/`AwaitedMethodCall` write a call without a receiver — `Process(item);` or
+`await SaveAsync(token);`. Use `MethodCallOn`/`AwaitedMethodCallOn` (or the `receiver` parameter on the
+`IEnumerable` overloads) for a call on a variable, including generic arguments:
+
+```csharp
+writer.MethodCall("Create", ["x"], receiver: "factory", genericArguments: [TypeReference.Create<string>()]);
+// factory.Create<string>(x);
 ```
 
 ### Conditional compilation blocks

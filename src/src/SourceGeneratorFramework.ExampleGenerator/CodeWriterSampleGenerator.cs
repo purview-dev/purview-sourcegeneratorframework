@@ -24,6 +24,7 @@ public partial class CodeWriterSampleGenerator : IIncrementalGenerator
 				if (ctx.SemanticModel.GetDeclaredSymbol(ctx.TargetNode, ct) is not INamedTypeSymbol symbol)
 					return default;
 
+				// The generator will emit a sample class for every type annotated with the attribute, so the target is the
 				return new CodeWriterSampleTarget(
 					TypeName: symbol.Name,
 					Namespace: symbol.ContainingNamespace is { IsGlobalNamespace: false } containingNamespace

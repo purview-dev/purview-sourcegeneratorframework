@@ -1333,6 +1333,7 @@ public sealed partial class CodeWriter
 	/// </summary>
 	/// <returns>A scope that does nothing when disposed.</returns>
 	/// <example><code>using var scope = wrapped ? writer.EmptyScope() : writer.HashDefinesScope("EXCLUDE_PURVIEW_TELEMETRY_LOGGING");</code></example>
+	[SuppressMessage("Performance", "CA1822:Mark members as static")]
 	public BlockScope EmptyScope() => default;
 
 	/// <summary>
@@ -2140,6 +2141,28 @@ public sealed partial class CodeWriter
 		MethodCallCore(methodName, arguments, receiver: null, genericArguments: null, false, true);
 
 	/// <summary>
+	/// Writes a method invocation on a receiver, such as <c>variable.Method(arg)</c>.
+	/// </summary>
+	/// <param name="receiver">The receiver expression written before the method name.</param>
+	/// <param name="methodName">The method name.</param>
+	/// <param name="arguments">The argument expressions.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.MethodCallOn("service", "Add", "value"); // service.Add(value);</code></example>
+	public CodeWriter MethodCallOn(string receiver, string methodName, params string[] arguments) =>
+		MethodCallCore(methodName, arguments, receiver, genericArguments: null, false, false);
+
+	/// <summary>
+	/// Writes an awaited method invocation on a receiver, such as <c>await variable.MethodAsync(arg)</c>.
+	/// </summary>
+	/// <param name="receiver">The receiver expression written before the method name.</param>
+	/// <param name="methodName">The method name.</param>
+	/// <param name="arguments">The argument expressions.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.AwaitedMethodCallOn("service", "LoadAsync", "token"); // await service.LoadAsync(token);</code></example>
+	public CodeWriter AwaitedMethodCallOn(string receiver, string methodName, params string[] arguments) =>
+		MethodCallCore(methodName, arguments, receiver, genericArguments: null, false, true);
+
+	/// <summary>
 	/// Writes a method invocation from structured argument declarations.
 	/// </summary>
 	/// <remarks>
@@ -2527,6 +2550,7 @@ public sealed partial class CodeWriter
 		if (ObjectCreationExpression(value, forceNotNull))
 			return this;
 
+		// If the object creation was written inline, we can write the closing semicolon on the same line.
 		return Line(";");
 	}
 
@@ -3625,6 +3649,7 @@ public sealed partial class CodeWriter
 		return IsValidAccessorAccessibility(resolved.Value, propertyAccessibility.Value) ? resolved : null;
 	}
 
+	[SuppressMessage("Style", "IDE0072:Add missing cases")]
 	static bool IsValidAccessorAccessibility(
 		TypeDeclarationAccessibility accessor,
 		TypeDeclarationAccessibility property

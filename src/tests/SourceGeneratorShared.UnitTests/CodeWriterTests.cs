@@ -1746,6 +1746,26 @@ public class CodeWriterTests
 	}
 
 	[Test]
+	public async Task MethodCallOn_GivenReceiver_WritesReceiverDot()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.MethodCallOn("variable", "Process", "item");
+
+		await Assert.That(writer.ToString()).IsEqualTo("variable.Process(item);\n");
+	}
+
+	[Test]
+	public async Task AwaitedMethodCallOn_GivenReceiver_WritesAwaitAndDot()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.AwaitedMethodCallOn("service", "LoadAsync", "token");
+
+		await Assert.That(writer.ToString()).IsEqualTo("await service.LoadAsync(token);\n");
+	}
+
+	[Test]
 	public async Task AwaitedMethodCall_WithStructuredArguments_WritesReceiverAndModifiers()
 	{
 		var writer = CodeWriterFactory.ForTests();

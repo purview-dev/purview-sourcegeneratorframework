@@ -61,6 +61,7 @@ static class CodeWriterLiteralClassifier
 				return true;
 
 			case InterpolatedStringExpressionSyntax interpolated:
+#pragma warning disable format
 			{
 				var builder = new StringBuilder();
 				foreach (var content in interpolated.Contents)
@@ -72,6 +73,7 @@ static class CodeWriterLiteralClassifier
 				text = builder.ToString();
 				return true;
 			}
+#pragma warning restore format
 
 			default:
 				break;
@@ -152,6 +154,7 @@ static class CodeWriterLiteralClassifier
 		if (StartsWithDeclaration(trimmed))
 			return null;
 
+		// The structured CodeWriter API does not yet support preprocessor directives other than #if/#else/#endif and
 		return ClassifyExecutable(trimmed);
 	}
 
@@ -167,6 +170,7 @@ static class CodeWriterLiteralClassifier
 		if (trimmed.StartsWith("using (", StringComparison.Ordinal) || !trimmed.EndsWith(";", StringComparison.Ordinal))
 			return null;
 
+		// "using alias = ..." is a using-alias directive, while "using ..." is a using-directive.
 		return trimmed.Contains(" = ") ? "UsingAlias" : "Using";
 	}
 
@@ -182,7 +186,7 @@ static class CodeWriterLiteralClassifier
 			return "Throw";
 
 		if (trimmed.StartsWith("await ", StringComparison.Ordinal) && trimmed.EndsWith(";", StringComparison.Ordinal))
-			return "AwaitedMethodCall";
+			return HasReceiver(trimmed) ? "AwaitedMethodCallOn" : "AwaitedMethodCall";
 
 		if (trimmed.StartsWith("if (", StringComparison.Ordinal))
 			return "IfBlock";
@@ -203,8 +207,15 @@ static class CodeWriterLiteralClassifier
 			return "Assignment";
 
 		if (trimmed.Contains("(") && trimmed.EndsWith(");", StringComparison.Ordinal))
-			return "MethodCall";
+			return HasReceiver(trimmed) ? "MethodCallOn" : "MethodCall";
 
+		// The structured CodeWriter API does not yet support preprocessor directives other than #if/#else/#endif and
 		return null;
+	}
+
+	static bool HasReceiver(string trimmed)
+	{
+		var openParen = trimmed.IndexOf('(');
+		return openParen > 0 && trimmed.LastIndexOf('.', openParen) >= 0;
 	}
 }

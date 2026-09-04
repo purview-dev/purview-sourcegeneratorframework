@@ -132,8 +132,8 @@ public sealed class PreferMinimalCodeWriterOverloadAnalyzer : DiagnosticAnalyzer
 	static bool HasObjectInitializer(SyntaxNode expression) =>
 		expression switch
 		{
-			ObjectCreationExpressionSyntax { Initializer: { Expressions.Count: > 0 } } => true,
-			ImplicitObjectCreationExpressionSyntax { Initializer: { Expressions.Count: > 0 } } => true,
+			ObjectCreationExpressionSyntax { Initializer.Expressions.Count: > 0 } => true,
+			ImplicitObjectCreationExpressionSyntax { Initializer.Expressions.Count: > 0 } => true,
 			_ => false,
 		};
 }
