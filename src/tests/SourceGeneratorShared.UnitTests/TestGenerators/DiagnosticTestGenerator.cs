@@ -40,7 +40,7 @@ public sealed class DiagnosticTestGenerator : IIncrementalGenerator
 			static (spc, target, ctx) =>
 			{
 				var writer = ctx.CreateCodeWriter();
-				writer.WriteLine($"partial class {target.Name} {{ }}");
+				writer.Line($"partial class {target.Name} {{ }}");
 				spc.AddSource($"{target.Name}.g.cs", writer.ToString());
 			}
 		);

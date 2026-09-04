@@ -69,13 +69,18 @@ public class ServiceRegistrationGeneratorTests
 		await Assert.That(method.HasParameters(query, IServiceCollection)).IsTrue();
 
 		var methodText = method.ToString();
+		var compact = methodText
+			.Replace("\r", "", StringComparison.Ordinal)
+			.Replace("\n", "", StringComparison.Ordinal)
+			.Replace("\t", "", StringComparison.Ordinal)
+			.Replace(" ", "", StringComparison.Ordinal);
 		await Assert
-			.That(methodText)
+			.That(compact)
 			.Contains(
 				"global::Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddSingleton<global::Test.MyService>(services);"
 			);
 		await Assert
-			.That(methodText)
+			.That(compact)
 			.Contains(
 				"global::Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddScoped<global::Test.OtherService>(services);"
 			);

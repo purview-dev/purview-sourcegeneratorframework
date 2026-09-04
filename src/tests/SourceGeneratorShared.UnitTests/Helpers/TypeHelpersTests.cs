@@ -413,7 +413,7 @@ public class TypeHelpersTests
 		// Act
 		var declaration = TypeHelpers.CreatePartialTypeDeclarationOptions(symbol);
 		var writer = CodeWriterFactory.ForTests();
-		using (writer.WriteTypeScope(declaration))
+		using (writer.TypeScope(declaration))
 		{
 			// Intentionally empty.
 		}
@@ -474,7 +474,7 @@ public class TypeHelpersTests
 		// Act
 		var declaration = TypeHelpers.CreatePartialTypeDeclarationOptions(symbol, includeOptionalParts: false);
 		var writer = CodeWriterFactory.ForTests();
-		using (writer.WriteTypeScope(declaration))
+		using (writer.TypeScope(declaration))
 		{
 			// Intentionally empty.
 		}
@@ -483,7 +483,9 @@ public class TypeHelpersTests
 		await Assert.That(declaration.Accessibility).IsNull();
 		await Assert.That(declaration.IsSealed).IsFalse();
 		await Assert.That(declaration.GenericTypes[0].Constraints).IsEmpty();
-		await Assert.That(writer.ToString()).IsEqualTo(GeneratedAttributes() + "partial class Container<T>\n{\n}\n");
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(GeneratedAttributes() + "public partial class Container<T>\n{\n}\n");
 	}
 
 	[Test]

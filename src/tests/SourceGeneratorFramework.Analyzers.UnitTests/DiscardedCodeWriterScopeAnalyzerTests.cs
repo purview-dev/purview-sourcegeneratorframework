@@ -18,7 +18,7 @@ public sealed class DiscardedCodeWriterScopeAnalyzerTests
 				public void Emit()
 				{
 					var writer = new CodeWriter(new GenerationSettings("G"));
-					writer.WriteClassScope(new TypeDeclarationOptions("C"));
+					writer.ClassScope(new TypeDeclarationOptions("C"));
 				}
 			}
 			""";
@@ -55,9 +55,9 @@ public sealed class DiscardedCodeWriterScopeAnalyzerTests
 				public void Emit()
 				{
 					var writer = new CodeWriter(new GenerationSettings("G"));
-					using (writer.WriteClassScope(new TypeDeclarationOptions("C")))
+					using (writer.ClassScope(new TypeDeclarationOptions("C")))
 					{
-						writer.WriteLine("// body");
+						writer.Line("// body");
 					}
 				}
 			}
@@ -94,7 +94,7 @@ public sealed class DiscardedCodeWriterScopeAnalyzerTests
 				public void Emit()
 				{
 					var writer = new CodeWriter(new GenerationSettings("G"));
-					writer.WriteProperty(new PropertyDeclarationOptions("Name", TypeIdentity.Create<string>()));
+					writer.Property(new PropertyDeclarationOptions("Name", TypeIdentity.Create<string>()));
 				}
 			}
 			""";

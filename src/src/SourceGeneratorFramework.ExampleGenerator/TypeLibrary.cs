@@ -65,4 +65,12 @@ static class TypeLibrary
 	/// The static <c>ServiceInfo</c> class.
 	/// </summary>
 	public static readonly TypeIdentity ServiceInfo = new(nameof(ServiceInfo), ExpamplesNamespace);
+
+	/// <summary>
+	/// The <c>[GenerateCodeWriterSample]</c> attribute type.
+	/// </summary>
+	public static readonly TypeIdentity GenerateCodeWriterSampleAttribute = new(
+		nameof(GenerateCodeWriterSampleAttribute),
+		ExpamplesNamespace
+	);
 }

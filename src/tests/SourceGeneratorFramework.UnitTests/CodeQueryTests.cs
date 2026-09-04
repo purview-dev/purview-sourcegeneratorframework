@@ -286,6 +286,64 @@ public class CodeQueryTests
 	}
 
 	[Test]
+	public async Task OperatorQueries_WithParameterTypes_MatchSignature()
+	{
+		// Arrange
+		const string source = """
+			namespace Test;
+
+			public struct Money
+			{
+				public static bool operator ==(Money left, Money right) => true;
+				public static bool operator !=(Money left, Money right) => false;
+				public static bool operator <(Money left, Money right) => true;
+				public static bool operator >(Money left, Money right) => false;
+			}
+			""";
+		var (compilation, _) = TestCompilation.CreateWithRoot(source);
+		var query = new CodeQuery([.. compilation.SyntaxTrees], compilation);
+		var moneyType = new TypeReference(new TypeIdentity("Money", "Test"));
+		var stringType = TypeReference.Create<string>();
+
+		// Act / Assert
+		await Assert.That(query.HasOperator("==", moneyType, moneyType)).IsTrue();
+		await Assert.That(query.HasOperator("==", moneyType, stringType)).IsFalse();
+		await Assert.That(query.HasOperator("!=", moneyType, moneyType)).IsTrue();
+		await Assert.That(query.HasOperator("+", moneyType, moneyType)).IsFalse();
+		await Assert.That(query.HasOperator("<", stringType, moneyType)).IsFalse();
+		await Assert.That(query.GetOperator("==", moneyType, moneyType).OperatorToken.ValueText).IsEqualTo("==");
+	}
+
+	[Test]
+	public async Task ConversionOperatorQueries_WithParameterType_MatchSignature()
+	{
+		// Arrange
+		const string source = """
+			namespace Test;
+
+			public struct Money
+			{
+				public static implicit operator int(Money value) => 0;
+				public static explicit operator string(Money value) => "";
+			}
+			""";
+		var (compilation, _) = TestCompilation.CreateWithRoot(source);
+		var query = new CodeQuery([.. compilation.SyntaxTrees], compilation);
+		var moneyType = new TypeReference(new TypeIdentity("Money", "Test"));
+		var intType = TypeReference.Create<int>();
+		var stringType = TypeReference.Create<string>();
+
+		// Act / Assert
+		await Assert.That(query.HasConversionOperator("implicit", moneyType)).IsTrue();
+		await Assert.That(query.HasConversionOperator("implicit", intType)).IsFalse();
+		await Assert.That(query.HasConversionOperator("explicit", moneyType)).IsTrue();
+		await Assert.That(query.HasConversionOperator("explicit", stringType)).IsFalse();
+		await Assert
+			.That(query.GetConversionOperator("implicit", moneyType).ImplicitOrExplicitKeyword.ValueText)
+			.IsEqualTo("implicit");
+	}
+
+	[Test]
 	public async Task StatementQueries_FindStatementsAndInvocations()
 	{
 		// Arrange

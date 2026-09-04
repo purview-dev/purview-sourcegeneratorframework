@@ -97,6 +97,80 @@ public sealed record GenerationSettings
 	public LanguageVersion? LanguageVersion { get; init; }
 
 	/// <summary>
+	/// Gets the default accessibility emitted for type declarations (classes, structs, records,
+	/// interfaces, enums, and delegates) when a declaration does not specify one. The default is
+	/// <see cref="TypeDeclarationAccessibility.Public"/>. Set to <see langword="null"/> to omit the
+	/// modifier, matching the previous behaviour.
+	/// </summary>
+	public TypeDeclarationAccessibility? DefaultTypeAccessibility { get; init; } = TypeDeclarationAccessibility.Public;
+
+	/// <summary>
+	/// Gets the default accessibility emitted for properties and indexers when a declaration does not
+	/// specify one. The default is <see cref="TypeDeclarationAccessibility.Public"/>. Set to
+	/// <see langword="null"/> to omit the modifier, matching the previous behaviour.
+	/// </summary>
+	public TypeDeclarationAccessibility? DefaultPropertyAccessibility { get; init; } =
+		TypeDeclarationAccessibility.Public;
+
+	/// <summary>
+	/// Gets the default accessibility emitted for property and indexer getters when a declaration does not
+	/// specify one. The default is <see cref="TypeDeclarationAccessibility.Public"/>. The modifier is
+	/// emitted only when it is more restrictive than the property's own accessibility; otherwise the
+	/// accessor inherits it. Set to <see langword="null"/> to omit the modifier.
+	/// </summary>
+	public TypeDeclarationAccessibility? DefaultPropertyGetterAccessibility { get; init; } =
+		TypeDeclarationAccessibility.Public;
+
+	/// <summary>
+	/// Gets the default accessibility emitted for property and indexer setters when a declaration does not
+	/// specify one. The default is <see cref="TypeDeclarationAccessibility.Public"/>. The modifier is
+	/// emitted only when it is more restrictive than the property's own accessibility; otherwise the
+	/// accessor inherits it. Set to <see langword="null"/> to omit the modifier.
+	/// </summary>
+	public TypeDeclarationAccessibility? DefaultPropertySetterAccessibility { get; init; } =
+		TypeDeclarationAccessibility.Public;
+
+	/// <summary>
+	/// Gets the default accessibility emitted for field declarations when a declaration does not specify
+	/// one. The default is <see cref="TypeDeclarationAccessibility.Private"/>. Set to
+	/// <see langword="null"/> to omit the modifier, matching the previous behaviour.
+	/// </summary>
+	public TypeDeclarationAccessibility? DefaultFieldAccessibility { get; init; } =
+		TypeDeclarationAccessibility.Private;
+
+	/// <summary>
+	/// Gets the default accessibility emitted for method declarations when a declaration does not specify
+	/// one. The default is <see cref="TypeDeclarationAccessibility.Public"/>. Set to
+	/// <see langword="null"/> to omit the modifier, matching the previous behaviour.
+	/// </summary>
+	public TypeDeclarationAccessibility? DefaultMethodAccessibility { get; init; } =
+		TypeDeclarationAccessibility.Public;
+
+	/// <summary>
+	/// Gets the default accessibility emitted for constructor declarations when a declaration does not
+	/// specify one. The default is <see cref="TypeDeclarationAccessibility.Public"/>. Set to
+	/// <see langword="null"/> to omit the modifier, matching the previous behaviour.
+	/// </summary>
+	public TypeDeclarationAccessibility? DefaultConstructorAccessibility { get; init; } =
+		TypeDeclarationAccessibility.Public;
+
+	/// <summary>
+	/// Gets the default accessibility emitted for indexer declarations when a declaration does not specify
+	/// one. The default is <see cref="TypeDeclarationAccessibility.Public"/>. Set to
+	/// <see langword="null"/> to omit the modifier, matching the previous behaviour.
+	/// </summary>
+	public TypeDeclarationAccessibility? DefaultIndexerAccessibility { get; init; } =
+		TypeDeclarationAccessibility.Public;
+
+	/// <summary>
+	/// Gets the default accessibility emitted for operator declarations when a declaration does not
+	/// specify one. The default is <see cref="TypeDeclarationAccessibility.Public"/>. Set to
+	/// <see langword="null"/> to omit the modifier, matching the previous behaviour.
+	/// </summary>
+	public TypeDeclarationAccessibility? DefaultOperatorAccessibility { get; init; } =
+		TypeDeclarationAccessibility.Public;
+
+	/// <summary>
 	/// Creates a new generation settings instance for the specified generator type, using the type name and assembly version.
 	/// </summary>
 	/// <typeparam name="TGenerator">The type of the generator.</typeparam>

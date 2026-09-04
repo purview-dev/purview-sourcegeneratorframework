@@ -49,7 +49,7 @@ partial class CodeWriter
 
 		NewLine();
 		foreach (var pragma in pragmas)
-			Write("#pragma warning restore ").WriteLine(pragma);
+			Write("#pragma warning restore ").Line(pragma);
 	}
 
 	/// <summary>
@@ -93,14 +93,26 @@ partial class CodeWriter
 		readonly int _scopeId;
 		readonly int _completedItem;
 		readonly int _itemIndent;
+		readonly bool _closingAtColumnZero;
+		readonly bool _changesIndentation;
 
-		internal BlockScope(CodeWriter writer, string? closingSeparator, int scopeId, int completedItem, int itemIndent)
+		internal BlockScope(
+			CodeWriter writer,
+			string? closingSeparator,
+			int scopeId,
+			int completedItem,
+			int itemIndent,
+			bool closingAtColumnZero = false,
+			bool changesIndentation = true
+		)
 		{
 			_writer = writer;
 			_closingSeparator = closingSeparator;
 			_scopeId = scopeId;
 			_completedItem = completedItem;
 			_itemIndent = itemIndent;
+			_closingAtColumnZero = closingAtColumnZero;
+			_changesIndentation = changesIndentation;
 		}
 
 		/// <summary>
@@ -113,7 +125,14 @@ partial class CodeWriter
 				return;
 
 			_writer = null;
-			writer.CloseBlock(_closingSeparator, _scopeId, _completedItem, _itemIndent);
+			writer.CloseBlock(
+				_closingSeparator,
+				_scopeId,
+				_completedItem,
+				_itemIndent,
+				_closingAtColumnZero,
+				_changesIndentation
+			);
 		}
 	}
 

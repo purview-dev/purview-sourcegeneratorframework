@@ -1,0 +1,288 @@
+# CodeWriter
+
+`CodeWriter` is the structured, allocation-conscious writer used to build generated C# source. Instead
+of concatenating strings or writing raw text, generators describe *what* to emit — declarations,
+statements, scopes — and the writer handles indentation, blank-line separation, generated attributes,
+and deterministic layout.
+
+This page uses the current best-practice API: bare semantic names (`Class`, `Method`, `Property`), the
+minimal-parameter overloads with an optional `configure` callback, and structured statements
+(`Return`, `MethodCall`, `Assignment`) instead of raw text.
+
+## Primitives
+
+Use the raw primitives for low-level text that has no structured equivalent:
+
+```csharp
+writer.Write("partial");              // no trailing line feed
+writer.Line("// generated");          // line feed appended
+writer.Append("text");                // Write alias
+writer.AppendLine("text");            // Line alias
+writer.Comment("Explains the next member.");
+writer.Indent();                      // increase indentation
+writer.NewLine();
+```
+
+`Write`/`Line`/`Append`/`AppendLine` are the only methods that retain a verb prefix: everything
+semantic drops it because the receiver is already a writer.
+
+## Declarations
+
+Each declaration writer has:
+
+- a **minimal overload** taking name/type/accessibility plus an optional `configure` callback
+  (`options => options with { ... }`); and
+- a **scope form** (`...Scope`) returning a `BlockScope` for `using` when you need fine-grained control.
+
+```csharp
+writer.Class(
+    "OrderService",
+    TypeDeclarationAccessibility.Public,
+    options => options with { IsSealed = true, IsPartial = false },
+    body =>
+    {
+        body.Field("_total", TypeIdentity.Create<decimal>().AsTypeReference(), TypeDeclarationAccessibility.Private);
+
+        body.Constructor(
+            "OrderService",
+            TypeDeclarationAccessibility.Public,
+            options => options with
+            {
+                Parameters = [new("total", TypeIdentity.Create<decimal>().AsTypeReference())],
+            },
+            constructorBody => constructorBody.Assignment("_total", "total")
+        );
+
+        body.Property(
+            "Total",
+            TypeIdentity.Create<decimal>().AsTypeReference(),
+            TypeDeclarationAccessibility.Public
+        );
+    }
+);
+```
+
+The same pattern applies to `Struct`, `RecordClass`, `RecordStruct`, `Interface`, `Enum` (+ `EnumField`),
+`Type` (kind-driven), `Delegate`, `AttributeClass`, `Method`/`PartialMethod`/`MethodExpression`,
+`Property`/`PropertyExpression`, `Indexer`, `Field`, and `Operator`.
+
+### Scope forms
+
+```csharp
+using (writer.ClassScope("OrderService", TypeDeclarationAccessibility.Public))
+using (writer.MethodScope("Apply", PurviewTypeLibrary.System.Void, TypeDeclarationAccessibility.Public))
+{
+    writer.MethodCall("Validate");
+}
+```
+
+Scope forms are ideal when a declaration spans multiple calls, loops, or conditional content. The
+`using` statement is mandatory — the closing token and indentation are written on dispose, and the
+`DiscardedCodeWriterScopeAnalyzer` (PSGFR17) flags scope returns that are dropped.
+
+## Statements
+
+Emit executable statements through the structured statement methods rather than raw `Line`:
+
+```csharp
+writer.MethodCall("Process", "item");                       // Process(item);
+writer.AwaitedMethodCall("SaveAsync", "cancellationToken"); // await SaveAsync(cancellationToken);
+writer.Return("value");                                     // return value;
+writer.Throw(TypeIdentity.Create<InvalidOperationException>(), "Failed.");  // throw new ...;
+writer.Assignment("_total", "value");                       // _total = value;
+writer.IfBlock("value is null", body => body.Return("null"));
+writer.Foreach("var item in items", body => body.MethodCall("Process", "item"));
+```
+
+### Conditional compilation blocks
+
+`HashDefines`/`HashDefinesScope` write a `#if`/`#endif` block with both directives at **column zero**.
+The body keeps the surrounding indentation — file-level directives and their content stay at column
+zero, while class members inside the block stay at the same indent as their siblings:
+
+```csharp
+using (writer.HashDefinesScope("!EXCLUDE_PURVIEW_TELEMETRY_LOGGING"))
+{
+    writer.FileScopedNamespace("Example");
+    writer.Enum("Mode", TypeDeclarationAccessibility.Public, fields: [new("Default", 0)]);
+}
+
+// Equivalent action form:
+writer.HashDefines("NET", body => body.Line("// NET only"));
+```
+
+Emits:
+
+```csharp
+#if !EXCLUDE_PURVIEW_TELEMETRY_LOGGING
+namespace Example;
+...
+#endif
+```
+
+At file level these blocks are self-spacing: a blank line is ensured before the `#if` and after the
+`#endif`, so directive sections remain separated without explicit `NewLine()` calls.
+
+`HashElse()` writes the `#else` directive at column zero between the two bodies:
+
+```csharp
+using (writer.HashDefinesScope("NET48_OR_GREATER || PURVIEW_TELEMETRY_NON_NULLABLE"))
+{
+    writer.Property("name", TypeIdentity.Create<string>().AsTypeReference(), TypeDeclarationAccessibility.Public,
+        options => options with { HasSetter = true, IncludeGeneratedAttributes = false });
+    writer.HashElse();
+    writer.Property("name", TypeIdentity.Create<string>().MakeNullable(writer), TypeDeclarationAccessibility.Public,
+        options => options with { HasSetter = true, IncludeGeneratedAttributes = false });
+}
+```
+
+Emits:
+
+```csharp
+#if NET48_OR_GREATER || PURVIEW_TELEMETRY_NON_NULLABLE
+public string name { get; set; }
+#else
+public string? name { get; set; }
+#endif
+```
+
+`EmptyScope()` returns a no-op scope so a block can be wrapped only when a guard requires it:
+
+```csharp
+using var scope = wrapInExcludeLoggingGuard
+    ? writer.EmptyScope()
+    : writer.HashDefinesScope("EXCLUDE_PURVIEW_TELEMETRY_LOGGING");
+```
+
+### Pragma warning suppression
+
+`PragmaDisable` writes a single `#pragma warning disable` directive at column zero for one or more
+warning codes. At file level it is self-spacing (blank lines are ensured around the directive):
+
+```csharp
+writer.PragmaDisable("CS8625", "CS0618");
+// #pragma warning disable CS8625 CS0618
+```
+
+For a scoped disable that restores the warnings when the scope is disposed, use `OpenPragmasScope`:
+
+```csharp
+using (writer.OpenPragmasScope("CS0618"))
+{
+    writer.Line("ObsoleteCall();");
+}
+// #pragma warning disable CS0618
+//     ObsoleteCall();
+// #pragma warning restore CS0618
+```
+
+The full header pattern — nullable directive, conditional `#nullable enable`, and a disabled warning —
+can be expressed entirely through the structured APIs (the file-level directives are self-spacing, so
+no explicit `NewLine()` calls are needed):
+
+```csharp
+writer.AutoGeneratedHeader(nullableDirective: NullableDirectiveMode.Disable);
+writer.HashDefines("!NET48_OR_GREATER && !PURVIEW_TELEMETRY_NON_NULLABLE", hashWriter => hashWriter.Line("#nullable enable"));
+writer.PragmaDisable("CS8625");
+writer.FileScopedNamespace("Purview.Telemetry");
+```
+
+Emits:
+
+```csharp
+// <auto-generated />
+// This code was generated by ExampleGenerator (version 1.0.0).
+// Changes to this file will be lost when the source generator runs again.
+
+#if !NET48_OR_GREATER && !PURVIEW_TELEMETRY_NON_NULLABLE
+#nullable enable
+#endif
+
+#pragma warning disable CS8625
+
+namespace Purview.Telemetry;
+```
+
+### Conditional compilation returns
+
+`NetConditionalReturn` writes a `return` for an interpolated string using the best invariant-culture
+API on each target framework, guarded by `#if NET`:
+
+```csharp
+writer.Method(
+    "Format",
+    TypeIdentity.Create<string>().AsTypeReference(),
+    TypeDeclarationAccessibility.Public,
+    null,
+    body => body.NetConditionalReturn("Value: {_value}")
+);
+```
+
+Emits:
+
+```csharp
+#if NET
+    return string.Create(global::System.Globalization.CultureInfo.InvariantCulture, $"Value: {_value}");
+#else
+    return global::System.FormattableString.Invariant($"Value: {_value}");
+#endif
+```
+
+## Default accessibility
+
+`CodeWriter` applies a default accessibility for each member kind when a declaration does not specify
+one. Set the defaults on `GenerationSettings` (to apply across a generation) or on the writer itself
+(to override per writer). Each value is `null`-able, so setting a kind back to `null` omits the
+modifier entirely.
+
+| Setting | Default |
+|---|---|
+| `DefaultTypeAccessibility` | `Public` |
+| `DefaultPropertyAccessibility` | `Public` |
+| `DefaultPropertyGetterAccessibility` | `Public` |
+| `DefaultPropertySetterAccessibility` | `Public` |
+| `DefaultFieldAccessibility` | `Private` |
+| `DefaultMethodAccessibility` | `Public` |
+| `DefaultConstructorAccessibility` | `Public` |
+| `DefaultIndexerAccessibility` | `Public` |
+| `DefaultOperatorAccessibility` | `Public` |
+
+```csharp
+var writer = generationContext.CreateCodeWriter();
+writer.Field("_total", TypeReference.Create<decimal>()); // private int _total; (DefaultFieldAccessibility)
+writer.Property("Total", TypeReference.Create<decimal>()); // public decimal Total { get; }
+```
+
+An explicit accessibility always wins over the default:
+
+```csharp
+writer.Property("Total", TypeReference.Create<decimal>(), TypeDeclarationAccessibility.Internal);
+// internal decimal Total { get; }
+```
+
+Accessor (getter/setter) defaults are emitted only when they are **more restrictive** than the
+property's own accessibility — C# forbids an accessor modifier that is equal to or more permissive
+than the property (CS0273). With the public defaults, a public property keeps bare `{ get; set; }`:
+
+```csharp
+writer.DefaultPropertySetterAccessibility = TypeDeclarationAccessibility.Private;
+writer.Property("Name", TypeReference.Create<string>(), TypeDeclarationAccessibility.Public,
+    options => options with { HasSetter = true });
+// public string Name { get; private set; }
+```
+
+## Guidance
+
+- Prefer the minimal overloads with a `configure` callback over constructing `*DeclarationOptions`
+  values manually — the `PreferMinimalCodeWriterOverloadAnalyzer` (PSGFR20) flags the verbose form.
+- Prefer structured declarations and statements over raw text — `PreferStructuredCodeWriterApiAnalyzer`
+  (PSGFR18) and `PreferStructuredCodeWriterStatementAnalyzer` (PSGFR19) flag raw emission.
+- Always consume scope-returning methods with `using` (PSGFR17).
+- Keep every value emitted through the structured API so layout stays deterministic and the analyzers
+  can guide callers back to the best practice.
+
+## Samples
+
+The [`SourceGeneratorFramework.ExampleGenerator`](../src/src/SourceGeneratorFramework.ExampleGenerator)
+reference implementation demonstrates these APIs end-to-end, including the `CodeWriterSampleGenerator`,
+which compiles a best-practice sample class for every `[GenerateCodeWriterSample]` target.

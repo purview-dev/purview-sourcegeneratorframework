@@ -18,7 +18,7 @@ public sealed class PreferNullableContextOverloadCodeFixProviderTests
 				public void Emit(CodeWriter writer)
 				{
 					var nullable = TypeIdentity.Create<string>().MakeNullable();
-					writer.WriteType(nullable);
+					writer.Type(nullable);
 				}
 			}
 			""";
@@ -81,8 +81,8 @@ public sealed class PreferNullableContextOverloadCodeFixProviderTests
 					{
 						var one = TypeIdentity.Create<string>().MakeNullable();
 						var two = TypeIdentity.Create<string>().MakeNullable();
-						writer.WriteType(one);
-						writer.WriteType(two);
+						writer.Type(one);
+						writer.Type(two);
 					}
 				}
 				""",
@@ -94,7 +94,7 @@ public sealed class PreferNullableContextOverloadCodeFixProviderTests
 					public void Emit(CodeWriter writer)
 					{
 						var three = TypeIdentity.Create<string>().MakeNullable();
-						writer.WriteType(three);
+						writer.Type(three);
 					}
 				}
 				""",
