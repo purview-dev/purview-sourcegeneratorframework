@@ -141,7 +141,7 @@ public sealed record TypeDeclarationOptions
 
 	/// <summary>
 	/// Gets whether to emit <see cref="EmbeddedAttribute"/> on the type.
-	/// When <see langword="null"/>, <c>WriteAttributeClass</c> enables it and other type-writing
+	/// When <see langword="null"/>, <c>AttributeClass</c> enables it and other type-writing
 	/// APIs leave it disabled. Set this explicitly to <see langword="false"/> to opt a generated
 	/// attribute out of embedding.
 	/// </summary>

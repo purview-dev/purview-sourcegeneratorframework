@@ -2,6 +2,11 @@
 
 A set of libraries for building and testing incremental C# source generators using Roslyn.
 
+## Documentation
+
+- [Source generator & analyser best practices](docs/guide.md)
+- [CodeWriter structured API reference](docs/code-writer.md)
+
 ## Packages
 
 | Package | Description | Packable |
@@ -45,6 +50,7 @@ normal reference with `ReferenceOutputAssembly="true"`. The complete pattern is 
 The framework package includes `AttributeDataModelGenerator` (implemented in `Purview.SourceGeneratorFramework.Generators`), which generates `readonly record struct` parser models for .NET attributes. It removes the repetitive boilerplate of hand-writing `FromAttributeData` methods for every attribute you want to inspect in a source generator.
 
 Supported features:
+
 - Manual mapping of named arguments, constructor arguments by index, and constructor arguments by name
 - Auto-discovery of all constructor parameters and public named properties
 - Nested generated models (e.g., a shared `ValidationAttributeData` model reused inside `RequiredAttributeData`)

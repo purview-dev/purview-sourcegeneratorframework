@@ -7,23 +7,22 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace Purview.SourceGeneratorFramework.Analyzers;
 
 /// <summary>
-/// Flags raw <c>CodeWriter</c> text emission that starts with a C# declaration keyword, suggesting a
-/// structured declaration API such as <c>Class</c> or <c>Property</c> instead. Plain,
-/// interpolated, and raw string literals as well as constant expressions are inspected.
+/// Flags raw <c>CodeWriter</c> text emission of a <c>#pragma warning disable</c>/<c>restore</c>
+/// directive, suggesting <c>PragmaDisable</c> or <c>OpenPragmasScope</c> instead.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
-public sealed class PreferStructuredCodeWriterApiAnalyzer : DiagnosticAnalyzer
+public sealed class PreferPragmaDisableAnalyzer : DiagnosticAnalyzer
 {
-	public const string DiagnosticId = "PSGFR18";
+	public const string DiagnosticId = "PSGFR22";
 
 	public static readonly DiagnosticDescriptor Rule = new(
 		DiagnosticId,
-		"Prefer a structured CodeWriter declaration API",
-		"'{0}' with a declaration should use a structured API such as Class, Method, Property, or Field",
+		"Prefer PragmaDisable for warning suppression",
+		"'{0}' with a pragma warning directive should use 'PragmaDisable' or 'OpenPragmasScope'",
 		"Purview.SourceGeneratorFramework",
 		DiagnosticSeverity.Info,
 		isEnabledByDefault: true,
-		description: "Emitting declaration syntax through raw text bypasses the structured, deterministic declaration APIs on CodeWriter."
+		description: "Emitting #pragma warning directives through raw text bypasses the structured PragmaDisable/OpenPragmasScope APIs."
 	);
 
 	public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [Rule];
@@ -72,11 +71,7 @@ public sealed class PreferStructuredCodeWriterApiAnalyzer : DiagnosticAnalyzer
 		)
 			return;
 
-		if (value is null)
-			return;
-
-		var trimmed = value.TrimStart();
-		if (!CodeWriterLiteralClassifier.StartsWithDeclaration(trimmed))
+		if (value is null || !CodeWriterLiteralClassifier.IsPragmaWarningDirective(value))
 			return;
 
 		context.ReportDiagnostic(Diagnostic.Create(Rule, invocation.GetLocation(), name));

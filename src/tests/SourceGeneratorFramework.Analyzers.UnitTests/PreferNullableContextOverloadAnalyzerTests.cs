@@ -17,7 +17,7 @@ public sealed class PreferNullableContextOverloadAnalyzerTests
 				public void Emit(CodeWriter writer)
 				{
 					var nullable = TypeIdentity.Create<string>().MakeNullable();
-					writer.WriteType(nullable);
+					writer.Type(nullable);
 				}
 			}
 			""";
@@ -69,7 +69,7 @@ public sealed class PreferNullableContextOverloadAnalyzerTests
 				public void Emit(CodeWriter writer)
 				{
 					var nullable = TypeIdentity.Create<string>().MakeNullable(writer);
-					writer.WriteType(nullable);
+					writer.Type(nullable);
 				}
 			}
 			""";

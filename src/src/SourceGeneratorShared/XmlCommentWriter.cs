@@ -78,7 +78,7 @@ public static class XmlCommentWriter
 		/// <summary>
 		/// Writes a self-closing XML <c>&lt;inheritdoc /&gt;</c> element.
 		/// </summary>
-		public CodeWriter XmlInheritDoc() => writer.Write("/// ").WriteLine(BuildSelfClosingXmlTag("inheritdoc"));
+		public CodeWriter XmlInheritDoc() => writer.Write("/// ").Line(BuildSelfClosingXmlTag("inheritdoc"));
 
 		/// <summary>
 		/// Writes a self-closing XML <c>&lt;inheritdoc /&gt;</c> element for a member.
@@ -86,7 +86,7 @@ public static class XmlCommentWriter
 		public CodeWriter XmlInheritDoc(string cref) =>
 			string.IsNullOrWhiteSpace(cref)
 				? throw new ArgumentException("The XML cref cannot be null or empty.", nameof(cref))
-				: writer.Write("/// ").WriteLine(BuildSelfClosingXmlTag("inheritdoc", ("cref", cref)));
+				: writer.Write("/// ").Line(BuildSelfClosingXmlTag("inheritdoc", ("cref", cref)));
 
 		/// <summary>
 		/// Writes an XML <c>&lt;returns&gt;</c> documentation block with the specified content.
@@ -178,7 +178,7 @@ public static class XmlCommentWriter
 
 			// If no content is provided, write a self-closing <seealso /> tag. Otherwise, write a <seealso> block with the provided content.
 			return content is null || content.Length == 0
-				? writer.Write("/// ").WriteLine(BuildSelfClosingXmlTag("seealso", ("cref", cref)))
+				? writer.Write("/// ").Line(BuildSelfClosingXmlTag("seealso", ("cref", cref)))
 				: XmlCore(writer, BuildXmlTag("seealso", ("cref", cref)), "seealso", content);
 		}
 
@@ -190,7 +190,7 @@ public static class XmlCommentWriter
 			var cref = ToXmlCref(type);
 
 			return content is null || content.Length == 0
-				? writer.Write("/// ").WriteLine(BuildSelfClosingXmlTag("seealso", ("cref", cref)))
+				? writer.Write("/// ").Line(BuildSelfClosingXmlTag("seealso", ("cref", cref)))
 				: XmlCore(writer, BuildXmlTag("seealso", ("cref", cref)), "seealso", content);
 		}
 
@@ -206,7 +206,7 @@ public static class XmlCommentWriter
 			var cref = ToXmlCref(type);
 
 			return content is null || content.Length == 0
-				? writer.Write("/// ").WriteLine(BuildSelfClosingXmlTag("seealso", ("cref", cref)))
+				? writer.Write("/// ").Line(BuildSelfClosingXmlTag("seealso", ("cref", cref)))
 				: XmlCore(writer, BuildXmlTag("seealso", ("cref", cref)), "seealso", content);
 		}
 
@@ -221,7 +221,7 @@ public static class XmlCommentWriter
 				throw new ArgumentException("The include path cannot be null or empty.", nameof(path));
 
 			// Write a self-closing <include /> tag with the specified file and path attributes.
-			return writer.Write("/// ").WriteLine(BuildSelfClosingXmlTag("include", ("file", file), ("path", path)));
+			return writer.Write("/// ").Line(BuildSelfClosingXmlTag("include", ("file", file), ("path", path)));
 		}
 
 		/// <summary>
@@ -365,7 +365,7 @@ public static class XmlCommentWriter
 					.Write(content[0])
 					.Write("</")
 					.Write(endTag)
-					.WriteLine(">");
+					.Line(">");
 			}
 
 			var isMultiLine = startTag is not null;
@@ -379,10 +379,10 @@ public static class XmlCommentWriter
 			insideStart?.Invoke(writer);
 
 			foreach (var line in content)
-				writer.Write("/// ").WriteLine(line);
+				writer.Write("/// ").Line(line);
 
 			if (endTag is not null)
-				writer.Write("/// </").Write(endTag).WriteLine(">");
+				writer.Write("/// </").Write(endTag).Line(">");
 
 			insideEnd?.Invoke(writer);
 

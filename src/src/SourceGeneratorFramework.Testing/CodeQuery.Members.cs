@@ -11,38 +11,57 @@ public sealed partial class CodeQuery
 	// ---------------------------------------------------------------------------------------------
 
 	/// <summary>
-	/// Gets the first operator declaration matching the given token, such as <c>==</c> or <c>implicit</c>.
+	/// Gets the first operator declaration matching the given token, such as <c>==</c>, optionally matching
+	/// its parameter types.
 	/// </summary>
 	/// <exception cref="SyntaxNotFoundException">No operator matched.</exception>
-	public OperatorDeclarationSyntax GetOperator(string operatorToken) =>
-		TryGetOperator(operatorToken, out var @operator)
+	public OperatorDeclarationSyntax GetOperator(string operatorToken, params TypeReference[]? parameters) =>
+		TryGetOperator(operatorToken, out var @operator, parameters)
 			? @operator!
 			: throw new SyntaxNotFoundException(
-				$"No operator '{operatorToken}' was found in the {ScopeDescription()}."
+				$"No operator '{operatorToken}' was found in the {ScopeDescription()}{(parameters is { Length: > 0 } ? " with the specified parameters" : "")}."
 			);
 
 	/// <summary>
-	/// Determines whether an operator declaration with the given token exists.
+	/// Determines whether an operator declaration with the given token exists, optionally matching its
+	/// parameter types.
 	/// </summary>
-	public bool HasOperator(string operatorToken) => TryGetOperator(operatorToken, out _);
+	public bool HasOperator(string operatorToken, params TypeReference[]? parameters) =>
+		TryGetOperator(operatorToken, out _, parameters);
 
 	/// <summary>
-	/// Attempts to get the first operator declaration matching the given token.
+	/// Attempts to get the first operator declaration matching the given token, optionally matching its
+	/// parameter types.
 	/// </summary>
-	public bool TryGetOperator(string operatorToken, out OperatorDeclarationSyntax? @operator)
+	/// <remarks>
+	/// Parameter types are resolved through the query's <see cref="Compilation"/> with the same semantics as
+	/// <see cref="HasParameters"/>: nullable <i>value</i> types are significant while nullable <i>reference</i>
+	/// annotations are metadata. When <paramref name="parameters"/> is <see langword="null"/> or empty, the
+	/// token is matched alone.
+	/// </remarks>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1021:Avoid out parameters")]
+	public bool TryGetOperator(
+		string operatorToken,
+		out OperatorDeclarationSyntax? @operator,
+		params TypeReference[]? parameters
+	)
 	{
 		if (string.IsNullOrWhiteSpace(operatorToken))
 			throw new ArgumentException("The operator token cannot be null or whitespace.", nameof(operatorToken));
 
+		var expected = parameters ?? [];
 		foreach (var tree in Trees)
 		{
 			foreach (var candidate in RootOf(tree).DescendantNodes().OfType<OperatorDeclarationSyntax>())
 			{
-				if (candidate.OperatorToken.ValueText == operatorToken)
-				{
-					@operator = candidate;
-					return true;
-				}
+				if (candidate.OperatorToken.ValueText != operatorToken)
+					continue;
+
+				if (expected.Length > 0 && !HasParameters(candidate, expected))
+					continue;
+
+				@operator = candidate;
+				return true;
 			}
 		}
 
@@ -51,38 +70,60 @@ public sealed partial class CodeQuery
 	}
 
 	/// <summary>
-	/// Gets the first conversion operator matching the given keyword, such as <c>implicit</c> or <c>explicit</c>.
+	/// Gets the first conversion operator matching the given keyword, such as <c>implicit</c> or
+	/// <c>explicit</c>, optionally matching its parameter type.
 	/// </summary>
 	/// <exception cref="SyntaxNotFoundException">No conversion operator matched.</exception>
-	public ConversionOperatorDeclarationSyntax GetConversionOperator(string keyword) =>
-		TryGetConversionOperator(keyword, out var conversion)
+	public ConversionOperatorDeclarationSyntax GetConversionOperator(
+		string keyword,
+		params TypeReference[]? parameters
+	) =>
+		TryGetConversionOperator(keyword, out var conversion, parameters)
 			? conversion!
 			: throw new SyntaxNotFoundException(
-				$"No '{keyword}' conversion operator was found in the {ScopeDescription()}."
+				$"No '{keyword}' conversion operator was found in the {ScopeDescription()}{(parameters is { Length: > 0 } ? " with the specified parameters" : "")}."
 			);
 
 	/// <summary>
-	/// Determines whether a conversion operator with the given keyword exists.
+	/// Determines whether a conversion operator with the given keyword exists, optionally matching its
+	/// parameter type.
 	/// </summary>
-	public bool HasConversionOperator(string keyword) => TryGetConversionOperator(keyword, out _);
+	public bool HasConversionOperator(string keyword, params TypeReference[]? parameters) =>
+		TryGetConversionOperator(keyword, out _, parameters);
 
 	/// <summary>
-	/// Attempts to get the first conversion operator matching the given keyword.
+	/// Attempts to get the first conversion operator matching the given keyword, optionally matching its
+	/// parameter type.
 	/// </summary>
-	public bool TryGetConversionOperator(string keyword, out ConversionOperatorDeclarationSyntax? conversion)
+	/// <remarks>
+	/// Parameter types are resolved through the query's <see cref="Compilation"/> with the same semantics as
+	/// <see cref="HasParameters"/>: nullable <i>value</i> types are significant while nullable <i>reference</i>
+	/// annotations are metadata. When <paramref name="parameters"/> is <see langword="null"/> or empty, the
+	/// keyword is matched alone.
+	/// </remarks>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1021:Avoid out parameters")]
+	public bool TryGetConversionOperator(
+		string keyword,
+		out ConversionOperatorDeclarationSyntax? conversion,
+		params TypeReference[]? parameters
+	)
 	{
 		if (keyword is not ("implicit" or "explicit"))
 			throw new ArgumentException("The keyword must be 'implicit' or 'explicit'.", nameof(keyword));
 
+		var expected = parameters ?? [];
 		foreach (var tree in Trees)
 		{
 			foreach (var candidate in RootOf(tree).DescendantNodes().OfType<ConversionOperatorDeclarationSyntax>())
 			{
-				if (candidate.ImplicitOrExplicitKeyword.ValueText == keyword)
-				{
-					conversion = candidate;
-					return true;
-				}
+				if (candidate.ImplicitOrExplicitKeyword.ValueText != keyword)
+					continue;
+
+				if (expected.Length > 0 && !HasParameters(candidate, expected))
+					continue;
+
+				conversion = candidate;
+				return true;
 			}
 		}
 

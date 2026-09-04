@@ -7,23 +7,23 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace Purview.SourceGeneratorFramework.Analyzers;
 
 /// <summary>
-/// Flags raw <c>CodeWriter</c> text emission that starts with a C# declaration keyword, suggesting a
-/// structured declaration API such as <c>Class</c> or <c>Property</c> instead. Plain,
-/// interpolated, and raw string literals as well as constant expressions are inspected.
+/// Flags raw <c>CodeWriter</c> text emission that writes a C# statement, suggesting a structured
+/// statement API such as <c>Return</c>, <c>MethodCall</c>, <c>Throw</c>,
+/// <c>Assignment</c>, <c>Using</c>, or <c>Comment</c> instead.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
-public sealed class PreferStructuredCodeWriterApiAnalyzer : DiagnosticAnalyzer
+public sealed class PreferStructuredCodeWriterStatementAnalyzer : DiagnosticAnalyzer
 {
-	public const string DiagnosticId = "PSGFR18";
+	public const string DiagnosticId = "PSGFR19";
 
 	public static readonly DiagnosticDescriptor Rule = new(
 		DiagnosticId,
-		"Prefer a structured CodeWriter declaration API",
-		"'{0}' with a declaration should use a structured API such as Class, Method, Property, or Field",
+		"Prefer a structured CodeWriter statement API",
+		"'{0}' with a statement should use '{1}'",
 		"Purview.SourceGeneratorFramework",
 		DiagnosticSeverity.Info,
 		isEnabledByDefault: true,
-		description: "Emitting declaration syntax through raw text bypasses the structured, deterministic declaration APIs on CodeWriter."
+		description: "Emitting statement syntax through raw text bypasses the structured, deterministic statement APIs on CodeWriter."
 	);
 
 	public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [Rule];
@@ -75,10 +75,10 @@ public sealed class PreferStructuredCodeWriterApiAnalyzer : DiagnosticAnalyzer
 		if (value is null)
 			return;
 
-		var trimmed = value.TrimStart();
-		if (!CodeWriterLiteralClassifier.StartsWithDeclaration(trimmed))
+		var structuredApi = CodeWriterLiteralClassifier.ClassifyStatement(value);
+		if (structuredApi is null)
 			return;
 
-		context.ReportDiagnostic(Diagnostic.Create(Rule, invocation.GetLocation(), name));
+		context.ReportDiagnostic(Diagnostic.Create(Rule, invocation.GetLocation(), name, structuredApi));
 	}
 }

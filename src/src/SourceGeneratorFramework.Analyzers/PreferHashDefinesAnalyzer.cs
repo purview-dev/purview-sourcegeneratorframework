@@ -7,23 +7,22 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace Purview.SourceGeneratorFramework.Analyzers;
 
 /// <summary>
-/// Flags raw <c>CodeWriter</c> text emission that starts with a C# declaration keyword, suggesting a
-/// structured declaration API such as <c>Class</c> or <c>Property</c> instead. Plain,
-/// interpolated, and raw string literals as well as constant expressions are inspected.
+/// Flags raw <c>CodeWriter</c> text emission of a <c>#if</c>/<c>#endif</c> preprocessor directive,
+/// suggesting <c>HashDefines</c>/<c>HashDefinesScope</c> instead.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
-public sealed class PreferStructuredCodeWriterApiAnalyzer : DiagnosticAnalyzer
+public sealed class PreferHashDefinesAnalyzer : DiagnosticAnalyzer
 {
-	public const string DiagnosticId = "PSGFR18";
+	public const string DiagnosticId = "PSGFR21";
 
 	public static readonly DiagnosticDescriptor Rule = new(
 		DiagnosticId,
-		"Prefer a structured CodeWriter declaration API",
-		"'{0}' with a declaration should use a structured API such as Class, Method, Property, or Field",
+		"Prefer HashDefines for conditional compilation",
+		"'{0}' with a preprocessor directive should use 'HashDefines' or 'HashElse'",
 		"Purview.SourceGeneratorFramework",
 		DiagnosticSeverity.Info,
 		isEnabledByDefault: true,
-		description: "Emitting declaration syntax through raw text bypasses the structured, deterministic declaration APIs on CodeWriter."
+		description: "Emitting #if/#else/#endif directives through raw text bypasses the structured HashDefines/HashElse APIs that write directives at column zero."
 	);
 
 	public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [Rule];
@@ -72,11 +71,7 @@ public sealed class PreferStructuredCodeWriterApiAnalyzer : DiagnosticAnalyzer
 		)
 			return;
 
-		if (value is null)
-			return;
-
-		var trimmed = value.TrimStart();
-		if (!CodeWriterLiteralClassifier.StartsWithDeclaration(trimmed))
+		if (value is null || !CodeWriterLiteralClassifier.IsHashDefine(value))
 			return;
 
 		context.ReportDiagnostic(Diagnostic.Create(Rule, invocation.GetLocation(), name));
