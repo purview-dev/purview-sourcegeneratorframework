@@ -114,6 +114,81 @@ public sealed class PreferStructuredCodeWriterStatementAnalyzerTests
 	}
 
 	[Test]
+	public async Task Line_WithIfStatement_SuggestsIfBlock(CancellationToken cancellationToken)
+	{
+		// Arrange
+		const string source = """
+			using Purview.SourceGeneratorFramework;
+
+			class Emitter
+			{
+				public void Emit()
+				{
+					var writer = new CodeWriter(new GenerationSettings("G"));
+					writer.Line("if (enabled)");
+				}
+			}
+			""";
+
+		// Act
+		var result = await AnalyzeAsync(source, Options, cancellationToken);
+
+		// Assert
+		var diagnostic = await Assert.That(result).HasDiagnostic(PreferStructuredCodeWriterStatementAnalyzer.Rule.Id);
+		await Assert.That(diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture)).Contains("IfBlock");
+	}
+
+	[Test]
+	public async Task Line_WithElseIfStatement_SuggestsElseIf(CancellationToken cancellationToken)
+	{
+		// Arrange
+		const string source = """
+			using Purview.SourceGeneratorFramework;
+
+			class Emitter
+			{
+				public void Emit()
+				{
+					var writer = new CodeWriter(new GenerationSettings("G"));
+					writer.Line("else if (retry)");
+				}
+			}
+			""";
+
+		// Act
+		var result = await AnalyzeAsync(source, Options, cancellationToken);
+
+		// Assert
+		var diagnostic = await Assert.That(result).HasDiagnostic(PreferStructuredCodeWriterStatementAnalyzer.Rule.Id);
+		await Assert.That(diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture)).Contains("ElseIf");
+	}
+
+	[Test]
+	public async Task Line_WithElseStatement_SuggestsElse(CancellationToken cancellationToken)
+	{
+		// Arrange
+		const string source = """
+			using Purview.SourceGeneratorFramework;
+
+			class Emitter
+			{
+				public void Emit()
+				{
+					var writer = new CodeWriter(new GenerationSettings("G"));
+					writer.Line("else");
+				}
+			}
+			""";
+
+		// Act
+		var result = await AnalyzeAsync(source, Options, cancellationToken);
+
+		// Assert
+		var diagnostic = await Assert.That(result).HasDiagnostic(PreferStructuredCodeWriterStatementAnalyzer.Rule.Id);
+		await Assert.That(diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture)).Contains("Else");
+	}
+
+	[Test]
 	public async Task Line_WithReceiverMethodCall_SuggestsMethodCallOn(CancellationToken cancellationToken)
 	{
 		// Arrange

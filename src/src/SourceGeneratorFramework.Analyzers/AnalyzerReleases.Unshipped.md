@@ -14,6 +14,12 @@ PSGFR19 | Purview.SourceGeneratorFramework | Info | Prefer a structured CodeWrit
 PSGFR20 | Purview.SourceGeneratorFramework | Info | Prefer the minimal CodeWriter overload
 PSGFR21 | Purview.SourceGeneratorFramework | Info | Prefer HashDefines for conditional compilation
 PSGFR22 | Purview.SourceGeneratorFramework | Info | Prefer PragmaDisable for warning suppression
+PSGFR23 | Purview.SourceGeneratorFramework | Info | Prefer the structured CodeWriter conditional API
+PSGFR24 | Purview.SourceGeneratorFramework | Warning | CodeFixProvider is not marked with ExportCodeFixProvider
+PSGFR25 | Purview.SourceGeneratorFramework | Warning | DiagnosticAnalyzer is not marked with DiagnosticAnalyzer
+PSGFR26 | Purview.SourceGeneratorFramework | Error | Source generator is not marked with Generator
+PSGFR27 | Purview.SourceGeneratorFramework | Warning | Roslyn component type must be public
+PSGFR28 | Purview.SourceGeneratorFramework | Info | Code fixer targets a diagnostic no analyzer produces
 ADM0001 | Target | Error | Target attribute type cannot be resolved
 ADM0002 | Property | Error | Property type is not supported for attribute extraction
 ADM0003 | Source | Error | Specified constructor index/name does not exist on the target attribute

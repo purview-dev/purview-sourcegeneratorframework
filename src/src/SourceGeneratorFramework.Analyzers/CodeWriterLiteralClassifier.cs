@@ -191,6 +191,12 @@ static class CodeWriterLiteralClassifier
 		if (trimmed.StartsWith("if (", StringComparison.Ordinal))
 			return "IfBlock";
 
+		if (trimmed.StartsWith("else if (", StringComparison.Ordinal))
+			return "ElseIf";
+
+		if (trimmed == "else")
+			return "Else";
+
 		if (trimmed.StartsWith("foreach (", StringComparison.Ordinal))
 			return "Foreach";
 
@@ -217,5 +223,38 @@ static class CodeWriterLiteralClassifier
 	{
 		var openParen = trimmed.IndexOf('(');
 		return openParen > 0 && trimmed.LastIndexOf('.', openParen) >= 0;
+	}
+
+	/// <summary>
+	/// Classifies the header of a block- or scope-opening <c>CodeWriter</c> method and returns the
+	/// structured <c>if</c>/<c>else if</c>/<c>else</c> API that can express it, or
+	/// <see langword="null"/> when the header is not a conditional block.
+	/// </summary>
+	/// <param name="header">The header text resolved from the first argument of the block method.</param>
+	/// <param name="isScopeForm">Whether the block method is the scope-returning form, which selects the
+	/// <c>Scope</c>-suffixed suggestion.</param>
+	/// <returns>
+	/// The structured API name, or <see langword="null"/> when the header does not describe a
+	/// conditional block.
+	/// </returns>
+	public static string? ClassifyBlockHeader(string? header, bool isScopeForm)
+	{
+		var trimmed = header?.Trim();
+		if (trimmed is null || trimmed.Length == 0)
+			return null;
+
+		if (trimmed.EndsWith(";", StringComparison.Ordinal) || trimmed.EndsWith(")", StringComparison.Ordinal))
+			trimmed = trimmed.TrimEnd(';', ')').Trim();
+
+		if (trimmed.StartsWith("else if (", StringComparison.Ordinal))
+			return isScopeForm ? "ElseIfScope" : "ElseIf";
+
+		if (trimmed == "else")
+			return isScopeForm ? "ElseScope" : "Else";
+
+		if (trimmed.StartsWith("if (", StringComparison.Ordinal))
+			return isScopeForm ? "IfBlockScope" : "IfBlock";
+
+		return null;
 	}
 }
