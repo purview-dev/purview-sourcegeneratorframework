@@ -108,6 +108,34 @@ writer.MethodCall("Create", ["x"], receiver: "factory", genericArguments: [TypeR
 // factory.Create<string>(x);
 ```
 
+A **chained** invocation — where the result of each call is the receiver of the next, and a postfix is
+applied to the final result — is expressed with `MethodCallChain`/`AwaitedMethodCallChain`. The chain
+is written as an expression (no terminating semicolon), so it composes as the value of an
+`Assignment`/`Return` expression callback:
+
+```csharp
+writer.Assignment(
+    "var hostKitOptions",
+    expression => expression.MethodCallChain(
+        "builder.Configuration.GetSection",
+        [$"{name}.SectionName"],
+        chain => chain.Method("Get", genericArguments: [optionsType]).Postfix(" ?? new()")));
+// var hostKitOptions = builder.Configuration.GetSection("x.SectionName").Get<Options>() ?? new();
+```
+
+- `rootMethod` may include the receiver (e.g. `builder.Configuration.GetSection`); each subsequent
+  `.Method(...)` call implicitly uses the previous result as its receiver.
+- `genericArguments` provides the `<...>` type arguments for a segment.
+- `Postfix(expression)` appends a trailing expression such as `?? new()` or `!`.
+
+A null-conditional receiver — `onBuilt?.Invoke(this, builder);` — is written with the `nullConditional`
+argument on the structured `MethodCallOn`/`AwaitedMethodCallOn` overloads:
+
+```csharp
+writer.MethodCallOn("onBuilt", "Invoke", ["this", "builder"], nullConditional: true);
+// onBuilt?.Invoke(this, builder);
+```
+
 ### Conditional statements
 
 `IfBlock`/`IfBlockScope` write an `if` block. `ElseIf`/`ElseIfScope` chain an `else if` block after an

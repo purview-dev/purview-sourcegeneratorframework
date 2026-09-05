@@ -1837,6 +1837,110 @@ public class CodeWriterTests
 	}
 
 	[Test]
+	public async Task MethodCallOn_WithNullConditional_WritesNullConditionalOperator()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.MethodCallOn("onBuilt", "Invoke", ["this", "builder"], nullConditional: true);
+
+		await Assert.That(writer.ToString()).IsEqualTo("onBuilt?.Invoke(this, builder);\n");
+	}
+
+	[Test]
+	public async Task AwaitedMethodCallOn_WithNullConditional_WritesAwaitAndNullConditionalOperator()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.AwaitedMethodCallOn("service", "LoadAsync", ["token"], nullConditional: true);
+
+		await Assert.That(writer.ToString()).IsEqualTo("await service?.LoadAsync(token);\n");
+	}
+
+	[Test]
+	public async Task MethodCallChain_WritesChainedInvocations()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.MethodCallChain(
+			"builder.Configuration.GetSection",
+			["x.SectionName"],
+			chain => chain.Method("Get", genericArguments: [Type("Options")]).Postfix(" ?? new()")
+		);
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("builder.Configuration.GetSection(x.SectionName).Get<Options>() ?? new()");
+	}
+
+	[Test]
+	public async Task MethodCallChain_AsAssignmentValue_WritesDeclarationAndSemicolon()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.Assignment(
+			"var value",
+			value =>
+				value.MethodCallChain(
+					"builder.Configuration.GetSection",
+					["x.SectionName"],
+					chain => chain.Method("Get", genericArguments: [Type("Options")]).Postfix(" ?? new()")
+				)
+		);
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("var value = builder.Configuration.GetSection(x.SectionName).Get<Options>() ?? new();\n");
+	}
+
+	[Test]
+	public async Task AwaitedMethodCallChain_WritesAwaitPrefix()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.Return(value =>
+			value.AwaitedMethodCallChain("service.LoadAsync", ["token"], chain => chain.Method("Configure"))
+		);
+
+		await Assert.That(writer.ToString()).IsEqualTo("return await service.LoadAsync(token).Configure();\n");
+	}
+
+	[Test]
+	public async Task MethodCallChain_WithMultipleSegments_WritesEachInvocation()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.MethodCallChain(
+			"items.Where",
+			["value => value.Enabled"],
+			chain => chain.Method("OrderBy", ["value => value.Name"]).Method("ToList")
+		);
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("items.Where(value => value.Enabled).OrderBy(value => value.Name).ToList()");
+	}
+
+	[Test]
+	public async Task MethodCallChain_GivenWhitespaceMethodName_Throws()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		await Assert
+			.That(() => writer.MethodCallChain("   ", [], chain => chain.Method("Get")))
+			.Throws<ArgumentException>();
+	}
+
+	[Test]
+	public async Task MethodCallChain_GivenWhitespaceArgument_Throws()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		await Assert
+			.That(() => writer.MethodCallChain("GetSection", ["   "], chain => chain.Method("Get")))
+			.Throws<ArgumentException>();
+	}
+
+	[Test]
 	public async Task Assignment_WithObjectCreationOptions_WritesOptionalVarAndMixedArguments()
 	{
 		var writer = CodeWriterFactory.ForTests();

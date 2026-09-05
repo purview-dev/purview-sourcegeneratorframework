@@ -28,6 +28,7 @@ public class CodeWriterSampleGeneratorTests
 		await Assert.That(result).HasGeneratedMethod("Describe");
 		await Assert.That(result).HasGeneratedMethod("Format");
 		await Assert.That(result).HasGeneratedMethod("Categorize");
+		await Assert.That(result).HasGeneratedMethod("Configure");
 
 		var defaultAccessibility = await Assert.That(result).HasGeneratedProperty("DefaultAccessibility");
 		await Assert.That(defaultAccessibility.Modifiers.ToString()).IsEqualTo("public");
@@ -61,6 +62,25 @@ public class CodeWriterSampleGeneratorTests
 
 		var constructor = result.Generated().GetConstructor("SampleTargetCodeWriterSample");
 		await Assert.That(constructor.ToString()).Contains("_value = value;");
+	}
+
+	[Test]
+	public async Task GenerateSample_EmitsChainedInvocationAndNullConditional(CancellationToken cancellationToken)
+	{
+		// Arrange
+		const string source = """
+			[GenerateCodeWriterSample]
+			public class SampleTarget { }
+			""";
+
+		// Act
+		var result = await GenerateAsync(source, cancellationToken);
+
+		// Assert
+		var configure = await Assert.That(result).HasGeneratedMethod("Configure");
+		var configureText = configure.ToString();
+		await Assert.That(configureText).Contains("var hostKitOptions = source.Trim().ToUpper() ?? string.Empty;");
+		await Assert.That(configureText).Contains("onBuilt?.Invoke();");
 	}
 
 	[Test]
