@@ -2128,7 +2128,7 @@ public sealed partial class CodeWriter
 	/// <returns>The current writer.</returns>
 	/// <example><code>writer.MethodCall("Run", "value", "cancellationToken"); // Run(value, cancellationToken);</code></example>
 	public CodeWriter MethodCall(string methodName, params string[] arguments) =>
-		MethodCallCore(methodName, arguments, receiver: null, genericArguments: null, false, false);
+		MethodCallCore(methodName, arguments, receiver: null, genericArguments: null, false, false, false);
 
 	/// <summary>
 	/// Writes an awaited method invocation statement.
@@ -2138,7 +2138,7 @@ public sealed partial class CodeWriter
 	/// <returns>The current writer.</returns>
 	/// <example><code>writer.AwaitedMethodCall("LoadAsync", "cancellationToken"); // await LoadAsync(cancellationToken);</code></example>
 	public CodeWriter AwaitedMethodCall(string methodName, params string[] arguments) =>
-		MethodCallCore(methodName, arguments, receiver: null, genericArguments: null, false, true);
+		MethodCallCore(methodName, arguments, receiver: null, genericArguments: null, false, true, false);
 
 	/// <summary>
 	/// Writes a method invocation on a receiver, such as <c>variable.Method(arg)</c>.
@@ -2149,7 +2149,35 @@ public sealed partial class CodeWriter
 	/// <returns>The current writer.</returns>
 	/// <example><code>writer.MethodCallOn("service", "Add", "value"); // service.Add(value);</code></example>
 	public CodeWriter MethodCallOn(string receiver, string methodName, params string[] arguments) =>
-		MethodCallCore(methodName, arguments, receiver, genericArguments: null, false, false);
+		MethodCallCore(methodName, arguments, receiver, genericArguments: null, false, false, false);
+
+	/// <summary>
+	/// Writes a method invocation on a receiver from structured argument declarations.
+	/// </summary>
+	/// <param name="receiver">The receiver expression written before the method name.</param>
+	/// <param name="methodName">The method name.</param>
+	/// <param name="arguments">The structured arguments to invoke the method with.</param>
+	/// <param name="nullConditional">
+	/// Whether the receiver is invoked with the null-conditional operator (<c>?.</c>) so the call is
+	/// skipped when the receiver is <see langword="null"/>.
+	/// </param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.MethodCallOn("onBuilt", "Invoke", ["this", "builder"], nullConditional: true); // onBuilt?.Invoke(this, builder);</code></example>
+	public CodeWriter MethodCallOn(
+		string receiver,
+		string methodName,
+		IEnumerable<MethodCallArgumentOptions> arguments,
+		bool nullConditional = false
+	) =>
+		MethodCallCore(
+			methodName,
+			(arguments ?? throw new ArgumentNullException(nameof(arguments))).Select(RenderCallArgument),
+			receiver,
+			genericArguments: null,
+			false,
+			false,
+			nullConditional
+		);
 
 	/// <summary>
 	/// Writes an awaited method invocation on a receiver, such as <c>await variable.MethodAsync(arg)</c>.
@@ -2160,7 +2188,35 @@ public sealed partial class CodeWriter
 	/// <returns>The current writer.</returns>
 	/// <example><code>writer.AwaitedMethodCallOn("service", "LoadAsync", "token"); // await service.LoadAsync(token);</code></example>
 	public CodeWriter AwaitedMethodCallOn(string receiver, string methodName, params string[] arguments) =>
-		MethodCallCore(methodName, arguments, receiver, genericArguments: null, false, true);
+		MethodCallCore(methodName, arguments, receiver, genericArguments: null, false, true, false);
+
+	/// <summary>
+	/// Writes an awaited method invocation on a receiver from structured argument declarations.
+	/// </summary>
+	/// <param name="receiver">The receiver expression written before the method name.</param>
+	/// <param name="methodName">The method name.</param>
+	/// <param name="arguments">The structured arguments to invoke the method with.</param>
+	/// <param name="nullConditional">
+	/// Whether the receiver is invoked with the null-conditional operator (<c>?.</c>) so the call is
+	/// skipped when the receiver is <see langword="null"/>.
+	/// </param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.AwaitedMethodCallOn("service", "LoadAsync", ["token"], nullConditional: true); // await service?.LoadAsync(token);</code></example>
+	public CodeWriter AwaitedMethodCallOn(
+		string receiver,
+		string methodName,
+		IEnumerable<MethodCallArgumentOptions> arguments,
+		bool nullConditional = false
+	) =>
+		MethodCallCore(
+			methodName,
+			(arguments ?? throw new ArgumentNullException(nameof(arguments))).Select(RenderCallArgument),
+			receiver,
+			genericArguments: null,
+			false,
+			true,
+			nullConditional
+		);
 
 	/// <summary>
 	/// Writes a method invocation from structured argument declarations.
@@ -2217,7 +2273,8 @@ public sealed partial class CodeWriter
 			receiver,
 			genericArguments,
 			writeArgumentsOnSeparateLines,
-			true
+			true,
+			false
 		);
 
 	/// <summary>
@@ -2236,7 +2293,7 @@ public sealed partial class CodeWriter
 		string? receiver = null,
 		IEnumerable<TypeReference>? genericArguments = null,
 		bool writeArgumentsOnSeparateLines = false
-	) => MethodCallCore(methodName, arguments, receiver, genericArguments, writeArgumentsOnSeparateLines, false);
+	) => MethodCallCore(methodName, arguments, receiver, genericArguments, writeArgumentsOnSeparateLines, false, false);
 
 	CodeWriter MethodCallCore(
 		string methodName,
@@ -2244,7 +2301,8 @@ public sealed partial class CodeWriter
 		string? receiver,
 		IEnumerable<TypeReference>? genericArguments,
 		bool writeArgumentsOnSeparateLines,
-		bool isAwaited
+		bool isAwaited,
+		bool nullConditional
 	)
 	{
 		ValidateStatementPart(methodName, nameof(methodName));
@@ -2262,7 +2320,7 @@ public sealed partial class CodeWriter
 		if (isAwaited)
 			Write("await ");
 		if (receiver is not null)
-			Write(receiver).Write('.');
+			Write(receiver).Write(nullConditional ? "?." : ".");
 		Write(methodName);
 		if (genericArgumentList.Length > 0)
 		{
@@ -2330,6 +2388,123 @@ public sealed partial class CodeWriter
 		}
 
 		return true;
+	}
+
+	/// <summary>
+	/// Writes a chained method-call expression in which the result of each call is the receiver of the
+	/// next. The chain is written without a trailing semicolon so it composes as the value of an
+	/// <see cref="Assignment(string, Action{CodeWriter})"/>, <see cref="Return(Action{CodeWriter})"/>, or
+	/// other expression. A standalone chain statement is terminated by appending <c>.Line(";")</c>.
+	/// </summary>
+	/// <param name="rootMethod">The root invocation, optionally including a receiver, such as <c>builder.Configuration.GetSection</c>.</param>
+	/// <param name="arguments">The root argument expressions.</param>
+	/// <param name="configure">The callback that appends chained invocations and the postfix.</param>
+	/// <param name="genericArguments">Optional generic type arguments for the root invocation.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.Assignment("var value", value =&gt; value.MethodCallChain(
+	/// 	"builder.Configuration.GetSection", [$"{name}.SectionName"],
+	/// 	chain =&gt; chain.Method("Get", genericArguments: [optionsType]).Postfix("?? new()")));
+	/// // var value = builder.Configuration.GetSection("x.SectionName").Get&lt;Options&gt;() ?? new();</code></example>
+	public CodeWriter MethodCallChain(
+		string rootMethod,
+		IEnumerable<string?> arguments,
+		Action<MethodChainBuilder> configure,
+		IEnumerable<TypeReference>? genericArguments = null
+	) => MethodCallChainCore(rootMethod, arguments, configure, genericArguments, isAwaited: false);
+
+	/// <summary>
+	/// Writes an awaited chained method-call expression in which the result of each call is the receiver
+	/// of the next. The chain is written without a trailing semicolon so it composes as an expression.
+	/// </summary>
+	/// <param name="rootMethod">The root invocation, optionally including a receiver.</param>
+	/// <param name="arguments">The root argument expressions.</param>
+	/// <param name="configure">The callback that appends chained invocations and the postfix.</param>
+	/// <param name="genericArguments">Optional generic type arguments for the root invocation.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.Return(value =&gt; value.AwaitedMethodCallChain(
+	/// 	"service.LoadAsync", ["token"], chain =&gt; chain.Method("Configure")));</code></example>
+	public CodeWriter AwaitedMethodCallChain(
+		string rootMethod,
+		IEnumerable<string?> arguments,
+		Action<MethodChainBuilder> configure,
+		IEnumerable<TypeReference>? genericArguments = null
+	) => MethodCallChainCore(rootMethod, arguments, configure, genericArguments, isAwaited: true);
+
+	CodeWriter MethodCallChainCore(
+		string rootMethod,
+		IEnumerable<string?> arguments,
+		Action<MethodChainBuilder> configure,
+		IEnumerable<TypeReference>? genericArguments,
+		bool isAwaited
+	)
+	{
+		ValidateStatementPart(rootMethod, nameof(rootMethod));
+		if (arguments is null)
+			throw new ArgumentNullException(nameof(arguments));
+		if (configure is null)
+			throw new ArgumentNullException(nameof(configure));
+
+		var rootArguments = arguments.ToArray();
+		for (var index = 0; index < rootArguments.Length; index++)
+			ValidateStatementPart(rootArguments[index], nameof(arguments));
+
+		var builder = new MethodChainBuilder(rootMethod, rootArguments, genericArguments);
+		configure(builder);
+
+		return RenderMethodChain(builder, isAwaited);
+	}
+
+	CodeWriter RenderMethodChain(MethodChainBuilder builder, bool isAwaited)
+	{
+		if (isAwaited)
+			Write("await ");
+
+		Write(builder.RootMethod);
+		RenderGenericArgumentList(builder.RootGenericArguments);
+		RenderInvocationArguments(builder.RootArguments);
+
+		for (var index = 0; index < builder.Segments.Count; index++)
+		{
+			var segment = builder.Segments[index];
+			Write('.');
+			Write(segment.MethodName);
+			RenderGenericArgumentList(segment.GenericArguments);
+			RenderInvocationArguments(segment.Arguments);
+		}
+
+		if (builder.PostfixExpression is not null)
+			Write(builder.PostfixExpression);
+
+		return this;
+	}
+
+	void RenderGenericArgumentList(ImmutableArray<TypeReference> genericArguments)
+	{
+		if (genericArguments.IsDefaultOrEmpty)
+			return;
+
+		Write('<');
+		for (var index = 0; index < genericArguments.Length; index++)
+		{
+			if (index != 0)
+				Write(", ");
+			if (genericArguments[index].IsEmpty)
+				throw new ArgumentException("Generic arguments cannot be empty.");
+			TypeReference(genericArguments[index]);
+		}
+		Write('>');
+	}
+
+	void RenderInvocationArguments(ImmutableArray<string?> arguments)
+	{
+		Write('(');
+		for (var index = 0; index < arguments.Length; index++)
+		{
+			if (index != 0)
+				Write(", ");
+			Write(arguments[index]);
+		}
+		Write(')');
 	}
 
 	/// <summary>

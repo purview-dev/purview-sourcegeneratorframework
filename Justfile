@@ -5,7 +5,7 @@ solution := root_folder / "SourceGeneratorFramework.slnx"
 build_configuration := "Release"
 artifacts_folder := "./artifacts"
 default_test_filter := "/*/*/*/*/"
-pipeline_version := "0.2.1"
+
 pipeline_feed := "https://api.nuget.org/v3/index.json"
 pipeline_tool := ".tools/purview-build/purview-build"
 
@@ -19,7 +19,7 @@ default:
 [private]
 ensure-pipeline-tool:
     if [ ! -x "{{ pipeline_tool }}" ]; then \
-        dotnet tool install Purview.Build --tool-path .tools/purview-build --add-source "{{ pipeline_feed }}" --version "{{ pipeline_version }}"; \
+        dotnet tool install Purview.Build --tool-path .tools/purview-build --add-source "{{ pipeline_feed }}"; \
     fi
 
 # Run the PR pipeline (restore, build, lint, tests)
@@ -46,7 +46,7 @@ pipeline-release *args:
 # Run the release pipeline (restore, build, lint, tests, pack, local nuget publish)
 # Note: `just` runs recipes through the shell, which strips backslashes from unquoted arguments.
 # Use the LOCAL_NUGET_FEED_PATH environment variable or forward slashes, e.g.
-#   just pipeline-local-release --PublishLocalNuGet:LocalFeedPath=p:/_sync-projects/.local-nuget/
+# just pipeline-local-release --PublishLocalNuGet:LocalFeedPath=p:/_sync-projects/.local-nuget/
 [group('Pipeline')]
 pipeline-local-release *args:
     just ensure-pipeline-tool

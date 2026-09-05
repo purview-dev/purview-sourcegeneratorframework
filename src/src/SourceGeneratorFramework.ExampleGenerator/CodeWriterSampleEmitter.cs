@@ -133,6 +133,36 @@ static class CodeWriterSampleEmitter
 							.ElseIf("value == 0", branch => branch.Return("\"zero\""))
 							.Else(branch => branch.Return("\"positive\""))
 				);
+
+				body.Method(
+					"Configure",
+					TypeIdentity.Create<string>().AsTypeReference(),
+					TypeDeclarationAccessibility.Public,
+					options =>
+						options with
+						{
+							IsStatic = true,
+							Parameters =
+							[
+								new("source", TypeIdentity.Create<string>().AsTypeReference()),
+								new("onBuilt", PurviewTypeLibrary.System.Action.AsTypeReference()),
+							],
+						},
+					methodBody =>
+					{
+						methodBody.Assignment(
+							"var hostKitOptions",
+							expression =>
+								expression.MethodCallChain(
+									"source.Trim",
+									[],
+									chain => chain.Method("ToUpper").Postfix(" ?? string.Empty")
+								)
+						);
+						methodBody.MethodCallOn("onBuilt", "Invoke", [], nullConditional: true);
+						methodBody.Return("hostKitOptions");
+					}
+				);
 			}
 		);
 
