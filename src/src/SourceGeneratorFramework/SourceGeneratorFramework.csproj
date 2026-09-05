@@ -33,6 +33,12 @@
 			OutputItemType="Analyzer"
 		/>
 		<ProjectReference
+			Include="..\SourceGeneratorFramework.CodeFixers\SourceGeneratorFramework.CodeFixers.csproj"
+			PrivateAssets="all"
+			ReferenceOutputAssembly="false"
+			OutputItemType="Analyzer"
+		/>
+		<ProjectReference
 			Include="..\SourceGeneratorShared\SourceGeneratorShared.csproj"
 			PrivateAssets="all"
 			Pack="false"

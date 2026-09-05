@@ -2540,6 +2540,120 @@ public class CodeWriterTests
 	}
 
 	[Test]
+	public async Task ElseIf_WritesChainedIfElseIfElse()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer
+			.IfBlock("value is null", body => body.Return("null"))
+			.ElseIf("value is 0", body => body.Return("zero"))
+			.Else(body => body.Return("value"));
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"if (value is null)\n"
+					+ "{\n"
+					+ "\treturn null;\n"
+					+ "}\n"
+					+ "else if (value is 0)\n"
+					+ "{\n"
+					+ "\treturn zero;\n"
+					+ "}\n"
+					+ "else\n"
+					+ "{\n"
+					+ "\treturn value;\n"
+					+ "}\n"
+			);
+	}
+
+	[Test]
+	public async Task ElseIf_WritesMultipleElseIfBranches()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer
+			.IfBlock("kind is 1", body => body.Return("\"one\""))
+			.ElseIf("kind is 2", body => body.Return("\"two\""))
+			.ElseIf("kind is 3", body => body.Return("\"three\""));
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"if (kind is 1)\n"
+					+ "{\n"
+					+ "\treturn \"one\";\n"
+					+ "}\n"
+					+ "else if (kind is 2)\n"
+					+ "{\n"
+					+ "\treturn \"two\";\n"
+					+ "}\n"
+					+ "else if (kind is 3)\n"
+					+ "{\n"
+					+ "\treturn \"three\";\n"
+					+ "}\n"
+			);
+	}
+
+	[Test]
+	public async Task ElseIfScope_WritesConditionAndScopedBody()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		using (writer.IfBlockScope("enabled"))
+			writer.Return("value");
+		using (writer.ElseIfScope("retry"))
+			writer.Return("retry");
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("if (enabled)\n{\n\treturn value;\n}\nelse if (retry)\n{\n\treturn retry;\n}\n");
+	}
+
+	[Test]
+	public async Task ElseIf_WritesMultilineConditionWithContinuationIndent()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer
+			.IfBlock("value != null", body => body.Return("value"))
+			.ElseIf("value < 0\n|| value > 100", body => body.Return("\"invalid\""));
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"if (value != null)\n"
+					+ "{\n"
+					+ "\treturn value;\n"
+					+ "}\n"
+					+ "else if (value < 0\n"
+					+ "\t|| value > 100)\n"
+					+ "{\n"
+					+ "\treturn \"invalid\";\n"
+					+ "}\n"
+			);
+	}
+
+	[Test]
+	public async Task ElseIf_GivenWhitespaceCondition_Throws()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		await Assert.That(() => writer.ElseIf("  ", _ => { })).Throws<ArgumentException>();
+	}
+
+	[Test]
+	public async Task ElseIf_GivenNullBody_Throws()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		await Assert
+			.That(() => writer.ElseIf("enabled", null!))
+			.Throws<ArgumentNullException>()
+			.WithParameterName("bodyWriter");
+	}
+
+	[Test]
 	public async Task Assignment_WritesDeclarationAndMultilineInitializer()
 	{
 		var writer = CodeWriterFactory.ForTests();

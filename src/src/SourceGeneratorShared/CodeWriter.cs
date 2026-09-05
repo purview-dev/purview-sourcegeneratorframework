@@ -2701,6 +2701,43 @@ public sealed partial class CodeWriter
 	}
 
 	/// <summary>
+	/// Writes an <c>else if</c> block following an <c>if</c> or another <c>else if</c> and invokes a
+	/// callback for its body.
+	/// </summary>
+	/// <param name="condition">The else-if condition.</param>
+	/// <param name="bodyWriter">The action to invoke for the body of the else-if block.</param>
+	/// <returns>The current writer.</returns>
+	/// <exception cref="ArgumentException">Thrown if the condition is null or whitespace.</exception>
+	/// <exception cref="ArgumentNullException">Thrown if the bodyWriter is null.</exception>
+	/// <example><code>writer.IfBlock("enabled", body =&gt; body.Return("value")).ElseIf("retry", body =&gt; body.Return("retry"));</code></example>
+	public CodeWriter ElseIf(string condition, Action<CodeWriter> bodyWriter)
+	{
+		if (bodyWriter is null)
+			throw new ArgumentNullException(nameof(bodyWriter));
+
+		using (ElseIfScope(condition))
+			bodyWriter(this);
+
+		return this;
+	}
+
+	/// <summary>
+	/// Writes an <c>else if</c> block and returns its body scope.
+	/// </summary>
+	/// <param name="condition">The else-if condition.</param>
+	/// <returns>The else-if body scope.</returns>
+	/// <example><code>using (writer.IfBlockScope("enabled")) writer.Return("value"); using (writer.ElseIfScope("retry")) writer.Return("retry");</code></example>
+	public BlockScope ElseIfScope(string condition)
+	{
+		ValidateStatementPart(condition, nameof(condition));
+		EnsureNewLine();
+		Write("else if (");
+		Expression(condition, expressionWriter: null);
+		Line(")");
+		return OpenBlockScope();
+	}
+
+	/// <summary>
 	/// Writes a <c>foreach</c> statement and invokes a callback for its body.
 	/// </summary>
 	/// <param name="iterator">The iterator declaration, such as <c>var item in items</c>.</param>

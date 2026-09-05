@@ -27,6 +27,7 @@ public class CodeWriterSampleGeneratorTests
 		await Assert.That(result).HasGeneratedProperty("DefaultAccessibility");
 		await Assert.That(result).HasGeneratedMethod("Describe");
 		await Assert.That(result).HasGeneratedMethod("Format");
+		await Assert.That(result).HasGeneratedMethod("Categorize");
 
 		var defaultAccessibility = await Assert.That(result).HasGeneratedProperty("DefaultAccessibility");
 		await Assert.That(defaultAccessibility.Modifiers.ToString()).IsEqualTo("public");
@@ -60,6 +61,27 @@ public class CodeWriterSampleGeneratorTests
 
 		var constructor = result.Generated().GetConstructor("SampleTargetCodeWriterSample");
 		await Assert.That(constructor.ToString()).Contains("_value = value;");
+	}
+
+	[Test]
+	public async Task GenerateSample_EmitsConditionalBranches(CancellationToken cancellationToken)
+	{
+		// Arrange
+		const string source = """
+			[GenerateCodeWriterSample]
+			public class SampleTarget { }
+			""";
+
+		// Act
+		var result = await GenerateAsync(source, cancellationToken);
+
+		// Assert
+		var categorize = await Assert.That(result).HasGeneratedMethod("Categorize");
+		var categorizeText = categorize.ToString();
+		await Assert.That(categorizeText).Contains("if (value < 0)\n\t\t{\n\t\t\treturn \"negative\";\n\t\t}");
+		await Assert.That(categorizeText).Contains("else if (value == 0)");
+		await Assert.That(categorizeText).Contains("return \"zero\";");
+		await Assert.That(categorizeText).Contains("return \"positive\";");
 	}
 
 	[Test]

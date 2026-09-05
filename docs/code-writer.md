@@ -93,6 +93,9 @@ writer.Return("value");                                     // return value;
 writer.Throw(TypeIdentity.Create<InvalidOperationException>(), "Failed.");  // throw new ...;
 writer.Assignment("_total", "value");                       // _total = value;
 writer.IfBlock("value is null", body => body.Return("null"));
+writer.IfBlock("value is null", body => body.Return("null"))
+    .ElseIf("value is 0", body => body.Return("zero"))
+    .Else(body => body.Return("value"));
 writer.Foreach("var item in items", body => body.MethodCallOn("item", "Process"));
 ```
 
@@ -104,6 +107,40 @@ writer.Foreach("var item in items", body => body.MethodCallOn("item", "Process")
 writer.MethodCall("Create", ["x"], receiver: "factory", genericArguments: [TypeReference.Create<string>()]);
 // factory.Create<string>(x);
 ```
+
+### Conditional statements
+
+`IfBlock`/`IfBlockScope` write an `if` block. `ElseIf`/`ElseIfScope` chain an `else if` block after an
+`if` or another `else if`, and `Else`/`ElseScope` close the chain with an `else` block. The methods
+return the writer, so branches can be chained fluently:
+
+```csharp
+writer
+    .IfBlock("value is null", body => body.Return("null"))
+    .ElseIf("value is 0", body => body.Return("zero"))
+    .Else(body => body.Return("value"));
+```
+
+Emits:
+
+```csharp
+if (value is null)
+{
+    return null;
+}
+else if (value is 0)
+{
+    return zero;
+}
+else
+{
+    return value;
+}
+```
+
+`IfElse(condition, ifBody, elseBody)` is the compact two-branch form. The scope forms
+`IfBlockScope`, `ElseIfScope`, and `ElseScope` write the header and return the body scope for
+content that spans multiple calls.
 
 ### Conditional compilation blocks
 
@@ -288,6 +325,9 @@ writer.Property("Name", TypeReference.Create<string>(), TypeDeclarationAccessibi
   values manually — the `PreferMinimalCodeWriterOverloadAnalyzer` (PSGFR20) flags the verbose form.
 - Prefer structured declarations and statements over raw text — `PreferStructuredCodeWriterApiAnalyzer`
   (PSGFR18) and `PreferStructuredCodeWriterStatementAnalyzer` (PSGFR19) flag raw emission.
+- Prefer `IfBlock`/`ElseIf`/`Else` over generic block methods for conditional content — the
+  `PreferStructuredCodeWriterIfBlockAnalyzer` (PSGFR23) flags `OpenBlockScope`/`OpenBlock` headers that
+  write an `if`, `else if`, or `else` statement, and its code fix rewrites them.
 - Always consume scope-returning methods with `using` (PSGFR17).
 - Keep every value emitted through the structured API so layout stays deterministic and the analyzers
   can guide callers back to the best practice.

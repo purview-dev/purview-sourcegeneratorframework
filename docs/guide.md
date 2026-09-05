@@ -1954,6 +1954,28 @@ This prevents Roslyn dependencies leaking into runtime package assets.
 
 ---
 
+## Roslyn Component Discovery
+
+The compiler host only loads a source generator, diagnostic analyser, or code fix provider when
+three conditions hold. Missing any one means the component is **silently ignored**, which is why
+"nothing shows up in Visual Studio" is usually a setup problem, not a code problem:
+
+1. **The type is public.** Non-public component types cannot be instantiated by Roslyn
+   (`PSGFR27`).
+2. **The type is decorated.** A generator needs `[Generator]` (`PSGFR26`), an analyser needs
+   `[DiagnosticAnalyzer]` (`PSGFR25`), and a code fix provider needs `[ExportCodeFixProvider]`
+   (`PSGFR24`).
+3. **The assembly is loaded as an analyser.** In a package the component assembly must be packed
+   under `analyzers/dotnet/cs/`; in a project reference it must be referenced with
+   `OutputItemType="Analyser"`. A normal library reference never surfaces a component to Roslyn.
+
+A code fix provider also only appears when the diagnostic ID in `FixableDiagnosticIds` is actually
+produced by an analyser that is loaded alongside it (`PSGFR28`). Visual Studio MEF-composes fix
+providers when the analyser set loads, so after adding or updating a fixer assembly you must
+restart Visual Studio or reload the project for the fixes to appear.
+
+---
+
 # 19. Review Checklist
 
 ## Analyser
@@ -1970,6 +1992,8 @@ This prevents Roslyn dependencies leaking into runtime package assets.
 - [ ] Is whole-compilation analysis genuinely necessary?
 - [ ] Could the diagnostic reasonably have a code fix?
 - [ ] Are diagnostic IDs release-tracked?
+- [ ] Is the analyser type `public` and decorated with `[DiagnosticAnalyzer]`?
+- [ ] Do the code fix's `FixableDiagnosticIds` match an ID the analyser actually produces?
 
 ---
 

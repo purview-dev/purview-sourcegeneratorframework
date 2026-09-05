@@ -15,6 +15,7 @@
 				"analyzers/dotnet/cs/Purview.SourceGeneratorFramework.dll",
 				"analyzers/dotnet/cs/Purview.SourceGeneratorFramework.Generators.dll",
 				"analyzers/dotnet/cs/Purview.SourceGeneratorFramework.Analyzers.dll",
+				"analyzers/dotnet/cs/Purview.SourceGeneratorFramework.CodeFixers.dll",
 				"analyzers/dotnet/cs/Purview.SourceGeneratorFramework.Shared.dll",
 				"build/Purview.SourceGeneratorFramework.props",
 				"build/Purview.SourceGeneratorFramework.targets"

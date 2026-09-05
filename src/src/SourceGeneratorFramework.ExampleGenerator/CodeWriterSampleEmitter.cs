@@ -116,6 +116,23 @@ static class CodeWriterSampleEmitter
 					)
 				)
 					body.NetConditionalReturn("Value: {_value}");
+
+				body.Method(
+					"Categorize",
+					TypeIdentity.Create<string>().AsTypeReference(),
+					TypeDeclarationAccessibility.Public,
+					options =>
+						options with
+						{
+							IsStatic = true,
+							Parameters = [new("value", TypeIdentity.Create<int>().AsTypeReference())],
+						},
+					methodBody =>
+						methodBody
+							.IfBlock("value < 0", branch => branch.Return("\"negative\""))
+							.ElseIf("value == 0", branch => branch.Return("\"zero\""))
+							.Else(branch => branch.Return("\"positive\""))
+				);
 			}
 		);
 

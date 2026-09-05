@@ -874,6 +874,11 @@ The `Purview.SourceGeneratorFramework` package includes the `Purview.SourceGener
 | `PSGFR20` | Prefer the minimal `CodeWriter` overloads over constructing `*DeclarationOptions` values manually. |
 | `PSGFR21` | Prefer `HashDefines`/`HashDefinesScope` for `#if`/`#endif` conditional-compilation directives. |
 | `PSGFR22` | Prefer `PragmaDisable`/`OpenPragmasScope` for `#pragma warning` directives. |
+| `PSGFR24` | `CodeFixProvider` is not marked `[ExportCodeFixProvider]`; Visual Studio will never discover it. |
+| `PSGFR25` | `DiagnosticAnalyzer` is not marked `[DiagnosticAnalyzer]`; it will never run. |
+| `PSGFR26` | A generator type is not marked `[Generator]`; it will never run. |
+| `PSGFR27` | A Roslyn component type is not public; the compiler host cannot instantiate it. |
+| `PSGFR28` | `FixableDiagnosticIds` references a diagnostic ID no analyzer in the compilation produces; the fix will never be shown. |
 
 ## License
 
